@@ -6,7 +6,7 @@ class JsonArray :
 	public JsonAbstractValue
 {
     typedef map<unsigned int, JsonAbstractValue*> jsonarray;
-    jsonarray map;
+    jsonarray internal_map;
 public:
     JsonArray();
     JsonArray(const JsonArray&);

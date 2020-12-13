@@ -1,4 +1,5 @@
 #include <string>
+#include <cstring>  // for memcpy
 #include <codecvt>
 #include <locale>
 #include <iostream>

@@ -9,24 +9,24 @@ JsonArray::JsonArray() {
  * Copy Constructor: create a deep clone of the specified object
  */
 JsonArray::JsonArray(const JsonArray &ary) {
-    for (jsonarray::iterator it = map.begin(); it != map.end(); ++it) {
+    for (jsonarray::iterator it = internal_map.begin(); it != internal_map.end(); ++it) {
         unsigned long key = it->first;
         JsonAbstractValue& value = *(it->second);
 
         // erase exsiting entry if it exists (this shouldnt happen)
-        jsonarray::iterator it2 = map.find(key);
-        if (it2 != map.end()) {
+        jsonarray::iterator it2 = internal_map.find(key);
+        if (it2 != internal_map.end()) {
             delete it2->second;
-            map.erase(it2);
+            internal_map.erase(it2);
         }
         // add the new entry
-        map.insert(pair<unsigned long, JsonAbstractValue*>(key, it->second->copy()));
+        internal_map.insert(pair<unsigned long, JsonAbstractValue*>(key, it->second->copy()));
     }
 }
 
 // destructor
 JsonArray::~JsonArray() {
-    for (jsonarray::iterator it = map.begin(); it != map.end(); ++it) 
+    for (jsonarray::iterator it = internal_map.begin(); it != internal_map.end(); ++it) 
         delete it->second;
 }
 
@@ -36,7 +36,7 @@ JsonAbstractValue* JsonArray::copy() {
 }
 
 void JsonArray::add(JsonAbstractValue *val) {
-    map.insert(pair<unsigned int, JsonAbstractValue*>(map.size(), val));
+    internal_map.insert(pair<unsigned int, JsonAbstractValue*>(internal_map.size(), val));
 }
 
 /*
@@ -46,11 +46,11 @@ void JsonArray::dump(ostream& out, bool pretty, int indent, bool useIndent) {
     out << "[";
     if (pretty) cout<<endl;
     bool firstElement = false;
-    for (jsonarray::iterator it = map.begin(); it != map.end(); ++it) {
+    for (jsonarray::iterator it = internal_map.begin(); it != internal_map.end(); ++it) {
         it->second->dump(out, pretty, indent+3,true);
         jsonarray::iterator itnext = it;
         itnext++;
-        if (itnext != map.end()) {
+        if (itnext != internal_map.end()) {
             out << ",";
         }
         if (pretty) out << endl;
@@ -68,13 +68,13 @@ void JsonArray::dump(ostream& out, bool pretty) {
 * is of the form [index].specifier
 */
 string JsonArray::getValue(string specifier) {
-    if (map.empty()) return "";
+    if (internal_map.empty()) return "";
 
     if (specifier=="") {
         // The specifier is empty - return values for all records in the
         // object (this should not be normal)
         string result;
-        for (jsonarray::iterator it = map.begin(); it != map.end(); ++it) {
+        for (jsonarray::iterator it = internal_map.begin(); it != internal_map.end(); ++it) {
             result.append(it->second->getValue(""));
             result.append(", ");
         }
@@ -83,8 +83,8 @@ string JsonArray::getValue(string specifier) {
     // use the leftmost part of the specifier as the key
     string index = specifier.substr(1, specifier.find("]") - 1);
     string spec2 = specifier.substr(specifier.find(".") + 1, specifier.length() - specifier.find(".") - 1);
-    jsonarray::iterator it = map.find(atol(index.c_str()));
-    if (it != map.end()) {
+    jsonarray::iterator it = internal_map.find(atol(index.c_str()));
+    if (it != internal_map.end()) {
         return it->second->getValue(spec2);
     }
     return "";
@@ -99,8 +99,8 @@ bool JsonArray::getBoolean(string specifier) {
     // use the leftmost part of the specifier as the key
     string index = specifier.substr(1, specifier.find("]") - 1);
     string spec2 = specifier.substr(specifier.find(".") + 1, specifier.length() - specifier.find(".") - 1);
-    jsonarray::iterator it = map.find(atol(index.c_str()));
-    if (it != map.end()) {
+    jsonarray::iterator it = internal_map.find(atol(index.c_str()));
+    if (it != internal_map.end()) {
         return it->second->getBoolean(spec2);
     }
     return "";
@@ -116,8 +116,8 @@ string JsonArray::getHandle(string specifier) {
     // use the leftmost part of the specifier as the key
     string index = specifier.substr(1, specifier.find("]") - 1);
     string spec2 = specifier.substr(specifier.find(".") + 1, specifier.length() - specifier.find(".") - 1);
-    jsonarray::iterator it = map.find(atol(index.c_str()));
-    if (it != map.end()) {
+    jsonarray::iterator it = internal_map.find(atol(index.c_str()));
+    if (it != internal_map.end()) {
         return it->second->getHandle(spec2);
     }
     return "";
@@ -133,8 +133,8 @@ long JsonArray::getInteger(string specifier) {
     // use the leftmost part of the specifier as the key
     string index = specifier.substr(1, specifier.find("]") - 1);
     string spec2 = specifier.substr(specifier.find(".") + 1, specifier.length() - specifier.find(".") - 1);
-    jsonarray::iterator it = map.find(atol(index.c_str()));
-    if (it != map.end()) {
+    jsonarray::iterator it = internal_map.find(atol(index.c_str()));
+    if (it != internal_map.end()) {
         return it->second->getInteger(spec2);
     }
     return 0;
@@ -150,8 +150,8 @@ double JsonArray::getDouble(string specifier) {
     // use the leftmost part of the specifier as the key
     string index = specifier.substr(1, specifier.find("]") - 1);
     string spec2 = specifier.substr(specifier.find(".") + 1, specifier.length() - specifier.find(".") - 1);
-    jsonarray::iterator it = map.find(atol(index.c_str()));
-    if (it != map.end()) {
+    jsonarray::iterator it = internal_map.find(atol(index.c_str()));
+    if (it != internal_map.end()) {
         return it->second->getDouble(spec2);
     }
     return 0.0;
@@ -159,16 +159,16 @@ double JsonArray::getDouble(string specifier) {
 
 // return the size of the array
 unsigned long JsonArray::size() {
-    return map.size();
+    return internal_map.size();
 }
 
 // return a specific indexted element from the array
 JsonAbstractValue* JsonArray::getElement(unsigned long index) {
     // attempt to find the indexed item in the array
-    jsonarray::iterator it = map.find(index);
+    jsonarray::iterator it = internal_map.find(index);
 
     // return the result if found, otherwise, null
-    if (it != map.end()) return it->second;
+    if (it != internal_map.end()) return it->second;
     return NULL;
 }
 

@@ -1,7 +1,8 @@
 #pragma once
 #include "pldm.h"
+#include "pldmnode.h"
 
-class node
+class node : public PldmNode
 {
 	unsigned char rxBuffer[512];
 	unsigned char txBuffer[512];
@@ -19,10 +20,7 @@ class node
 	void processCommandGetPdr(PldmRequestHeader* rxHeader, PldmResponseHeader* txHeader);
 public:
 	node();
-	void configurePDRRepository(int numNumericSensors, int numStateSensors, int numNumericEffecters, int numStateEffecters);
-
-	void putCommand(PldmRequestHeader* hdr, unsigned char* command, unsigned int size);
-	unsigned char* getResponse(void);
-
+	virtual void putCommand(PldmRequestHeader* hdr, unsigned char* command, unsigned int size);
+	virtual unsigned char* getResponse(void);
 };
 

@@ -10,11 +10,15 @@
 #define MAX_BYTES_PER_PDR_XFER 40
 
 
-int main()
+int main(int argc, char*argv[])
 {
+    if (argc!=2) {
+        std::cerr<<"Wrong number of arguments."<<endl;
+        return -1;
+    }
     PdrRepository pdrRepository;
-    pdrRepository.setDictionary("..\\..\\PdrMaker\\PdrMaker\\pldm_definitions.json");
-
+    if (!pdrRepository.setDictionary(argv[1])) return -1;
+    
     node node1;
     unsigned char buffer[256];
  
@@ -27,7 +31,7 @@ int main()
     GetPdrRepositoryInfoResponse* infoResponse = (GetPdrRepositoryInfoResponse*)(response + sizeof(PldmResponseHeader));
     if (infoResponse->completionCode != RESPONSE_SUCCESS) {
         std::cout << "Error Getting PDR Info" << std::endl;
-        return 0;
+        return -1;
     }
     std::cout << "PDR Info:" << std::endl;
     std::cout << "   Records       " << infoResponse->recordCount << std::endl;

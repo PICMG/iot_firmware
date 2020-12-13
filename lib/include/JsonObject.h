@@ -8,7 +8,7 @@ class JsonObject :
 {
     typedef map<string, JsonAbstractValue*> jsonmap;
     typedef list<string> jsonmapindex;
-    jsonmap map;
+    jsonmap internal_map;
     jsonmapindex index;
 public:
     JsonObject();
