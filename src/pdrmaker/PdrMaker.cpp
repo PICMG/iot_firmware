@@ -1,9 +1,51 @@
+//*******************************************************************
+//    PdrMaker.cpp
+//
+//    This file implements code that builds a byte table for a given
+//    JSON-based pdr table.  The byte table emitted is formatted in 
+//    such a way that it can be built directly into IoT device firmware.
+//
+//    Portions of this code are based on the Platform Level Data Model
+//    (PLDM) specifications from the Distributed Management Task Force 
+//    (DMTF).  More information about PLDM can be found on the DMTF
+//    web site (www.dmtf.org).
+//
+//    More information on the PICMG IoT data model can be found within
+//    the PICMG family of IoT specifications.  For more information,
+//    please visit the PICMG web site (www.picmg.org)
+//
+//    Copyright (C) 2020,  PICMG
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
 #include <iostream>
 #include <iomanip>
 #include <fstream>
 #include "JsonFactory.h"
 
 #define COMMON_HEADER_SIZE 10
+
+//*******************************************************************
+// loadJsonFile()
+//
+// Given the filename of a Json File, load the dictionary from the 
+// file.
+//
+// parameters:
+//    filename - the name of the json file to load
+// returns:
+//    a pointer to json structure that was loaded, otherwise NULL
 JsonAbstractValue* loadJsonFile(const char* filename) {
     JsonFactory jf;
 
@@ -35,7 +77,18 @@ JsonAbstractValue* loadJsonFile(const char* filename) {
     return json;
 }
 
-// return a pointer to the matching pdr template
+//*******************************************************************
+// getMatchingPdrTemplate()
+//
+// Given a JsonArray of PDR templates, and a string specifying a PDR
+// name, return the template JSON definition matching the PDR name
+//
+// parameters:
+//    pdrs - an array of pdr tempates to check
+//    type - the pdr type to find in the teplate array.
+// returns:
+//    a pointer to json tempate with a type matching the type
+//    parameters, otherwise NULL.
 JsonObject* getMatchingPdrTemplate(JsonArray& pdrs, string type) {
     JsonAbstractValue* av;
     if (type.length() == 0) return NULL;
@@ -62,8 +115,17 @@ JsonObject* getMatchingPdrTemplate(JsonArray& pdrs, string type) {
     return NULL;
 }
 
+//*******************************************************************
+// findEnumerationValue()
+//
 // find an enumeration entry that matches the specified value and 
 // return the value as a result, return "" if no match is found
+//
+// parameters:
+//    enums - an array of enumeration choices
+//    matchkey - the enumeration key to match.
+// returns:
+//    a string of the matching enumeration value, otherwise ""
 string findEnumerationValue(JsonArray* enums, string matchkey) {
     if (matchkey == "") return "";
 
@@ -81,6 +143,23 @@ string findEnumerationValue(JsonArray* enums, string matchkey) {
     }
     return "";
 }
+
+//*******************************************************************
+// emitByte()
+//
+// emit a single byte to the specified output stream.  If more than
+// the specified number of bytes will be written on the current
+// line, send a carriage return so the next bytes will be written to
+// the next line.
+//
+// parameters:
+//    out - the output stream to write to
+//    byte - the byte to write
+//    bytes_on_line - the number of bytes on the current line (updated
+//       on exit)
+//    bytecount - the total bytes emitted (updated on exit)
+// returns:
+//    noting
 void emitByte(ostream& out, unsigned char byte, unsigned char& bytes_on_line, unsigned long& bytecount) {
     out << "0x" << hex << setw(2) << setfill('0') << (0x0ff & (unsigned int) byte) << ", ";
     bytes_on_line++; bytecount++;
@@ -90,7 +169,18 @@ void emitByte(ostream& out, unsigned char byte, unsigned char& bytes_on_line, un
     }
 }
 
-// 
+//*******************************************************************
+// calculatePdrBytes()
+//
+// calculate the total number of bytes that will be required to 
+// represent the specified pdr.  This function is similar to main()
+// except bytes are not actually emitted.
+//
+// parameters:
+//    tmplt - the template metadata for this pdr
+//    pdr - the pdr to calculate byte size for
+// returns:
+//    the size (in bytes) required to represent the pdr
 unsigned long calculatePdrBytes(JsonObject *tmplt, JsonObject &pdr ) {
     JsonAbstractValue* av;
     string type;
