@@ -1,3 +1,4 @@
+//*******************************************************************
 //    PdrRepository.cpp
 //
 //    This file provides implementation of a PDR repositiory class that is
@@ -5,7 +6,16 @@
 //    code. This class contains a collection of GenericPdr ojects and 
 //    a dictionary Json object that can be used to decode the bytes within 
 //    the PDRs.
-//    
+//
+//    Portions of this code are based on the Platform Level Data Model
+//    (PLDM) specifications from the Distributed Management Task Force 
+//    (DMTF).  More information about PLDM can be found on the DMTF
+//    web site (www.dmtf.org).
+//
+//    More information on the PICMG IoT data model can be found within
+//    the PICMG family of IoT specifications.  For more information,
+//    please visit the PICMG web site (www.picmg.org)
+//
 //    Copyright (C) 2020,  PICMG
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -32,12 +42,48 @@
 #include "GenericPdr.h"
 
 #define MAX_BYTES_PER_PDR_XFER 40
+
+//*******************************************************************
+// PdrRepository()
+// 
+// Constructor for PDR Repository.
+PdrRepository::PdrRepository() :dictionary(NULL) {
+
+}
+
+//*******************************************************************
+// PdrRepository()
+// 
+// Destructor for PDR Repository.  This function frees any memory
+// allocated to the object
+PdrRepository::~PdrRepository() {
+	// free memory for each element in the map
+	for (map<uint32,GenericPdr*>::iterator it = repository.begin(); it != repository.end(); ++it) {
+		delete it->second;
+		it->second = 0;
+	}
+}
+
+//*******************************************************************
+// findPdrTemplateFromId()
+//
+// Given the id number of a PDR type, this function searches the 
+// dictionary of known PDRs and returns a Json object that describes
+// the PDR with the specified type ID.
+//
+// parameters:
+//    id - the pdr type (id) to find in the dictionary
+// returns:
+//    a pointer to a JsonObject that describes the PDR with the
+//    specified type.  If a matching PDR template cannot be found, 
+//    NULL is returned.
 JsonObject* PdrRepository::findPdrTemplateFromId(unsigned long id) {
     if (!dictionary) return NULL;
 
     JsonAbstractValue* av;
     JsonArray& pdrs = *((JsonArray*)dictionary->find("pdr_defs"));
 
+    // loop for each tempate in the dictionary
     for (int i = 0;i < pdrs.size();i++) {
         // get the template
         av = pdrs.getElement(i);
@@ -63,7 +109,17 @@ JsonObject* PdrRepository::findPdrTemplateFromId(unsigned long id) {
     return NULL;
 }
 
-JsonAbstractValue* loadJsonFile(const char* filename) {
+//*******************************************************************
+// loadJsonFile()
+//
+// Given the filename of a Json File, load the dictionary from the 
+// file.
+//
+// parameters:
+//    filename - the name of the json file to load
+// returns:
+//    a pointer to json structure that was loaded, otherwise NULL
+JsonAbstractValue* PdrRepository::loadJsonFile(const char* filename) {
     JsonFactory jf;
 
     ifstream jsonfile(filename, ifstream::binary);
@@ -90,21 +146,18 @@ JsonAbstractValue* loadJsonFile(const char* filename) {
     JsonAbstractValue* json = jf.build(buffer);
 
     delete[] buffer;
-
     return json;
 }
 
-PdrRepository::PdrRepository() :dictionary(NULL) {}
-
-PdrRepository::~PdrRepository() {
-	// free memory for each element in the map
-	for (map<uint32,GenericPdr*>::iterator it = repository.begin(); it != repository.end(); ++it) {
-		delete it->second;
-		it->second = 0;
-	}
-	// base class destructor will be automatically called to destruct the map
-}
-
+//*******************************************************************
+// setDictionary()
+//
+// Set the dictionary for the repository from the specified file.
+//
+// parameters:
+//    filename - the name of the json file that hold the dictionary.
+// returns:
+//    true of dictionary is successfully loaded, otherwise false
 bool PdrRepository::setDictionary(string filename) {
     // load the pdr template file
     JsonAbstractValue* tmplt_defs = loadJsonFile(filename.c_str());
@@ -124,6 +177,23 @@ bool PdrRepository::setDictionary(string filename) {
     return true;
 }
 
+//*******************************************************************
+// getPdrPart()
+//
+// this function sends a GetPDR pldm command through the specified 
+// connector node in order to receive a portion of a PDR. 
+//
+// parameters:
+//    node - the connector node to communicate with.
+//    recordHandle - the record handle from the previous call, or 0
+//       for the start of a new record.
+//    nextRecordHandle - this parameter will be updated with the value
+//       to use for recordHandle on the next call of this function.
+// returns:
+//    the response code received from the communication with the
+//    connector node.
+// changes:
+//    If a new PDR is completely received, it is added to the repository
 int PdrRepository::getPdrPart(PldmNode& node1, uint32 recordHandle, uint32 & nextRecordHandle) {
     // read part of the pdr from the device - 
     // returns -1 on error, 0 if not complete, 1 if the transfer is complete
@@ -215,6 +285,22 @@ int PdrRepository::getPdrPart(PldmNode& node1, uint32 recordHandle, uint32 & nex
 }
 
 
+//*******************************************************************
+// addPdrsFromNode()
+//
+// this function successively sends GetPDR pldm commands through the 
+// specified connector node in order to receive all the PDRs in the
+// connected devices PDR repository.  When done, this PdrRepository
+// will be populated with copies of the PDRs received from the connector
+// node.
+//
+// parameters:
+//    node - the connector node to communicate with.
+// returns:
+//    true if no errors, otherwise false.
+// changes:
+//    The pdr repository will contain copies of the PDRs received from
+//    the connector node.
 bool PdrRepository::addPdrsFromNode(PldmNode& node1) {
     // loop to read all the PDR records from the node and build a local PDR repository
     uint32 recordHandle = 0;
@@ -232,8 +318,16 @@ bool PdrRepository::addPdrsFromNode(PldmNode& node1) {
     return true;
 }
 
+//*******************************************************************
+// dump()
+//
+// dump the contents of this repository to the standard output device.
+//
+// parameters:
+//    none.
+// returns:
+//    void
 void PdrRepository::dump() {
-    // free memory for each element in the map
     for (map<uint32, GenericPdr*>::iterator it = repository.begin(); it != repository.end(); ++it) {
         it->second->dump();
         std::cout << std::endl;
