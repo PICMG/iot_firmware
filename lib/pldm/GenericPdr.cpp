@@ -1,3 +1,27 @@
+//*******************************************************************
+//    GenericPdr.cpp
+//
+//    This file provides implementation of a generic PDR class that is
+//    intended to be used as part of the PICMG pldm library reference
+//    code. This class contains a buffer of bytes that represents the 
+//    raw data of the pdr itself.  The class also contains a dictionary
+//    Json object that can be used to decode the bytes within the PDR.
+//    
+//    Copyright (C) 2020,  PICMG
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
 #include <string>
 #include <cstring>  // for memcpy
 #include <codecvt>
@@ -12,17 +36,37 @@
 #include "GenericPdr.h"
 
 using namespace std;
-GenericPdr::GenericPdr() : offsets(NULL), rawData(NULL), rawSize(0), dict(NULL) {}
 
+//*******************************************************************
+// GenericPdr()
+//
+// Constructor for the GenericPDR Class
+GenericPdr::GenericPdr() : offsets(NULL), rawData(NULL), rawSize(0), dict(NULL) {
+}
+
+//*******************************************************************
+// ~GenericPdr()
+//
+// Destructor for the GenericPdr class - free any dynamically 
+// allocated memory.
 GenericPdr::~GenericPdr() {
 	if (offsets) delete[] offsets;
 	if (rawData) delete[] rawData;
-
 }
 
-// communication helper function - copy new data into the abstract pdr buffer
-void GenericPdr::appendRawData(unsigned char* newData, unsigned int size)
-{
+//*******************************************************************
+// appendRawData()
+//
+// This is a communication helper function that copies new data
+// into the GenericPdr's raw data buffer.  The rawData buffer
+// is resized as required.
+//
+// parameters:
+//    newData - a pointer to the new data to be copied
+//    size    - the number of bytes to be copied
+// returns:
+//    void
+void GenericPdr::appendRawData(unsigned char* newData, unsigned int size) {
 	// add the data into the buffer, resizing as required
 	if (!rawData) {
 		// create a new buffer
@@ -40,15 +84,44 @@ void GenericPdr::appendRawData(unsigned char* newData, unsigned int size)
 	rawSize += size;
 }
 
-// common header getters
+//*******************************************************************
+// getRecordHandle()
+//
+// return the record handle from the pdr data stored in the object's
+// rawData representation of the PDR.
+//
+// parameters:
+//    none
+// returns:
+//    the PDR record handle for this PDR
 uint32 GenericPdr::getRecordHandle() {
 	return ((PdrCommonHeader*)rawData)->recordHandle;
 }
 
+//*******************************************************************
+// getHeaderVersion()
+//
+// return the header version from the pdr data stored in the object's
+// rawData representation of the PDR.
+//
+// parameters:
+//    none
+// returns:
+//    the PDR header version for this PDR
 uint8 GenericPdr::getHeaderVersion() {
 	return ((PdrCommonHeader*)rawData)->PDRHeaderVersion;
 }
 
+//*******************************************************************
+// getPdrType()
+//
+// return the Pdr type from the pdr data stored in the object's
+// rawData representation of the PDR.
+//
+// parameters:
+//    none
+// returns:
+//    the PDR type for this PDR
 uint8 GenericPdr::getPdrType() {
 	return ((PdrCommonHeader*)rawData)->PDRType;
 }
