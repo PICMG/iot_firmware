@@ -1,11 +1,47 @@
+//*******************************************************************
+//    JsonObject.h
+//
+//    This file provides implementation for a class that represents
+//    a JSON object (json content enclosed in curly-brace characters).
+//    This header is intended to be used as part of the PICMG IoT 
+//    library reference code. 
+//    
+//    More information on the PICMG IoT data model can be found within
+//    the PICMG family of IoT specifications.  For more information,
+//    please visit the PICMG web site (www.picmg.org)
+//
+//    Copyright (C) 2020,  PICMG
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
 #include "JsonObject.h"
 
+//*******************************************************************
+// JsonObject()
+//
+// default constructor.
 JsonObject::JsonObject() {
 }
 
-/*
-* create a deep clone of the specified json object
-*/
+//*******************************************************************
+// JsonObject()
+//
+// Copy constructor - initialize this object as a deep clone of the 
+// specified object.
+// 
+// parameters:
+//    val - a reference of the object to clone.
 JsonObject::JsonObject(const JsonObject &obj) {
     // iterate through each element in the internal_map
     for (jsonmap::iterator it = internal_map.begin(); it != internal_map.end(); ++it) {
@@ -23,18 +59,38 @@ JsonObject::JsonObject(const JsonObject &obj) {
     }
 }
 
-// destructor - delete any dynamically allocated memory associated with
-// this object.
+//*******************************************************************
+// ~JsonObject()
+//
+// destructor - deallocate any memory associated with this object.
 JsonObject::~JsonObject() {
     for (jsonmap::iterator it = internal_map.begin(); it != internal_map.end(); ++it)
         delete it->second;
 }
 
-// return a pointer to a deep copy of this object (uses copy constructor)
+//*******************************************************************
+// copy()
+//
+// create a deep clone of this JsonValue and return the result.
+// 
+// parameters:
+//    none
+// returns:
+//    a pointer to a deep clone of the object
 JsonAbstractValue* JsonObject::copy() {
     return (JsonAbstractValue*) new JsonObject(*this);
 }
 
+//*******************************************************************
+// put()
+//
+// add a new element into the object.
+// 
+// parameters:
+//    key - the key to associate the new value with
+//    val - the new value to add
+// returns:
+//    void
 void JsonObject::put(string key, JsonAbstractValue* val) {
     jsonmap::iterator it2 = internal_map.find(key);
     if (it2 != internal_map.end()) {
@@ -51,9 +107,20 @@ void JsonObject::put(string key, JsonAbstractValue* val) {
     }
 }
 
-/*
-* diagnostic function - dumps the contents of the json object to the system output device
-*/
+//*******************************************************************
+// dump()
+//
+// a diagnostic function to dump this object to the 
+// specifed output stream.
+// 
+// parameters:
+//    out - the output stream to write to
+//    pretty - if true, the output will be indented with fields on
+//       separate lines.
+//    indent - the indentation level to be used for this value
+//    useIndent - true if indentation should be used, otherwise false
+// returns:
+//    void
 void JsonObject::dump(ostream& out, bool pretty, int indent, bool useIndent) {
     if ((useIndent)&&(pretty))  for (int i = 0;i < indent;i++) out<<" ";
     out << "{";
@@ -76,16 +143,36 @@ void JsonObject::dump(ostream& out, bool pretty, int indent, bool useIndent) {
     if (pretty) for (int i = 0;i < indent;i++) out<<" ";
     out<<"}";
 }
+
+//*******************************************************************
+// dump()
+//
+// a diagnostic function to dump this object to the 
+// specifed output stream.
+// 
+// parameters:
+//    out - the output stream to write to
+//    pretty - if true, the output will be indented with fields on
+//       separate lines.
+// returns:
+//    void
 void JsonObject::dump(ostream& out, bool pretty) {
     dump(out, pretty, 0, true);
 }
 
-/*
-* returns a string value of the specified element where the specifier
-* is of the form:
-* 		Empty - return the entire object
-* 		key
-*/
+//*******************************************************************
+// getValue()
+//
+// returns a string value of the specified element where the specifier
+// is of the form:
+// 		Empty - return the entire object
+// 		key - return the value associated with the specific key
+// 
+// parameters:
+//    specifier - the key for the value to return - or empty to return 
+//       a string representation of the entire object (not normal)
+// returns:
+//    a string representation of the requested value
 string JsonObject::getValue(string specifier) {
     if (internal_map.empty()) return "";
 
@@ -111,14 +198,17 @@ string JsonObject::getValue(string specifier) {
 }
 
     
-/*
-* returns a bool value of the specified element where the specifier
-* is of the form:
-* 		Empty - return the entire object
-* 		key
-* 		key[index].specifier
-* 		key.specifier
-*/
+//*******************************************************************
+// getBoolean()
+//
+// returns a boolean representation of the value specified by the 
+// input parameter.
+// 
+// parameters:
+//    specifier - the key for the value to return
+// returns:
+//    a boolean representation of the requested value (if found), 
+//    otherwise, false
 bool JsonObject::getBoolean(string specifier) {
     if (internal_map.empty()) return "";
     if (specifier == "") return false;
@@ -130,10 +220,17 @@ bool JsonObject::getBoolean(string specifier) {
 }
 
     
-/*
-* returns a handle where the specifier is of the form:
-* 		key
-*/
+//*******************************************************************
+// getBoolean()
+//
+// returns a string representation of the handle specified by the 
+// input parameter.
+// 
+// parameters:
+//    specifier - the key for the value to return
+// returns:
+//    a string representation of the requested handle (if found), 
+//    otherwise, an empty string
 string JsonObject::getHandle(string specifier) {
     if (internal_map.empty()) return "";
     if (specifier == "") return "";
@@ -145,11 +242,17 @@ string JsonObject::getHandle(string specifier) {
 }
 
     
-/*
-* returns an integer value of the specified element where the specifier
-* is of the form:
-* 		key
-*/
+//*******************************************************************
+// getInteger()
+//
+// returns an integer representation of the value specified by the 
+// input parameter.
+// 
+// parameters:
+//    specifier - the key for the value to return
+// returns:
+//    an integer representation of the requested value (if found), 
+//    otherwise, zero
 long JsonObject::getInteger(string specifier) {
     if (internal_map.empty()) return 0;
     if (specifier == "") return 0;
@@ -161,11 +264,17 @@ long JsonObject::getInteger(string specifier) {
 }
 
     
-/*
-* returns a double value of the specified element where the specifier
-* is of the form:
-* 		key
-*/
+//*******************************************************************
+// getDouble()
+//
+// returns a double representation of the value specified by the 
+// input parameter.
+// 
+// parameters:
+//    specifier - the key for the value to return
+// returns:
+//    a double representation of the requested value (if found), 
+//    otherwise, zero
 double JsonObject::getDouble(string specifier) {
     if (internal_map.empty()) return 0.0;
     if (specifier == "") return 0.0;
@@ -176,18 +285,46 @@ double JsonObject::getDouble(string specifier) {
     return 0.0;
 }
 
+//*******************************************************************
+// find()
+//
+// find and return the value associated with the specified key.
+// 
+// parameters:
+//    specifier - the key for the value to return
+// returns:
+//    a pointer to a JsonAbstractValue associated with the key, otherwise
+//    NULL
 JsonAbstractValue* JsonObject::find(string key) {
+    map<string,JsonAbstractValue*>::iterator it = internal_map.find(key);
+    if (it == internal_map.end()) return NULL;
     return internal_map.find(key)->second;
 }
     
-// return the size of the json object
+//*******************************************************************
+// size()
+//
+// return the number of elements within this object.
+// 
+// parameters:
+//    none.
+// returns:
+//    the number of fields in this object.
 unsigned long JsonObject::size() {
     return internal_map.size();
 }
 
-// return a specific indexed element from the array
+//*******************************************************************
+// getElementKey()
+//
+// returns the key for the nth indext element within the object.
+// 
+// parameters:
+//    idx - the index number for the element to retrieve the key for.
+// returns:
+//    the key for the nth element, otherwise an empty string.
 string JsonObject::getElementKey(unsigned long idx) {
-    if (idx >= index.size()) return NULL;
+    if (idx >= index.size()) return "";
 
     // attempt to find the indexed item in the array
     jsonmapindex::iterator it = index.begin();
