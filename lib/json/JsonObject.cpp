@@ -7,26 +7,26 @@ JsonObject::JsonObject() {
 * create a deep clone of the specified json object
 */
 JsonObject::JsonObject(const JsonObject &obj) {
-    // iterate through each element in the map
-    for (jsonmap::iterator it = map.begin(); it != map.end(); ++it) {
+    // iterate through each element in the internal_map
+    for (jsonmap::iterator it = internal_map.begin(); it != internal_map.end(); ++it) {
         string key = it->first;
         JsonAbstractValue &value = *(it->second);
         
         // erase exsiting entry if it exists (this shouldnt happen)
-        jsonmap::iterator it2 = map.find(key);
-        if (it2 != map.end()) {
+        jsonmap::iterator it2 = internal_map.find(key);
+        if (it2 != internal_map.end()) {
             delete it2->second;
-            map.erase(it2);
+            internal_map.erase(it2);
         }
         // add the new entry
-        map.insert(pair<string, JsonAbstractValue*>(key,it->second->copy()));
+        internal_map.insert(pair<string, JsonAbstractValue*>(key,it->second->copy()));
     }
 }
 
 // destructor - delete any dynamically allocated memory associated with
 // this object.
 JsonObject::~JsonObject() {
-    for (jsonmap::iterator it = map.begin(); it != map.end(); ++it)
+    for (jsonmap::iterator it = internal_map.begin(); it != internal_map.end(); ++it)
         delete it->second;
 }
 
@@ -36,17 +36,17 @@ JsonAbstractValue* JsonObject::copy() {
 }
 
 void JsonObject::put(string key, JsonAbstractValue* val) {
-    jsonmap::iterator it2 = map.find(key);
-    if (it2 != map.end()) {
+    jsonmap::iterator it2 = internal_map.find(key);
+    if (it2 != internal_map.end()) {
         delete it2->second;
-        map.erase(it2);
+        internal_map.erase(it2);
 
         // add the new entry
-        map.insert(pair<string, JsonAbstractValue*>(key, val));
+        internal_map.insert(pair<string, JsonAbstractValue*>(key, val));
     }
     else {
-        // add the new entry and map index
-        map.insert(pair<string, JsonAbstractValue*>(key, val));
+        // add the new entry and internal_map index
+        internal_map.insert(pair<string, JsonAbstractValue*>(key, val));
         index.push_back(key);
     }
 }
@@ -61,8 +61,8 @@ void JsonObject::dump(ostream& out, bool pretty, int indent, bool useIndent) {
 
     for (jsonmapindex::iterator it = index.begin(); it != index.end(); ++it) {
         if (pretty) for (int i = 0;i < indent + 3;i++) out<<" ";
-        string key = map.find(it->data())->first;
-        JsonAbstractValue& value = *map.find(it->data())->second;
+        string key = internal_map.find(it->data())->first;
+        JsonAbstractValue& value = *internal_map.find(it->data())->second;
 
         out << "\""<<key<<"\":";
         value.dump(out, pretty, indent + 3,false);
@@ -87,13 +87,13 @@ void JsonObject::dump(ostream& out, bool pretty) {
 * 		key
 */
 string JsonObject::getValue(string specifier) {
-    if (map.empty()) return "";
+    if (internal_map.empty()) return "";
 
     string result = "";
     if (specifier == "") {
         // The specifier is empty - return values for all records in the
         // object (this should not be normal)
-        for (jsonmap::iterator it = map.begin(); it != map.end(); ++it) {
+        for (jsonmap::iterator it = internal_map.begin(); it != internal_map.end(); ++it) {
             string key = it->first;
             JsonAbstractValue& value = *(it->second);
             result.append("\"");
@@ -105,8 +105,8 @@ string JsonObject::getValue(string specifier) {
         return result;
     }
     // the specifier as the key
-    jsonmap::iterator it = map.find(specifier);
-    if (it != map.end()) return it->second->getValue("");
+    jsonmap::iterator it = internal_map.find(specifier);
+    if (it != internal_map.end()) return it->second->getValue("");
     return "";
 }
 
@@ -120,12 +120,12 @@ string JsonObject::getValue(string specifier) {
 * 		key.specifier
 */
 bool JsonObject::getBoolean(string specifier) {
-    if (map.empty()) return "";
+    if (internal_map.empty()) return "";
     if (specifier == "") return false;
 
     // the specifier as the key
-    jsonmap::iterator it = map.find(specifier);
-    if (it != map.end()) return it->second->getBoolean("");
+    jsonmap::iterator it = internal_map.find(specifier);
+    if (it != internal_map.end()) return it->second->getBoolean("");
     return false;
 }
 
@@ -135,12 +135,12 @@ bool JsonObject::getBoolean(string specifier) {
 * 		key
 */
 string JsonObject::getHandle(string specifier) {
-    if (map.empty()) return "";
+    if (internal_map.empty()) return "";
     if (specifier == "") return "";
 
     // the specifier as the key
-    jsonmap::iterator it = map.find(specifier);
-    if (it != map.end()) return it->second->getHandle("");
+    jsonmap::iterator it = internal_map.find(specifier);
+    if (it != internal_map.end()) return it->second->getHandle("");
     return "NULL";
 }
 
@@ -151,12 +151,12 @@ string JsonObject::getHandle(string specifier) {
 * 		key
 */
 long JsonObject::getInteger(string specifier) {
-    if (map.empty()) return 0;
+    if (internal_map.empty()) return 0;
     if (specifier == "") return 0;
 
     // the specifier as the key
-    jsonmap::iterator it = map.find(specifier);
-    if (it != map.end()) return it->second->getInteger("");
+    jsonmap::iterator it = internal_map.find(specifier);
+    if (it != internal_map.end()) return it->second->getInteger("");
     return 0;
 }
 
@@ -167,22 +167,22 @@ long JsonObject::getInteger(string specifier) {
 * 		key
 */
 double JsonObject::getDouble(string specifier) {
-    if (map.empty()) return 0.0;
+    if (internal_map.empty()) return 0.0;
     if (specifier == "") return 0.0;
 
     // the specifier as the key
-    jsonmap::iterator it = map.find(specifier);
-    if (it != map.end()) return it->second->getDouble("");
+    jsonmap::iterator it = internal_map.find(specifier);
+    if (it != internal_map.end()) return it->second->getDouble("");
     return 0.0;
 }
 
 JsonAbstractValue* JsonObject::find(string key) {
-    return map.find(key)->second;
+    return internal_map.find(key)->second;
 }
     
 // return the size of the json object
 unsigned long JsonObject::size() {
-    return map.size();
+    return internal_map.size();
 }
 
 // return a specific indexed element from the array

@@ -84,10 +84,10 @@ PdrRepository::~PdrRepository() {
 
 bool PdrRepository::setDictionary(string filename) {
     // load the pdr template file
-    JsonAbstractValue* tmplt_defs = loadJsonFile("..\\..\\PdrMaker\\PdrMaker\\pldm_definitions.json");
+    JsonAbstractValue* tmplt_defs = loadJsonFile(filename.c_str());
     if ((!tmplt_defs) || (typeid(*tmplt_defs) != typeid(JsonObject))) {
         cerr << "Unable to open PLDM template Json file" << endl;
-        return 0;
+        return false;
     }
 
     // find the PDR description array within the file
@@ -95,12 +95,13 @@ bool PdrRepository::setDictionary(string filename) {
     av = ((JsonObject*)tmplt_defs)->find("pdr_defs");
     if ((!av) || (typeid(*av) != typeid(JsonArray))) {
         cerr << "Couldn't locate PDR templates in PLDM template Json file" << endl;
-        return 0;
+        return false;
     }
     dictionary = (JsonObject*)tmplt_defs;
+    return true;
 }
 
-int PdrRepository::getPdrPart(node& node1, uint32 recordHandle, uint32 & nextRecordHandle) {
+int PdrRepository::getPdrPart(PldmNode& node1, uint32 recordHandle, uint32 & nextRecordHandle) {
     // read part of the pdr from the device - 
     // returns -1 on error, 0 if not complete, 1 if the transfer is complete
     static uint32 lastRecordHandle = 0xffff;
@@ -144,40 +145,6 @@ int PdrRepository::getPdrPart(node& node1, uint32 recordHandle, uint32 & nextRec
         
         // this is the start of the packet
         partialPdrPtr = new GenericPdr();
-/*
-        switch (header->PDRType) {
-        case PDR_TYPE_NUMERIC_EFFECTER:
-            partialPdrPtr = new NumericEffecterPDR();
-            break;
-        case PDR_TYPE_STATE_EFFECTER:
-            partialPdrPtr = new StateEffecterPDR();
-            break;
-        case PDR_TYPE_NUMERIC_SENSOR:
-            partialPdrPtr = new GenericPdr();
-            break;
-        case PDR_TYPE_STATE_SENSOR:
-            partialPdrPtr = new StateSensorPDR();
-            break;
-        case PDR_TYPE_TERMINUS_LOCATOR:
-            partialPdrPtr = new TerminusLocatorPDR();
-            break;
-        case PDR_TYPE_FRU_RECORD_SET:
-            partialPdrPtr = new FruRecordSetPDR();
-            break;
-        case PDR_TYPE_ENTITY_ASSOCIATION:
-            partialPdrPtr = new EntityAssociationPDR();
-            break;
-        case PDR_TYPE_OEM_ENTITY_ID:
-            partialPdrPtr = new OemEntityIdPDR();
-            break;
-        case PDR_TYPE_OEM_STATE_SET:
-            partialPdrPtr = new OemStateSetPDR();
-            break;
-        default:
-            // TODO: add support for other PDR types
-            return -1;
-        }
-        */
     }
 
     // copy the data into the result
@@ -186,8 +153,7 @@ int PdrRepository::getPdrPart(node& node1, uint32 recordHandle, uint32 & nextRec
         getPdrResponse->responseCount);
 
 
-    if (typeid(*partialPdrPtr) == typeid(GenericPdr))
-        ((GenericPdr*)partialPdrPtr)->setDictionary(findPdrTemplateFromId(partialPdrPtr->getPdrType()));
+    ((GenericPdr*)partialPdrPtr)->setDictionary(findPdrTemplateFromId(partialPdrPtr->getPdrType()));
 
     // update state based on completion code
     switch (getPdrResponse->transferFlag) {
@@ -226,7 +192,7 @@ int PdrRepository::getPdrPart(node& node1, uint32 recordHandle, uint32 & nextRec
 }
 
 
-bool PdrRepository::addPdrsFromNode(node node1) {
+bool PdrRepository::addPdrsFromNode(PldmNode& node1) {
     // loop to read all the PDR records from the node and build a local PDR repository
     uint32 recordHandle = 0;
     uint32 nextRecordHandle = 0;
