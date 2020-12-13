@@ -1,7 +1,36 @@
-﻿//Description: cpp file for MCTP data transfer protocol
-//Authors: Douglas Sandy, David Sandy
-//Copyright 2020 PICMG all rights reserved
-
+﻿//*******************************************************************
+//    mctp.cpp
+//
+//    This file contains implementation of a MCTP serial driver 
+//    class which is intended to be used as part of 
+//    the PICMG PLDM library reference code. This class contains
+//	  a state machine that recieves a char stream and outputs and
+//    validates MCTP packets.
+//    
+//    Portions of this code are based on the Management Component Transport
+//    Protocol (MCTP) specifications from the Distributed Management Task Force 
+//    (DMTF).  More information about MCTP can be found on the DMTF
+//    web site (www.dmtf.org).
+//
+//    More information on the PICMG IoT data model can be found within
+//    the PICMG family of IoT specifications.  For more information,
+//    please visit the PICMG web site (www.picmg.org)
+//
+//    Copyright (C) 2020,  PICMG
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
 #include "mctp.h"
 extern bool          uart_haschar();
 extern unsigned char uart_getchar();
@@ -30,53 +59,59 @@ using namespace std;
 #define MCTP_SERIAL_REV         0x01
 
 //*******************************************************************
-//Function name: MctpSerialDriver
-//Description: default constructor that initializes UART with default USB pin
-//Parameters:
-//Returns:
-//Changes:
+// MctpSerialDriver()
+//
+// Constructor for the MctpSerialDriver Class - implements and
+// initializes UART with default linux USB pin.
 MctpSerialDriver::MctpSerialDriver() {
     uart.initialize("/dev/ttyUSB0");
 }
 
 //*******************************************************************
-//Function name: ~MctpSerialDriver
-//Description: default destructor
-//Parameters:
-//Returns:
-//Changes:
+// MctpSerialDriver()
+//
+// Destructor for the MctpSerialDriver Class
 MctpSerialDriver::~MctpSerialDriver() {
 
 }
 
 //*******************************************************************
-//Function name: isPacketAvailable
-//Description: checks for whether there is an MCTP packet available and
-//             returns whether there is or not as a bool
-//Parameters:
-//Returns: a boolean statement of whether there is a packet
-//Changes:
+// isPacketAvailable()
+//
+// This is a helper function that checks whether there is
+// a packet available in the buffer
+//
+// parameters:
+//	  none
+// returns:
+//    boolean - whether there is a packet available
 bool  MctpSerialDriver::isPacketAvailable() {
 	return mctp_packet_ready;
 }
 
 //*******************************************************************
-//Function name: getPacket
-//Description: a getter that returns a MCTP packet from the buffer
-//Parameters:
-//Returns: an MCTP packet as a char*
-//Changes:
+// getPacket()
+//
+// returns a packet from the buffer
+//
+// parameters:
+//	  none
+// returns:
+//    rxBuffer - the buffer's contents, usually a MCTP packet
 unsigned char* MctpSerialDriver::getPacket() {
 	return rxBuffer;
 }
 
 //*******************************************************************
-//Function name: updateRxFSM
-//Description: a finite state machine that builds a MCTP packet from
-//             the serial buffer and checks for errors in the packet
-//Parameters:
-//Returns:
-//Changes:
+// isPacketAvailable()
+//
+// This is a finite state machine takes in chars from the serial port
+// and builds them into a MCTP packet and validates the packet.
+//
+// parameters:
+//	  none
+// returns:
+//    void
 void  MctpSerialDriver::updateRxFSM() {
 	static unsigned char mctp_serial_state = MCTPSER_WAITING_FOR_SYNC;
 	static unsigned int byte_count = 0;
@@ -104,7 +139,8 @@ void  MctpSerialDriver::updateRxFSM() {
 		else mctp_serial_state = MCTPSER_WAITING_FOR_SYNC;
 		break;
 	case MCTPSER_BYTECOUNT:
-    // checking bytecount. This number should be the data payload size plus 4 bytes
+    // checking bytecount. This number should be the data 
+	// payload size plus 4 bytes
 		if (ch > 0x4) {
 			byte_count = ch - 4;
 			mctp_serial_state = MCTPSER_VERSION;
@@ -138,7 +174,8 @@ void  MctpSerialDriver::updateRxFSM() {
 		else mctp_serial_state = MCTPSER_WAITING_FOR_SYNC;
 		break;
 	case MCTPSER_FLAGS:
-    // checking flags. Refer to base specification for details. These flags should be set to 0xC8
+    // Checking flags. Refer to base specification for details. 
+	// These flags should be set to 0xC8
 		if (ch == 0xC8) {
 			mctp_serial_state = MCTPSER_BODY;
 			fcs = frameCheckSequence.calcFcs(fcs, &ch, 1);
@@ -165,7 +202,7 @@ void  MctpSerialDriver::updateRxFSM() {
 		break;
 	case MCTPSER_ESCAPE:
     // if escaped sync or escaped escape are detected in data payload,
-    //this either replaces it or drops the packet
+    // this either replaces it or drops the packet
 		if ((ch==ESCAPED_SYNC)||(ch==ESCAPED_ESCAPE)) {
 			// insert the character in the buffer
 			rxBuffer[rxInsertionIdx] = ch + 0x20;
@@ -202,11 +239,14 @@ void  MctpSerialDriver::updateRxFSM() {
 }
 
 //*******************************************************************
-//Function name: transmitFrameStart
-//Description: transmits the MCTP packet header to the serial port
-//Parameters: totallength- the length of the data in bytes + 4
-//Returns:
-//Changes:
+// transmitFrameStart()
+//
+// This function builds the MCTP packet header and puts it into the buffer.
+//
+// parameters:
+//	  totallength - the length of the message being transmitted plus 4 bytes
+// returns:
+//    void
 void  MctpSerialDriver::transmitFrameStart(unsigned char totallength) {
 	txfcs = frameCheckSequence.INITFCS;
 	unsigned char ch = SYNC_CHAR;
@@ -227,11 +267,15 @@ void  MctpSerialDriver::transmitFrameStart(unsigned char totallength) {
 }
 
 //*******************************************************************
-//Function name: transmitFrameData
-//Description: transmits the message payload to the serial port
-//Parameters: data- the message being transmitted: size- the length of the data in bytes
-//Returns:
-//Changes:
+// transmitFrameData()
+//
+// This function builds the MCTP packet body and puts it into the buffer.
+//
+// parameters:
+//	  data -  the message being transmitted
+//    length - the length of the data in bytes
+// returns:
+//    void
 void  MctpSerialDriver::transmitFrameData(unsigned char *data, unsigned int size) {
 	for (unsigned int i = 0; i < size; i++) {
 		// write the character
@@ -247,11 +291,14 @@ void  MctpSerialDriver::transmitFrameData(unsigned char *data, unsigned int size
 }
 
 //*******************************************************************
-//Function name: transmitFrameEnd
-//Description: transmits the MCTP packet footer to the serial port
-//Parameters:
-//Returns:
-//Changes:
+// transmitFrameEnd()
+//
+// This function builds the MCTP packet footer and puts it into the buffer.
+//
+// parameters:
+//	  none
+// returns:
+//    void
 void  MctpSerialDriver::transmitFrameEnd() {
 	// transmit the message length in big-endian format
 	uart.writeCh(txfcs >> 8);
