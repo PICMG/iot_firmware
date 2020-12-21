@@ -1,12 +1,12 @@
-EXECUTABLE := uart_c_test
+EXECUTABLE := mctp_c_test
 LIBINCLUDES := ../../lib/include
 LIBPATH := ../../lib
 INCLUDES := .
-OBJECTS := uart_c_test.o $(LIBPATH)/uartc/libuartc.a
+OBJECTS := mctp_c_test.o $(LIBPATH)/mctp/libmctp.a $(LIBPATH)/fcs/libfcsc.a $(LIBPATH)/uart/libuartc.a
 CXX_FLAGS := -std=c++11 -ggdb
 
-build : $(OBJECTS)
-	g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) -L$(LIBPATH)/uartc -luartc
+build : $(OBJECTS)  
+	g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) -L$(LIBPATH)/mctp -L$(LIBPATH)/fcs -L$(LIBPATH)/uart -lfcsc -luartc -lmctp
 	
 %.o : %.cpp
 	g++ $(CXX_FLAGS) -c $< -I$(INCLUDES) -I$(LIBINCLUDES)
