@@ -1,13 +1,9 @@
-﻿//*******************************************************************
-//    fcs.h
+//*******************************************************************
+//    uart.h
 //
-//    This file provides definitions for a Frame Check Sequence used
-//    as part of the PICMG pldm library reference code. 
-//    
-//    Portions of this code are based on the IETF RFC 1662 
-//    as required by the DMTF MCTP and PLDM protocols.
-//    More information about PLDM and MCTP can be found on the DMTF
-//    web site (www.dmtf.org).
+//    This file provides definitions for UART serial port
+//    binding. This header is intended to be used as part of 
+//    the PICMG PLDM library reference code. 
 //
 //    More information on the PICMG IoT data model can be found within
 //    the PICMG family of IoT specifications.  For more information,
@@ -28,12 +24,26 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
-#pragma once
+#ifndef UART_H_INCLUDED
+#define UART_H_INCLUDED
 
-//constant values used as checks by the FCS
-#define  INITFCS 0xffff
-#define  GOODFCS 0xf0b8
+// struct for data transfer
+typedef unsigned char cbool;
+typedef struct{
+   int descriptor;        // file descriptor for the usb device
+   cbool is_connected;
+   struct termios *tty;
+} uart_struct;
 
-//FCS value generator
-unsigned int fcs_calcFcs(unsigned int fcs, unsigned char* cp, unsigned int len);
+// function definitions
+void  uart_delay_ms(float ms);
+cbool uart_init(uart_struct *, const char *);
+cbool uart_isConnected(uart_struct*);
+cbool uart_flush(uart_struct*);
+cbool uart_readCh(uart_struct *,char*);
+cbool uart_writeCh(uart_struct*, char);
+cbool uart_writeBuffer(uart_struct*,const void* buf, unsigned int size);
+cbool uart_rx_isempty();
+cbool uart_close(uart_struct *);
 
+#endif // UART_H_INCLUDED

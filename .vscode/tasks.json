@@ -6,7 +6,7 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "make pldm_test",
+            "command": "make mctp_c_test",
             "group": {
                 "kind": "build",
                 "isDefault": true
