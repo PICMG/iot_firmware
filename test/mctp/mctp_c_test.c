@@ -20,6 +20,7 @@
 
 int main()
 {
+    //testing sending packet
     unsigned char* ch = (unsigned char*)("ABCDEFGHIJKLMNOPQRSTUVWXYq");
 
     unsigned int chSize = 26;
@@ -35,6 +36,8 @@ int main()
     }
     printf("%s", mctp_getPacket(&mctp1));
     printf("\n");
-
+    
+    mctp_close(&mctp1);
+    
     return 0;
 }
