@@ -31,8 +31,10 @@
 //
 #pragma once
 
-#include "uart.h"
-#include "fcs.h"
+#include <iostream>
+
+#include "uartconnection.h"
+#include "fcs_cpp.h"
 
 // endpoint command codes
 #define CMD_RESERVED                       0x00
@@ -41,45 +43,25 @@
 
 #define MCTP_BUFFER_SIZE 128
 
-//#defines for MCTP data transmission
-#define MCTPSER_WAITING_FOR_SYNC 0
-#define MCTPSER_GETTING_REV      1
-#define MCTPSER_BYTECOUNT        2
-#define MCTPSER_VERSION          4
-#define MCTPSER_DESTID           5
-#define MCTPSER_SOURCEID         6
-#define MCTPSER_FLAGS			 7
-#define MCTPSER_BODY             8
-#define MCTPSER_ESCAPE           9
-#define MCTPSER_FCS_MSB         10
-#define MCTPSER_FCS_LSB         11
-#define MCTPSER_ENDSYNC         12
-
-#define ESCAPE_CHAR             0x7D
-#define SYNC_CHAR               0x7E
-#define ESCAPED_ESCAPE          0x5D
-#define ESCAPED_SYNC            0x5E
-#define MCTP_SERIAL_REV         0x01
-
-
-typedef unsigned char cbool;
-
-// struct for data transfer
-typedef struct{
+/******************************************************************
+* Serial Driver Class structure
+*/
+class MctpSerialDriver {
+private:
     unsigned char rxBuffer[MCTP_BUFFER_SIZE];
-	unsigned char rxInsertionIdx;
+	unsigned char rxInsertionIdx = 0;
 	unsigned int  fcs;
 	unsigned int  txfcs;
-	cbool mctp_packet_ready;
-	uart_struct uart;
-} mctp_struct;
-
-// function definitions
-void  mctp_init(mctp_struct*);
-cbool mctp_isPacketAvailable(mctp_struct*);
-unsigned char* mctp_getPacket(mctp_struct*);
-void  mctp_updateRxFSM(mctp_struct*);
-void  mctp_transmitFrameStart(mctp_struct*, unsigned char totallength);
-void  mctp_transmitFrameData(mctp_struct*, unsigned char*, unsigned int);
-void  mctp_transmitFrameEnd(mctp_struct*);
-void  mctp_close(mctp_struct*);
+	bool mctp_packet_ready;
+    uartConnection uart;
+    FrameCheckSequence frameCheckSequence;
+public:
+	MctpSerialDriver();
+	~MctpSerialDriver();
+	bool  isPacketAvailable();
+	unsigned char* getPacket();
+	void  updateRxFSM();
+	void  transmitFrameStart(unsigned char totallength);
+	void  transmitFrameData(unsigned char*, unsigned int);
+	void  transmitFrameEnd();
+};

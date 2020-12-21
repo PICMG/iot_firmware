@@ -30,10 +30,18 @@
 //
 #pragma once
 
-//constant values used as checks by the FCS
-#define  INITFCS 0xffff
-#define  GOODFCS 0xf0b8
+#include <iostream>
 
-//FCS value generator
-unsigned int fcs_calcFcs(unsigned int fcs, unsigned char* cp, unsigned int len);
+class FrameCheckSequence {
+private:
+
+public:
+    //constant values used as checks by the FCS
+    static const unsigned int INITFCS = 0xffff;
+    static const unsigned int GOODFCS = 0xf0b8;
+    //FCS lookup table as calculated by the table generator.
+    static const unsigned int fcstab[256];
+    //FCS value generator
+    unsigned int calcFcs(unsigned int fcs, unsigned char* cp, unsigned int len);
+};
 

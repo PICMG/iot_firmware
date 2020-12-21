@@ -17,7 +17,7 @@
 #include <sys/ioctl.h>
 
 #include "uartconnection.h"
-#include "mctp.h"
+#include "mctp_cpp.h"
 using namespace std;
 
 class TestDriver{
