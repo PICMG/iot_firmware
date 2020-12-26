@@ -88,8 +88,8 @@ int uart_init(const char* name)
     if (tcgetattr(handle, &tty) != 0) return 0;
 
     /* Set Baud Rate */
-    cfsetospeed(&tty, (speed_t)B115200);
-    cfsetispeed(&tty, (speed_t)B115200);
+    cfsetospeed(&tty, (speed_t)B9600);
+    cfsetispeed(&tty, (speed_t)B9600);
 
     /* Setting other Port Stuff */
     tty.c_cflag &= ~PARENB;            // Make 8n1
@@ -118,7 +118,7 @@ int uart_init(const char* name)
     }
 
     // delay a bit to allow the endpoint to wake up.
-    delay_ms(100);
+    delay_ms(5000);
 
     return handle;
 }

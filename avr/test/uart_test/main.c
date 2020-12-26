@@ -1,81 +1,51 @@
-/*
- */
-
+//*******************************************************************
+//    main.c
+//
+//    This creates a simple uart loopback program for the atmega328p
+//
+//    Copyright (C) 2020,  PICMG
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
 #include "avr/io.h"
 #include "uart.h"
-
-/**********************************************************
-* writestr()
-*
-* write an ascii null-terminated string to the uart.
-*
-* parameters:
-*   str - a pointer to the ascii null-terminated string
-* returns:
-*   void
-* changes:
-*   the state of the USART will change due to sending
-*   characters to the transmit buffer.
-*/
-void writestr(char* str)
-{
-    unsigned i = 0;
-    while (str[i]!=0) {
-        uart_writeCh(0,str[i]);
-        i++;
-    }
-}
-
-/**********************************************************
-* writesize
-*
-* write the size of a data type to the console.  This is
-* a very simple routine that is only intended for HW2.
-*
-* parameters:
-*    size - the size of the data type
-* returns:
-*    void
-* changes:
-*    the state of the USART will change due to writing
-*    characters to the transmit buffer.
-*/
-void writesize(int size)
-{
-  switch (size) {
-  case 1:
-    writestr("8 bits\n");
-    break;
-  case 2:
-    writestr("16 bits\n");
-    break;
-  case 4:
-    writestr("32 bits\n");
-    break;
-  default:
-    writestr("unknown\n");
-  }
-}
+#include "mctp.h"
 
 int main(void)
 {
-    // enable global interrupts
-    SREG |= (1<<SREG_I);
-    uart_init(0,"");
+  mctp_struct mctp1;
 
-    writestr("Hello World from Atmega328\n");
-    writestr("SER486 - Homework Assignment 2\n");
-    writestr("Doug Sandy\n");
-    writestr("char size (bits) = ");writesize(sizeof(char));
-    writestr("int  size (bits) = ");writesize(sizeof(int));
-    writestr("long size (bits) = ");writesize(sizeof(long));
+  // enable global interrupts
+  SREG |= (1<<SREG_I);
 
-    while (1) {
-        char ch;
-        if (uart_readCh(0,&ch)) {
-          uart_writeCh(0,ch);
-        }
+  // initilaize the uart 
+  uart_init("");
+
+  // initialize mctp socket
+  mctp_init(0, &mctp1);
+          
+  while (1) {
+    char ch;
+    if (!mctp_isPacketAvailable(&mctp1)) {
+      mctp_updateRxFSM(&mctp1);
+    } else {
+      // packet has arrived - process as a loopback
+      mctp_transmitFrameStart(&mctp1,10+4);
+      mctp_transmitFrameData(&mctp1,mctp_getPacket(&mctp1),10);
+      mctp_transmitFrameEnd(&mctp1);
     }
-    return 0;
+  }
+  return 0;
 }
 
