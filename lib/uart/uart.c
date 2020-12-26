@@ -49,7 +49,7 @@
 //	  ms - the amount of delay in milliseconds
 // returns:
 //    void
-void delay_ms(float ms) {
+static void delay_ms(float ms) {
     time_t start = time(NULL);
     while (difftime(time(NULL), start) < ms / 1000.0) {};
 }
@@ -60,89 +60,67 @@ void delay_ms(float ms) {
 // This function initializes the UART with the provided linux USB pin.
 //
 // parameters:
-//	  vars - a data struct used for all uart functions
+//	  handle - a data struct used for all uart functions
 //    name - the name of the linux USB pin, usually "/dev/ttyUSB0"
 // returns:
-//    cbool - whether the connection was successful
-cbool uart_init(uart_struct * vars, const char* name)
+//    returns the handle for the serial port device, or -1 on error
+int uart_init(const char* name)
 {
-    // dont reinitialize if the port is still connected
-    if ((vars->is_connected)==1) return 1;
+    struct termios tty;
+    int handle;
 
-    if (vars->descriptor) close(vars->descriptor);
-
-    // allocate memory for the termios structure
-    vars->tty = (struct termios *)malloc(sizeof(struct termios));
-    if (!(vars->tty)) return 0;
-
-    memset((void*)(vars->tty), 0, sizeof(*(vars->tty)));
+    memset((void*)(&tty), 0, sizeof(struct termios));
 
     // attempt to open the USB connection
     printf("opening ");
     printf("%s",name);
     printf("\n");
-    vars->descriptor = open(name, O_RDWR | O_NOCTTY);
-    printf("%d",(vars->descriptor));
+    handle = open(name, O_RDWR | O_NOCTTY);
+    printf("%d",(handle));
     printf("\n");
-    if(vars->descriptor<=0)
+    if(handle<=0)
     {
         printf("invalid usb port\n");
-        return 0;
+        return -1;
     }
 
     /* get the current attributes for the usb connection */
-    if (tcgetattr(vars->descriptor, vars->tty) != 0) return 0;
+    if (tcgetattr(handle, &tty) != 0) return 0;
 
     /* Set Baud Rate */
-    cfsetospeed(vars->tty, (speed_t)B115200);
-    cfsetispeed(vars->tty, (speed_t)B115200);
+    cfsetospeed(&tty, (speed_t)B115200);
+    cfsetispeed(&tty, (speed_t)B115200);
 
     /* Setting other Port Stuff */
-    vars->tty->c_cflag &= ~PARENB;            // Make 8n1
-    vars->tty->c_cflag &= ~CSTOPB;
-    vars->tty->c_cflag &= ~CSIZE;
-    vars->tty->c_cflag |= CS8;
+    tty.c_cflag &= ~PARENB;            // Make 8n1
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CSIZE;
+    tty.c_cflag |= CS8;
 
-    vars->tty->c_cflag &= ~CRTSCTS;           // no flow control
-    vars->tty->c_cc[VMIN] = 0;                  // read doesn't block
-    vars->tty->c_cc[VTIME] = 5;                  // 0.5 seconds read timeout
-    vars->tty->c_cflag |= CREAD | CLOCAL;     // turn on READ & ignore ctrl lines
-    vars->tty->c_iflag &= ~(IXON | IXOFF | IXANY);// turn off s/w flow ctrl
-    vars->tty->c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); // make raw
-    vars->tty->c_oflag &= ~OPOST;              // make raw
+    tty.c_cflag &= ~CRTSCTS;           // no flow control
+    tty.c_cc[VMIN] = 0;                  // read doesn't block
+    tty.c_cc[VTIME] = 5;                  // 0.5 seconds read timeout
+    tty.c_cflag |= CREAD | CLOCAL;     // turn on READ & ignore ctrl lines
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY);// turn off s/w flow ctrl
+    tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); // make raw
+    tty.c_oflag &= ~OPOST;              // make raw
 
     /* Make raw */
-    cfmakeraw(vars->tty);
+    cfmakeraw(&tty);
 
     /* Flush Port, then applies attributes */
     printf("flushing port\n");
-    tcflush(vars->descriptor, TCIFLUSH);
+    tcflush(handle, TCIFLUSH);
 
-    if (tcsetattr(vars->descriptor, TCSANOW, vars->tty) != 0)
+    if (tcsetattr(handle, TCSANOW, &tty) != 0)
     {
-        return 0;
+        return -1;
     }
-
-    vars->is_connected = 1;
 
     // delay a bit to allow the endpoint to wake up.
     delay_ms(100);
 
-    return 1;
-}
-
-//*******************************************************************
-// uart_isConnected()
-//
-// A helper function that returns if the UART is connected
-//
-// parameters:
-//	  vars - a data struct used for all uart functions
-// returns:
-//    cbool - whether the connection was successful
-cbool uart_isConnected(uart_struct* vars)
-{
-    return vars->is_connected;
+    return handle;
 }
 
 //*******************************************************************
@@ -151,15 +129,14 @@ cbool uart_isConnected(uart_struct* vars)
 // This function flushes the buffer.
 //
 // parameters:
-//	  vars - a data struct used for all uart functions
+//	  handle - a file descriptor to the open uart port
 // returns:
-//    cbool - whether the buffer was successfuly flushed
-cbool uart_flush(uart_struct* vars)
+//    unsigned char - whether the buffer was successfuly flushed
+unsigned char uart_flush(int handle)
 // flush all characters from the buffer
 {
-    if (vars->is_connected==0) return 0;
     char ch;
-    while (uart_readCh(vars,&ch)) {};
+    while (uart_readCh(handle,&ch)) {};
     return 1;
 }
 
@@ -169,32 +146,30 @@ cbool uart_flush(uart_struct* vars)
 // This function reads a char from the buffer.
 //
 // parameters:
-//	  vars - a data struct used for all uart functions
+//	  handle - a data struct used for all uart functions
 //    ch - a pointer to where the read-in char can be stored
 // returns:
-//    cbool - whether the read was successful
-cbool uart_readCh(uart_struct* vars,char* ch)
+//    unsigned char - whether the read was successful
+unsigned char uart_readCh(int handle,char* ch)
 {
-    if (vars->is_connected==0) return 0;
     fd_set rfds;
     struct timeval tv = { .tv_sec = 0, .tv_usec = 0 };
     FD_ZERO(&rfds);
-    FD_SET(vars->descriptor, &rfds);
+    FD_SET(handle, &rfds);
     
     // non-blocking call to wait until we have data
-    int ready = select(vars->descriptor + 1, &rfds, NULL, NULL, &tv);
+    int ready = select(handle + 1, &rfds, NULL, NULL, &tv);
 
-    if (ready && FD_ISSET(vars->descriptor, &rfds)) {
+    if (ready && FD_ISSET(handle, &rfds)) {
         size_t len = 0;
-        ioctl(vars->descriptor, FIONREAD, &len);
+        ioctl(handle, FIONREAD, &len);
 
         if (len == 0) {
-            vars->is_connected = 0;
             return 0;
         }
 
-        // While we have data, collect it
-        if (read(vars->descriptor, ch, 1) > 0) {
+        // if we have data, collect it
+        if (read(handle, ch, 1) > 0) {
             return 1;
         }
 
@@ -208,14 +183,13 @@ cbool uart_readCh(uart_struct* vars,char* ch)
 // This function writes a char out to the buffer.
 //
 // parameters:
-//	  vars - a data struct used for all uart functions
+//	  handle - a data struct used for all uart functions
 //    ch - the char being sent out to the serial port
 // returns:
-//    cbool - whether the write was successful
-cbool uart_writeCh(uart_struct* vars,char ch)
+//    unsigned char - whether the write was successful
+unsigned char uart_writeCh(int handle,char ch)
 {
-    if (vars->is_connected==0) return 0;
-    if (write(vars->descriptor, &ch, 1) == 0) return 0;
+    if (write(handle, &ch, 1) == 0) return 0;
     return 1;
 }
 
@@ -225,15 +199,14 @@ cbool uart_writeCh(uart_struct* vars,char ch)
 // This function writes a buffer of chars (char*, str, char[])
 //
 // parameters:
-//	  vars - a data struct used for all uart functions
+//	  handle - a data struct used for all uart functions
 //    buffer - the chars being written out
 //    len - the length of the buffer
 // returns:
-//    cbool - whether the write was successful
-cbool uart_writeBuffer(uart_struct* vars, const void* buffer, unsigned int len)
+//    unsigned char - whether the write was successful
+unsigned char uart_writeBuffer(int handle, const void* buffer, unsigned int len)
 {
-    if (vars->is_connected==0) return 0;
-    if (write(vars->descriptor, buffer, len) != len) return 0;
+    if (write(handle, buffer, len) != len) return 0;
     return 1;
 }
 
@@ -243,13 +216,11 @@ cbool uart_writeBuffer(uart_struct* vars, const void* buffer, unsigned int len)
 // This function frees the memory taken by the serial binding
 //
 // parameters:
-//	  vars - a data struct used for all uart functions
+//	  handle - a data struct used for all uart functions
 // returns:
-//    cbool - whether the close was successful
-cbool uart_close(uart_struct* vars)
+//    unsigned char - whether the close was successful
+unsigned char uart_close(int handle)
 {
-    if (vars->is_connected==0) return 0;
-    close(vars->descriptor);
-    if (vars->tty) free(vars->tty);
+    close(handle);
     return 1;
 }

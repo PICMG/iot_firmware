@@ -1,11 +1,8 @@
 /*
  */
 
+#include "avr/io.h"
 #include "uart.h"
-
-#define DDRB11 (*((volatile char *)0x24))
-#define PORTB11 (*((volatile char *)0x25))
-
 
 /**********************************************************
 * writestr()
@@ -24,7 +21,7 @@ void writestr(char* str)
 {
     unsigned i = 0;
     while (str[i]!=0) {
-        uart_writechar(str[i]);
+        uart_writeCh(0,str[i]);
         i++;
     }
 }
@@ -62,7 +59,9 @@ void writesize(int size)
 
 int main(void)
 {
-    uart_init();
+    // enable global interrupts
+    SREG |= (1<<SREG_I);
+    uart_init(0,"");
 
     writestr("Hello World from Atmega328\n");
     writestr("SER486 - Homework Assignment 2\n");
@@ -71,7 +70,12 @@ int main(void)
     writestr("int  size (bits) = ");writesize(sizeof(int));
     writestr("long size (bits) = ");writesize(sizeof(long));
 
-    while (1) {}
+    while (1) {
+        char ch;
+        if (uart_readCh(0,&ch)) {
+          uart_writeCh(0,ch);
+        }
+    }
     return 0;
 }
 
