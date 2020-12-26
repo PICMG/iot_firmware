@@ -1,19 +1,11 @@
 Archive member included to satisfy reference by file (symbol)
 
-libserial.a(uart.o)           main.o (uart_init)
-libserial.a(serial.o)         libserial.a(uart.o) (serial_init)
 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
                               /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o (exit)
 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
                               main.o (__do_copy_data)
 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
-                              libserial.a(serial.o) (__do_clear_bss)
-
-Allocating common symbols
-Common symbol       size              file
-
-rxbuf               0x40              libserial.a(serial.o)
-txbuf               0x40              libserial.a(serial.o)
+                              uart.o (__do_clear_bss)
 
 Memory Configuration
 
@@ -32,7 +24,8 @@ Linker script and memory map
 Address of section .data set to 0x800100
 LOAD /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
 LOAD main.o
-LOAD libserial.a
+LOAD uart.o
+LOAD simulavr_info.o
 LOAD /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a
 LOAD /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/libm.a
 START GROUP
@@ -141,7 +134,7 @@ END GROUP
 .rela.plt
  *(.rela.plt)
 
-.text           0x0000000000000000      0x39e
+.text           0x0000000000000000      0x5a8
  *(.vectors)
  .vectors       0x0000000000000000       0x68 /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
                 0x0000000000000000                __vectors
@@ -224,71 +217,71 @@ END GROUP
                 0x00000000000000a2                __vector_10
                 0x00000000000000a2                __vector_16
                 0x00000000000000a2                __vector_20
- .text          0x00000000000000a6      0x102 main.o
+ .text          0x00000000000000a6      0x142 main.o
                 0x00000000000000a6                writestr
-                0x00000000000000fe                writesize
-                0x0000000000000152                main
- .text          0x00000000000001a8        0x8 libserial.a(uart.o)
-                0x00000000000001a8                uart_init
-                0x00000000000001ae                uart_writechar
- .text          0x00000000000001b0      0x1ea libserial.a(serial.o)
-                0x00000000000001b0                serial_init
-                0x00000000000001d6                __vector_18
-                0x0000000000000238                __vector_19
-                0x000000000000029e                serial_rxchars
-                0x00000000000002ac                serial_popchar
-                0x00000000000002e0                serial_writechar
-                0x0000000000000340                serial_writestr
-                0x000000000000036c                serial_writestr_P
- .text          0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
- .text          0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
- .text          0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
-                0x000000000000039a                . = ALIGN (0x2)
+                0x0000000000000104                writesize
+                0x0000000000000158                main
+ .text          0x00000000000001e8      0x3bc uart.o
+                0x00000000000001e8                __vector_18
+                0x000000000000027c                __vector_19
+                0x000000000000031a                uart_init
+                0x000000000000037a                uart_isConnected
+                0x0000000000000394                uart_flush
+                0x00000000000003b6                uart_readCh
+                0x0000000000000424                uart_writeCh
+                0x00000000000004ec                uart_writeBuffer
+                0x0000000000000562                uart_rx_isempty
+                0x000000000000058a                uart_close
+ .text          0x00000000000005a4        0x0 simulavr_info.o
+ .text          0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
+ .text          0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
+ .text          0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
+                0x00000000000005a4                . = ALIGN (0x2)
  *(.text.*)
  .text.libgcc.mul
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
  .text.libgcc.div
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
- .text.libgcc   0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
+ .text.libgcc   0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
  .text.libgcc.prologue
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
  .text.libgcc.builtins
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
  .text.libgcc.fmul
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
  .text.libgcc.fixed
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
  .text.libgcc.mul
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
  .text.libgcc.div
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
- .text.libgcc   0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
+ .text.libgcc   0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
  .text.libgcc.prologue
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
  .text.libgcc.builtins
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
  .text.libgcc.fmul
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
  .text.libgcc.fixed
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
  .text.libgcc.mul
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
  .text.libgcc.div
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
- .text.libgcc   0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
+ .text.libgcc   0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
  .text.libgcc.prologue
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
  .text.libgcc.builtins
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
  .text.libgcc.fmul
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
  .text.libgcc.fixed
-                0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
-                0x000000000000039a                . = ALIGN (0x2)
+                0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
+                0x00000000000005a4                . = ALIGN (0x2)
  *(.fini9)
- .fini9         0x000000000000039a        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
-                0x000000000000039a                exit
-                0x000000000000039a                _exit
+ .fini9         0x00000000000005a4        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
+                0x00000000000005a4                exit
+                0x00000000000005a4                _exit
  *(.fini9)
  *(.fini8)
  *(.fini8)
@@ -307,35 +300,34 @@ END GROUP
  *(.fini1)
  *(.fini1)
  *(.fini0)
- .fini0         0x000000000000039a        0x4 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
+ .fini0         0x00000000000005a4        0x4 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
  *(.fini0)
-                0x000000000000039e                _etext = .
+                0x00000000000005a8                _etext = .
 
-.siminfo        0x000000000000039e       0x28
- .siminfo       0x000000000000039e       0x28 libserial.a(uart.o)
-                0x000000000000039e                siminfo_serial_out
-                0x00000000000003a9                siminfo_serial_in
-                0x00000000000003b4                siminfo_cpufrequency
-                0x00000000000003ba                siminfo_device
+.siminfo        0x00000000000005a8       0x3a
+ .siminfo       0x00000000000005a8       0x3a simulavr_info.o
+                0x00000000000005a8                siminfo_device
+                0x00000000000005b4                siminfo_cpufrequency
+                0x00000000000005ba                siminfo_serial_in
+                0x00000000000005ce                siminfo_serial_out
 
-.data           0x0000000000800100       0xa8 load address 0x00000000000003c6
+.data           0x0000000000800100       0xa8 load address 0x00000000000005e2
                 0x0000000000800100                PROVIDE (__data_start, .)
  *(.data)
  .data          0x0000000000800100        0x0 /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
  .data          0x0000000000800100        0x0 main.o
- .data          0x0000000000800100        0x0 libserial.a(uart.o)
- .data          0x0000000000800100        0x0 libserial.a(serial.o)
+ .data          0x0000000000800100        0x0 uart.o
+ .data          0x0000000000800100        0x0 simulavr_info.o
  .data          0x0000000000800100        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
  .data          0x0000000000800100        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
  .data          0x0000000000800100        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
  *(.data*)
  *(.gnu.linkonce.d*)
  *(.rodata)
- .rodata        0x0000000000800100       0xa7 main.o
+ .rodata        0x0000000000800100       0xa8 main.o
  *(.rodata*)
  *(.gnu.linkonce.r*)
                 0x00000000008001a8                . = ALIGN (0x2)
- *fill*         0x00000000008001a7        0x1 
                 0x00000000008001a8                _edata = .
                 0x00000000008001a8                PROVIDE (__data_end, .)
 
@@ -344,23 +336,16 @@ END GROUP
  *(.bss)
  .bss           0x00000000008001a8        0x0 /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
  .bss           0x00000000008001a8        0x0 main.o
- .bss           0x00000000008001a8        0x0 libserial.a(uart.o)
- .bss           0x00000000008001a8        0x4 libserial.a(serial.o)
-                0x00000000008001a8                txtail
-                0x00000000008001a9                txhead
-                0x00000000008001aa                rxtail
-                0x00000000008001ab                rxhead
- .bss           0x00000000008001ac        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
- .bss           0x00000000008001ac        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
- .bss           0x00000000008001ac        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
+ .bss           0x00000000008001a8       0x84 uart.o
+ .bss           0x000000000080022c        0x0 simulavr_info.o
+ .bss           0x000000000080022c        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_exit.o)
+ .bss           0x000000000080022c        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
+ .bss           0x000000000080022c        0x0 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
  *(.bss*)
  *(COMMON)
- COMMON         0x00000000008001ac       0x80 libserial.a(serial.o)
-                0x00000000008001ac                rxbuf
-                0x00000000008001ec                txbuf
                 0x000000000080022c                PROVIDE (__bss_end, .)
-                0x00000000000003c6                __data_load_start = LOADADDR (.data)
-                0x000000000000046e                __data_load_end = (__data_load_start + SIZEOF (.data))
+                0x00000000000005e2                __data_load_start = LOADADDR (.data)
+                0x000000000000068a                __data_load_end = (__data_load_start + SIZEOF (.data))
 
 .noinit         0x000000000080022c        0x0
                 [!provide]                        PROVIDE (__noinit_start, .)
@@ -388,11 +373,17 @@ END GROUP
 .user_signatures
  *(.user_signatures*)
 
-.stab
+.stab           0x0000000000000000     0x129c
  *(.stab)
+ .stab          0x0000000000000000      0x6d8 main.o
+ .stab          0x00000000000006d8      0x8b8 uart.o
+                                        0xa80 (size before relaxing)
+ .stab          0x0000000000000f90      0x30c simulavr_info.o
+                                        0x480 (size before relaxing)
 
-.stabstr
+.stabstr        0x0000000000000000     0x1109
  *(.stabstr)
+ .stabstr       0x0000000000000000     0x1109 main.o
 
 .stab.excl
  *(.stab.excl)
@@ -406,13 +397,12 @@ END GROUP
 .stab.indexstr
  *(.stab.indexstr)
 
-.comment        0x0000000000000000       0x22
+.comment        0x0000000000000000       0x11
  *(.comment)
  .comment       0x0000000000000000       0x11 main.o
                                          0x12 (size before relaxing)
- .comment       0x0000000000000011       0x11 libserial.a(uart.o)
-                                         0x12 (size before relaxing)
- .comment       0x0000000000000022       0x12 libserial.a(serial.o)
+ .comment       0x0000000000000011       0x12 uart.o
+ .comment       0x0000000000000011       0x12 simulavr_info.o
 
 .note.gnu.avr.deviceinfo
                 0x0000000000000000       0x40
@@ -485,7 +475,7 @@ END GROUP
 
 .debug_macro
  *(.debug_macro)
-OUTPUT(hello_avr.elf elf32-avr)
+OUTPUT(uart_test.elf elf32-avr)
 LOAD linker stubs
 
 Cross Reference Table
@@ -499,7 +489,7 @@ __data_end                                        /usr/lib/gcc/avr/5.4.0/avr5/li
 __data_load_start                                 /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
 __data_start                                      /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
 __do_clear_bss                                    /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_clear_bss.o)
-                                                  libserial.a(serial.o)
+                                                  uart.o
 __do_copy_data                                    /usr/lib/gcc/avr/5.4.0/avr5/libgcc.a(_copy_data.o)
                                                   main.o
 __heap_end                                        /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
@@ -514,9 +504,9 @@ __vector_14                                       /usr/lib/gcc/avr/5.4.0/../../.
 __vector_15                                       /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
 __vector_16                                       /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
 __vector_17                                       /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
-__vector_18                                       libserial.a(serial.o)
+__vector_18                                       uart.o
                                                   /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
-__vector_19                                       libserial.a(serial.o)
+__vector_19                                       uart.o
                                                   /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
 __vector_2                                        /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
 __vector_20                                       /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
@@ -539,27 +529,20 @@ exit                                              /usr/lib/gcc/avr/5.4.0/avr5/li
                                                   /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
 main                                              main.o
                                                   /usr/lib/gcc/avr/5.4.0/../../../avr/lib/avr5/crtatmega328p.o
-rxbuf                                             libserial.a(serial.o)
-rxhead                                            libserial.a(serial.o)
-rxtail                                            libserial.a(serial.o)
-serial_init                                       libserial.a(serial.o)
-                                                  libserial.a(uart.o)
-serial_popchar                                    libserial.a(serial.o)
-serial_rxchars                                    libserial.a(serial.o)
-serial_writechar                                  libserial.a(serial.o)
-                                                  libserial.a(uart.o)
-serial_writestr                                   libserial.a(serial.o)
-serial_writestr_P                                 libserial.a(serial.o)
-siminfo_cpufrequency                              libserial.a(uart.o)
-siminfo_device                                    libserial.a(uart.o)
-siminfo_serial_in                                 libserial.a(uart.o)
-siminfo_serial_out                                libserial.a(uart.o)
-txbuf                                             libserial.a(serial.o)
-txhead                                            libserial.a(serial.o)
-txtail                                            libserial.a(serial.o)
-uart_init                                         libserial.a(uart.o)
+siminfo_cpufrequency                              simulavr_info.o
+siminfo_device                                    simulavr_info.o
+siminfo_serial_in                                 simulavr_info.o
+siminfo_serial_out                                simulavr_info.o
+uart_close                                        uart.o
+uart_flush                                        uart.o
+uart_init                                         uart.o
                                                   main.o
-uart_writechar                                    libserial.a(uart.o)
+uart_isConnected                                  uart.o
+uart_readCh                                       uart.o
+                                                  main.o
+uart_rx_isempty                                   uart.o
+uart_writeBuffer                                  uart.o
+uart_writeCh                                      uart.o
                                                   main.o
 writesize                                         main.o
 writestr                                          main.o

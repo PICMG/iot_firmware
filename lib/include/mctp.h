@@ -62,21 +62,19 @@
 #define MCTP_SERIAL_REV         0x01
 
 
-typedef unsigned char cbool;
-
 // struct for data transfer
 typedef struct{
     unsigned char rxBuffer[MCTP_BUFFER_SIZE];
 	unsigned char rxInsertionIdx;
 	unsigned int  fcs;
 	unsigned int  txfcs;
-	cbool mctp_packet_ready;
-	uart_struct uart;
+	unsigned char mctp_packet_ready;
+	int uart_handle;
 } mctp_struct;
 
 // function definitions
-void  mctp_init(mctp_struct*);
-cbool mctp_isPacketAvailable(mctp_struct*);
+void  mctp_init(int, mctp_struct*);
+unsigned char mctp_isPacketAvailable(mctp_struct*);
 unsigned char* mctp_getPacket(mctp_struct*);
 void  mctp_updateRxFSM(mctp_struct*);
 void  mctp_transmitFrameStart(mctp_struct*, unsigned char totallength);

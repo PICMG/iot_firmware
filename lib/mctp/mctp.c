@@ -38,11 +38,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-extern cbool          uart_haschar();
-extern unsigned char  uart_getchar();
-extern void           uart_writechar(unsigned char);
-
-
 //*******************************************************************
 // mctp_init()
 //
@@ -50,11 +45,12 @@ extern void           uart_writechar(unsigned char);
 // initializes UART with default linux USB pin.
 //
 // parameters:
+//    handle - a handle for the uart to transmit with
 //	  vars - a data struct used for all mctp functions
 // returns:
 //    none
-void mctp_init(mctp_struct* vars){
-	if(uart_init(&(vars->uart),"/dev/ttyUSB0")) printf("connection successful\n");
+void mctp_init(int handle, mctp_struct* vars){
+	vars->uart_handle = handle;
 	vars->mctp_packet_ready=0;
 }
 
@@ -68,7 +64,7 @@ void mctp_init(mctp_struct* vars){
 //	  vars - a data struct used for all mctp functions
 // returns:
 //    cbool - whether there is a packet available
-cbool  mctp_isPacketAvailable(mctp_struct* vars) {
+unsigned char  mctp_isPacketAvailable(mctp_struct* vars) {
 	return vars->mctp_packet_ready;
 }
 
@@ -102,7 +98,7 @@ void  mctp_updateRxFSM(mctp_struct* vars) {
 
     // reading in char from serial port
 	unsigned char ch;
-	if (uart_readCh(&(vars->uart),(char*)&ch)==0) return;
+	if (uart_readCh(vars->uart_handle,(char*)&ch)==0) return;
 
     //building packet FSM
 	switch (mctp_serial_state) {
@@ -234,19 +230,19 @@ void  mctp_updateRxFSM(mctp_struct* vars) {
 void  mctp_transmitFrameStart(mctp_struct* vars, unsigned char totallength) {
 	vars->txfcs = INITFCS;
 	unsigned char ch = SYNC_CHAR;
-	uart_writeCh(&(vars->uart),ch);  // mctp synchronization character;
+	uart_writeCh(vars->uart_handle,ch);  // mctp synchronization character;
 	vars->txfcs = fcs_calcFcs(vars->txfcs, &ch, 1);
     ch = 0x01;
-	uart_writeCh(&(vars->uart),ch);  // mctp version
+	uart_writeCh(vars->uart_handle,ch);  // mctp version
 	vars->txfcs = fcs_calcFcs(vars->txfcs, &ch, 1);
 
 	// transmit the message length
-	uart_writeCh(&(vars->uart),totallength);
+	uart_writeCh(vars->uart_handle,totallength);
 	vars->txfcs = fcs_calcFcs(vars->txfcs, &totallength, 1);
 
 	// transmit the MCTP media-independent header
 	unsigned char hdr[] = { 0x01, 0x00, 0x00, 0xC8 };
-	uart_writeBuffer(&(vars->uart),hdr,4);
+	uart_writeBuffer(vars->uart_handle,hdr,4);
 	vars->txfcs = fcs_calcFcs(vars->txfcs, &hdr[0], 4);
 }
 
@@ -264,11 +260,11 @@ void  mctp_transmitFrameStart(mctp_struct* vars, unsigned char totallength) {
 void  mctp_transmitFrameData(mctp_struct* vars, unsigned char *data, unsigned int size) {
 	for (unsigned int i = 0; i < size; i++) {
 		// write the character
-		uart_writeCh(&(vars->uart),data[i]);
+		uart_writeCh(vars->uart_handle,data[i]);
 		// if the character is a sync or an escape, write the escape sequence
 		if ((data[i] == SYNC_CHAR) || (data[i] == ESCAPE_CHAR)) {
-			uart_writeCh(&(vars->uart),ESCAPE_CHAR);
-			uart_writeCh(&(vars->uart),data[i]-0x20);
+			uart_writeCh(vars->uart_handle,ESCAPE_CHAR);
+			uart_writeCh(vars->uart_handle,data[i]-0x20);
 		}
 	}
 	// update the fcs
@@ -286,10 +282,10 @@ void  mctp_transmitFrameData(mctp_struct* vars, unsigned char *data, unsigned in
 //    void
 void  mctp_transmitFrameEnd(mctp_struct* vars) {
 	// transmit the message length in big-endian format
-	uart_writeCh(&(vars->uart),vars->txfcs >> 8);
-	uart_writeCh(&(vars->uart),vars->txfcs & 0xff);
+	uart_writeCh(vars->uart_handle,vars->txfcs >> 8);
+	uart_writeCh(vars->uart_handle,vars->txfcs & 0xff);
 	// mctp synchronization character
-	uart_writeCh(&(vars->uart),SYNC_CHAR);
+	uart_writeCh(vars->uart_handle,SYNC_CHAR);
 }
 
 //*******************************************************************
@@ -302,5 +298,5 @@ void  mctp_transmitFrameEnd(mctp_struct* vars) {
 // returns:
 //    void
 void mctp_close(mctp_struct* vars){
-	uart_close(&(vars->uart));
+	uart_close(vars->uart_handle);
 }
