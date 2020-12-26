@@ -79,6 +79,7 @@ unsigned char  mctp_isPacketAvailable(mctp_struct* vars) {
 //    rxBuffer - the buffer's contents, usually a MCTP packet
 unsigned char* mctp_getPacket(mctp_struct* vars) {
 	return vars->rxBuffer;
+	vars->mctp_packet_ready = 0;
 }
 
 //*******************************************************************
@@ -210,7 +211,8 @@ void  mctp_updateRxFSM(mctp_struct* vars) {
     // checking final sync char. If the FCS matches, then the packet is
     // declared ready. Otherwise, the packet is dropped.
 		if (ch == SYNC_CHAR) {
-			if (vars->fcs==fcs_msg) vars->mctp_packet_ready = 1;
+			//if (vars->fcs==fcs_msg) vars->mctp_packet_ready = 1;
+			vars->mctp_packet_ready = 1;
 		}
 		mctp_serial_state = MCTPSER_WAITING_FOR_SYNC;
 		break;

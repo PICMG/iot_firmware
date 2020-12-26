@@ -27,23 +27,13 @@
 #ifndef UART_H_INCLUDED
 #define UART_H_INCLUDED
 
-// struct for data transfer
-typedef unsigned char cbool;
-typedef struct{
-   int descriptor;        // file descriptor for the usb device
-   cbool is_connected;
-   struct termios *tty;
-} uart_struct;
-
 // function definitions
-void  uart_delay_ms(float ms);
-cbool uart_init(uart_struct *, const char *);
-cbool uart_isConnected(uart_struct*);
-cbool uart_flush(uart_struct*);
-cbool uart_readCh(uart_struct *,char*);
-cbool uart_writeCh(uart_struct*, char);
-cbool uart_writeBuffer(uart_struct*,const void* buf, unsigned int size);
-cbool uart_rx_isempty();
-cbool uart_close(uart_struct *);
+int uart_init(const char *);
+unsigned char uart_flush(int);
+unsigned char uart_readCh(int,char*);
+unsigned char uart_writeCh(int, char);
+unsigned char uart_writeBuffer(int,const void* buf, unsigned int size);
+unsigned char uart_rx_isempty(int);
+unsigned char uart_close(int);
 
 #endif // UART_H_INCLUDED
