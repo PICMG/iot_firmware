@@ -5,11 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch",
+            "name": "(gdb) Launch mctp test",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/test/mctp/mctp_c_test",
-            "args": ["pldm_definitions.json"],
+            "args": ["/dev/ttyUSB0"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/test/mctp",
             "environment": [],
@@ -22,37 +22,19 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "build mctp_c_test"
         },
         {
-            "name": "(gdb) Launch avr test",
+            "name": "(gdb) Launch uart test",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/avr/test/helloworld/hello_avr.elf",
-            "args": [],
+            "program": "${workspaceFolder}/test/uart/uart_c_test",
+            "args": ["/dev/ttyUSB0"],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/avr/test/helloworld",
+            "cwd": "${workspaceFolder}/test/uart",
             "environment": [],
             "externalConsole": false,
-            "miDebuggerPath": "/usr/bin/avr-gdb",
-            "miDebuggerServerAddress": "127.0.0.1:1212",
             "MIMode": "gdb",
             "setupCommands": [
-                {
-                    "description": "kill any existing copies of simulavr",
-                    "text": "shell killall simulavr",
-                    "ignoreFailures":false
-                },
-                {
-                    "description": "launch simulavr",
-                    "text": "shell gnome-terminal -- /bin/sh -c \"stty erase 127 -isig -brkint -ignbrk -icanon -ctlecho -echo -inlcr; ~/simulavr/src/simulavr -g -d atmega328 -f ${workspaceFolder}/avr/test/helloworld/hello_avr.elf\" &",
-                    "ignoreFailures":true
-                },
-                {
-                    "description":"load program",
-                    "text":"load",
-                    "ignoreFailures": true
-                },
                 {
                     "description": "Enable pretty-printing for gdb",
                     "text": "-enable-pretty-printing",

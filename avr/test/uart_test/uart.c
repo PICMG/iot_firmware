@@ -24,6 +24,14 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
+#ifndef __AVR_ATmega328P__ 
+#define __AVR_ATmega328P__
+#endif
+
+#ifndef F_CPU
+#define F_CPU 16000000
+#endif
+
 #include "avr/io.h"
 #include "avr/interrupt.h"
 #include "uart.h"
@@ -88,7 +96,7 @@ ISR(USART_UDRE_vect) {
 //    name - the name of the linux device to connect to (e.g. "/dev/ttyUSB0")
 // returns:
 //    true if the connection was successful
-unsigned char uart_init(int handle, const char *device) {
+int uart_init(const char *device) {
     // set the buad rate based on the cpu frequency
     #if BAUD > 38401
         UCSR0A = BIT2NUM(U2X0);
