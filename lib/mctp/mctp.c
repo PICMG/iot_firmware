@@ -94,7 +94,7 @@ unsigned char* mctp_getPacket(mctp_struct* vars) {
 void  mctp_updateRxFSM(mctp_struct* vars) {
 	static unsigned char mctp_serial_state = MCTPSER_WAITING_FOR_SYNC;
 	static unsigned int byte_count = 0;
-	unsigned int fcs_msg;
+	static unsigned int fcs_msg = 0;
 
     // reading in char from serial port
 	unsigned char ch;

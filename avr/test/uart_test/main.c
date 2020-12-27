@@ -36,7 +36,6 @@ int main(void)
   mctp_init(0, &mctp1);
           
   while (1) {
-    char ch;
     if (!mctp_isPacketAvailable(&mctp1)) {
       mctp_updateRxFSM(&mctp1);
     } else {

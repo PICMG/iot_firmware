@@ -20,7 +20,7 @@ mctp_c_test :
 
 avr_uart_test :
 	cd ./avr/test/uart_test && make clean
-	cd ./avr/test/uart_test && make all
+	cd ./avr/test/uart_test && make build
 
 clean:
 	cd ./lib/fcs && make clean
