@@ -46,6 +46,8 @@ int main(int argc, char* argv[])
     while(mctp_isPacketAvailable(&mctp1)==0){
         mctp_updateRxFSM(&mctp1);
     }
+    unsigned char*packet = mctp_getPacket(&mctp1);
+    packet[10] = 0; 
     printf("%s",mctp_getPacket(&mctp1));
     printf("\n");
     
