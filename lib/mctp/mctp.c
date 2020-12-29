@@ -78,6 +78,7 @@ unsigned char  mctp_isPacketAvailable(mctp_struct* vars) {
 // returns:
 //    rxBuffer - the buffer's contents, usually a MCTP packet
 unsigned char* mctp_getPacket(mctp_struct* vars) {
+	vars->mctp_packet_ready = 0;
 	return vars->rxBuffer;
 }
 
@@ -184,7 +185,8 @@ void  mctp_updateRxFSM(mctp_struct* vars) {
     // this either replaces it or drops the packet
 		if ((ch==ESCAPED_SYNC)||(ch==ESCAPED_ESCAPE)) {
 			// insert the character in the buffer
-			vars->rxBuffer[vars->rxInsertionIdx] = ch + 0x20;
+			ch = ch+0x20;
+			vars->rxBuffer[vars->rxInsertionIdx] = ch;
 			vars->rxInsertionIdx = vars->rxInsertionIdx + 1;
 			vars->fcs = fcs_calcFcs(vars->fcs, &ch, 1);
 
@@ -224,7 +226,7 @@ void  mctp_updateRxFSM(mctp_struct* vars) {
 //
 // parameters:
 //	  vars - a data struct used for all mctp functions
-//	  totallength - the length of the message being transmitted plus 4 bytes
+//	  totallength - the length of the message being transmitted (body + mctp serial header)
 // returns:
 //    void
 void  mctp_transmitFrameStart(mctp_struct* vars, unsigned char totallength) {
@@ -259,12 +261,13 @@ void  mctp_transmitFrameStart(mctp_struct* vars, unsigned char totallength) {
 //    void
 void  mctp_transmitFrameData(mctp_struct* vars, unsigned char *data, unsigned int size) {
 	for (unsigned int i = 0; i < size; i++) {
-		// write the character
-		uart_writeCh(vars->uart_handle,data[i]);
 		// if the character is a sync or an escape, write the escape sequence
 		if ((data[i] == SYNC_CHAR) || (data[i] == ESCAPE_CHAR)) {
 			uart_writeCh(vars->uart_handle,ESCAPE_CHAR);
 			uart_writeCh(vars->uart_handle,data[i]-0x20);
+		} else {
+			// write the character
+			uart_writeCh(vars->uart_handle,data[i]);
 		}
 		//TODO: fix handling of sync char and esc char to match documentation.
 	}
