@@ -157,7 +157,6 @@ typedef struct {
 } PldmResponseHeader;
 
 typedef struct {
-    enum8        test;
     enum8        completionCode;
     enum8        repositoryState;
     timestamp104 updateTime;
