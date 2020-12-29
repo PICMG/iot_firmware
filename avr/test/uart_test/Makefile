@@ -25,7 +25,7 @@ LIBINCLUDES := -L../../../lib/include -L/usr/lib/avr/include
 LIBPATH     := ../../../lib /usr/lib/avr
 AVRPROJLIBS := ../../lib
 INCLUDES    := -I. -I../../../lib/include -I/usr/lib/avr/include
-OBJECTS     := main.o simulavr_info.o
+OBJECTS     := main.o simulavr_info.o pdr_data.o
 LIBOBJECTS  := uart.o fcs.o mctp.o
 CXX_FLAGS   := -Wall -mmcu=atmega328p -DF_CPU=16000000UL
 OUTPUT_DIR  := $(CURDIR)

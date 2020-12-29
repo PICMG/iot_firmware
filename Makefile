@@ -1,20 +1,32 @@
-all : pldm_test uart_c_test mctp_c_test avr_uart_test
+all : libraries pldm_test uart_c_test mctp_c_test pldm_client pldm_server
+
+libraries:
+	cd ./lib/json && make clean
+	cd ./lib/fcs && make clean
+	cd ./lib/pldm && make clean
+	cd ./lib/mctp && make clean
+	cd ./lib/uart && make clean
+	cd ./lib/json && make build
+	cd ./lib/fcs && make build
+	cd ./lib/pldm && make build
+	cd ./lib/mctp && make build
+	cd ./lib/uart && make build
+	
+pldm_client : 
+	cd ./test/pldm_client && make build
+
+pldm_server : 
+	cd ./test/pldm_server && make build
 
 pldm_test : 
-	cd ./lib/json && make clean
-	cd ./lib/pldm && make clean
 	cd ./test/pldm && make clean
 	cd ./test/pldm && make build
 
 uart_c_test : 
-	cd ./lib/uart && make clean
 	cd ./test/uart && make clean
 	cd ./test/uart && make build
 
 mctp_c_test : 
-	cd ./lib/mctp && make clean
-	cd ./lib/fcs && make clean
-	cd ./lib/uart && make clean
 	cd ./test/mctp && make clean
 	cd ./test/mctp && make build
 
