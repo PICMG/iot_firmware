@@ -83,6 +83,6 @@ static unsigned int fcstab[256] = {
 unsigned int fcs_calcFcs(unsigned int fcs, unsigned char* cp, unsigned int len)
 {
 	while (len--)
-		fcs = 0xffff&(fcs >> 8) ^ fcstab[(fcs ^ *cp++) & 0xff];
+		fcs = 0xffff&((fcs >> 8) ^ fcstab[(fcs ^ *cp++) & 0xff]);
 	return (fcs);
 }
