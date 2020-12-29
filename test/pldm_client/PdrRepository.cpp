@@ -251,13 +251,16 @@ int PdrRepository::getPdrPart(PldmNode& node1, uint32 recordHandle, uint32 & nex
     // update state based on completion code
     switch (getPdrResponse->transferFlag) {
     case 0: // start
+std::cout<<"rxd start of pdr "<<recordHandle<<std::endl;
         lastRecordHandle = recordHandle;
         lastDataHandle = getPdrResponse->nextDataTransferHandle;
         break;
     case 1: // middle
+std::cout<<"rxd middle of pdr "<<recordHandle<<std::endl;
         lastDataHandle = getPdrResponse->nextDataTransferHandle;
         break;
     case 4: // end
+std::cout<<"rxd end of pdr "<<recordHandle<<std::endl;
         lastRecordHandle = 0xffff;
         lastDataHandle = 0x0000;
         nextRecordHandle = getPdrResponse->nextRecordHandle;
@@ -270,6 +273,7 @@ int PdrRepository::getPdrPart(PldmNode& node1, uint32 recordHandle, uint32 & nex
         return 1;
         break;
     case 5: // start and end
+std::cout<<"rxd start and end of pdr "<<recordHandle<<std::endl;
         lastRecordHandle = 0xffff;
         lastDataHandle = 0x0000;
         nextRecordHandle = getPdrResponse->nextRecordHandle;
@@ -317,6 +321,7 @@ bool PdrRepository::addPdrsFromNode(PldmNode& node1) {
     }
     return true;
 }
+
 
 //*******************************************************************
 // dump()
