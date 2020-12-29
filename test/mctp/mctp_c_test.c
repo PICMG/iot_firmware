@@ -33,9 +33,9 @@ int main(int argc, char* argv[])
     }
 
     //testing sending packet
-    unsigned char* ch = (unsigned char*)("ABCDEFGHIJKLMNOPQRSTUVWXYq");
+    unsigned char* ch = (unsigned char*)("AB}CD");
 
-    unsigned int chSize = 26;
+    unsigned int chSize = 5;
 
     mctp_struct mctp1;
     mctp_init(uart_handle, &mctp1);

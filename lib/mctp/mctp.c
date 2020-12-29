@@ -266,6 +266,7 @@ void  mctp_transmitFrameData(mctp_struct* vars, unsigned char *data, unsigned in
 			uart_writeCh(vars->uart_handle,ESCAPE_CHAR);
 			uart_writeCh(vars->uart_handle,data[i]-0x20);
 		}
+		//TODO: fix handling of sync char and esc char to match documentation.
 	}
 	// update the fcs
 	vars->txfcs = fcs_calcFcs(vars->txfcs, data, size);
