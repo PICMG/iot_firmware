@@ -30,7 +30,11 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 #pragma once
-#include <cstdint>
+#ifdef __cplusplus
+    #include <cstdint>
+#else
+    #include <stdint.h>
+#endif
 
 // data types
 typedef uint16_t uint16;

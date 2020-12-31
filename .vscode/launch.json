@@ -117,6 +117,42 @@
                     "ignoreFailures": true
                 }
             ],
+        },
+        {
+            "name": "(gdb) Launch avr userver",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/avr/test/userver/userver.elf",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/avr/test/userver",
+            "environment": [],
+            "externalConsole": false,
+            "miDebuggerPath": "/usr/bin/avr-gdb",
+            "miDebuggerServerAddress": "127.0.0.1:1212",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "kill any existing copies of simulavr",
+                    "text": "shell killall simulavr",
+                    "ignoreFailures":false
+                },
+                {
+                    "description": "launch simulavr",
+                    "text": "shell gnome-terminal -- /bin/sh -c \"stty erase 127 -isig -brkint -ignbrk -icanon -ctlecho -echo -inlcr; ~/simulavr/src/simulavr -g -d atmega328 -f ${workspaceFolder}/avr/test/userver/userver.elf\" &",
+                    "ignoreFailures":true
+                },
+                {
+                    "description":"load program",
+                    "text":"load",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
         }
     ],
     "inputs" : [
