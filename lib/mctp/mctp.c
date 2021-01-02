@@ -115,6 +115,9 @@ void  mctp_updateRxFSM(mctp_struct* vars) {
 		if (ch == MCTP_SERIAL_REV) {
 			mctp_serial_state = MCTPSER_BYTECOUNT;
 			vars->fcs = fcs_calcFcs(vars->fcs, &ch, 1);
+		} 
+		else if (ch == SYNC_CHAR) {
+			vars->fcs = fcs_calcFcs(INITFCS, &ch, 1);
 		}
 		else mctp_serial_state = MCTPSER_WAITING_FOR_SYNC;
 		break;
