@@ -38,6 +38,10 @@
 #include <string.h>
 #include <stdlib.h>
 
+#ifdef __linux__
+#include <sys/time.h>
+#endif 
+
 //*******************************************************************
 // mctp_init()
 //
@@ -53,6 +57,45 @@ void mctp_init(int handle, mctp_struct* vars){
 	vars->uart_handle = handle;
 	vars->mctp_packet_ready=0;
 }
+
+//*******************************************************************
+// mctp_sendAndWait()
+//
+// This function sends a MCTP packet and implements a timeout as specified
+// in DMTF specification
+// parameters:
+//    length - the length of the message
+//    msg - the message being transmitted
+//	  vars - a data struct used for all mctp functions
+// returns:
+//    whether or not the packet was sent successfully
+#ifdef __linux__
+unsigned char mctp_sendAndWait(mctp_struct* vars, unsigned int length, unsigned char* msg){
+	for(int i=0; i<8; i++){
+		// send packet
+		mctp_transmitFrameStart(vars,length+4);
+		mctp_transmitFrameData(vars,msg,length);
+		mctp_transmitFrameEnd(vars);
+		// checking start time
+		struct timeval tstart, tnow;
+		double start, now;
+		gettimeofday(&tstart,0);
+		gettimeofday(&tnow,0);
+		start = (double)tstart.tv_sec+((double)tstart.tv_usec)/1000000.0;
+		now = (double)tnow.tv_sec+((double)tnow.tv_usec)/1000000.0;
+		
+		//updating until timeout of one second or successful packet transmission
+		while(now - start < 1.0){
+			mctp_updateRxFSM(vars);
+			gettimeofday(&tnow,0);
+			now = (double)tnow.tv_sec+((double)tnow.tv_usec)/1000000.0;
+		
+			if(vars->mctp_packet_ready) return 1;
+		}
+	}
+	return 0;
+}
+#endif 
 
 //*******************************************************************
 // mctp_isPacketAvailable()
@@ -83,7 +126,7 @@ unsigned char* mctp_getPacket(mctp_struct* vars) {
 }
 
 //*******************************************************************
-// mctp_isPacketAvailable()
+// mctp_updateRxFSM()
 //
 // This is a finite state machine takes in chars from the serial port
 // and builds them into a MCTP packet and validates the packet.

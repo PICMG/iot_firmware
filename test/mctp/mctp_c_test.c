@@ -113,6 +113,15 @@ int main(int argc, char* argv[])
     // initilize mctp
     mctp_struct mctp1;
     mctp_init(uart_handle, &mctp1);
+
+
+    // mctp timeout test
+    if(mctp_sendAndWait(&mctp1,27,(unsigned char*)"ABCDEFGHIJKLMNOPQRSTUVWXYZ")){
+        printf("%s\n",mctp_getPacket(&mctp1));
+    }else{
+        printf("timeout\n");
+        return -1;
+    }
     
     // testing sending a packet with 4 chars
     testPacket(4,(unsigned char*) "ABCD",uart_handle,&mctp1);
@@ -126,7 +135,7 @@ int main(int argc, char* argv[])
     testPacket(5,(unsigned char*) "AB}CD",uart_handle,&mctp1);
     // testing sending a packet with an assortment of different characters
     testPacket(11,(unsigned char*) "Ab&{}jiS~IL",uart_handle,&mctp1);
-
+    
     mctp_close(&mctp1);
     
 

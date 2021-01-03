@@ -74,6 +74,7 @@ typedef struct{
 
 // function definitions
 void  mctp_init(int, mctp_struct*);
+unsigned char mctp_sendAndWait(mctp_struct*, unsigned int, unsigned char*);
 unsigned char mctp_isPacketAvailable(mctp_struct*);
 unsigned char* mctp_getPacket(mctp_struct*);
 void  mctp_updateRxFSM(mctp_struct*);
