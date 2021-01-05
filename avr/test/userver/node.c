@@ -34,13 +34,30 @@
 #define __AVR_ATmega328P__
 #endif
 
+#include <avr/pgmspace.h>
+#pragma
 #include "node.h"
 #include "mctp.h"
 #include "pldm.h"
-#include "pldm.h"
 #include "pdrdata.h"
+#include "control_servo.h"
 
 static	mctp_struct *mctp;
+
+#define UINT8_TYPE  0
+#define SINT8_TYPE  1
+#define UINT16_TYPE 2
+#define SINT16_TYPE 3
+#define UINT32_TYPE 4
+#define SINT32_TYPE 5
+
+#define SERVO_CONTROL_MODE
+
+#define KFFA_EFFECTER_ID     1
+#define APROFILE_EFFECTER_ID 2
+#define VPROFILE_EFFECTER_ID 3
+#define PFINAL_EFFECTER_ID   4
+
 
 static void transmitByte(unsigned char data) {
     // send the data to the MCTP buffer in little-endian fashion
@@ -319,6 +336,68 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
     }
 }
 
+
+//*******************************************************************
+// setNumericEfffecterValue()
+//
+// set the value of a numeric state effecter if it exists.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void setNumericEffecterValue(PldmRequestHeader* rxHeader) {
+    // extract the information from the body
+    unsigned int  effecter_number  = *((int*)((char*)rxHeader)+sizeof(PldmRequestHeader));
+    unsigned char effecter_numtype = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2);
+    unsigned char response = RESPONSE_ERROR; 
+    switch (effecter_number) {
+#ifdef SERVO_CONTROL_MODE
+    case APROFILE_EFFECTER_ID:
+        if (effecter_numtype == SINT32_TYPE) {
+            requested_acceleration = *((long*)(((char*)rxHeader)+sizeof(PldmRequestHeader)+2+1));
+        } else {
+            response = RESPONSE_ERROR_INVALID_DATA;
+        }
+        break;
+    case VPROFILE_EFFECTER_ID:
+        if (effecter_numtype == SINT32_TYPE) {
+            requested_velocity = *((long*)(((char*)rxHeader)+sizeof(PldmRequestHeader)+2+1));            
+        } else {
+            response = RESPONSE_ERROR_INVALID_DATA;
+        }
+        break;
+    case PFINAL_EFFECTER_ID:
+        if (effecter_numtype == SINT32_TYPE) {
+            requested_position = *((long*)(((char*)rxHeader)+sizeof(PldmRequestHeader)+2+1));                        
+        } else {
+            response = RESPONSE_ERROR_INVALID_DATA;
+        }
+        break;
+    case KFFA_EFFECTER_ID:
+        if (effecter_numtype == SINT32_TYPE) {
+            requested_kffa = *((long*)(((char*)rxHeader)+sizeof(PldmRequestHeader)+2+1));                                    
+        } else {
+            response = RESPONSE_ERROR_INVALID_DATA;
+        }
+        break;
+#endif
+    default:
+        response = RESPONSE_INVALID_EFFECTER_ID; 
+        break;
+    }
+
+    // send the response
+    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 4);
+        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);   // completion code
+        mctp_transmitFrameEnd(mctp);
+} 
+
 //*******************************************************************
 // parseCommand()
 //
@@ -346,7 +425,7 @@ static void parseCommand()
         //GetStateSensorReadings(cmdBuffer);
         break;
     case CMD_SET_NUMERIC_EFFECTER_VALUE:
-        //SetNumericEffecterValue(cmdBuffer);
+        setNumericEffecterValue(rxHeader);
         break;
     case CMD_GET_NUMERIC_EFFECTER_VALUE:
         //GetNumericEffecterValue(cmdBuffer);

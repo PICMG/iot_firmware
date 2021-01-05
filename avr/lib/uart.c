@@ -32,8 +32,8 @@
 #define F_CPU 16000000
 #endif
 
-#include "avr/io.h"
-#include "avr/interrupt.h"
+#include <avr/io.h>
+#include <avr/interrupt.h>
 #include "uart.h"
 
 // Baud rate.
