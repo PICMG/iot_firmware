@@ -44,6 +44,28 @@ FP16 requested_velocity;
 FP16 requested_acceleration;
 FP16 requested_kffa;
 static char mode_scurve = 1;
+static unsigned char state = STATE_IDLE;
+
+static unsigned char start_effecter_value = 2;  // initialize to STOP state;
+
+//****************************************************************
+// control_setState()
+// request a state change.  This function is called from the 
+// low-priority loop.
+unsigned char control_setState(unsigned char reqState) {
+    if (reqState == 1) {
+        if (state == STATE_IDLE) {
+            // run command is only valid from the idle state
+            servo_cmd = SERVO_CMD_RUN;
+            start_effecter_value = reqState;
+            return 1;
+        }
+        return 0;
+    } 
+    servo_cmd = SERVO_CMD_STOP; 
+    start_effecter_value = reqState;
+    return 1;
+}
 
 //****************************************************************
 // this is the high-priority update loop for the servo motor
@@ -52,7 +74,6 @@ static char mode_scurve = 1;
 // are disabled when this function runs.
 //
 void control_update() {
-    static unsigned char state = STATE_IDLE;
 
     switch (state) {
     case STATE_IDLE:
@@ -215,5 +236,5 @@ void control_update() {
         // transistion
         state = STATE_IDLE;
     }
-        
+    servo_cmd = SERVO_CMD_NONE;       
 }

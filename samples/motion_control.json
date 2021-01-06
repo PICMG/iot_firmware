@@ -447,7 +447,7 @@
 		"recordHandle":17,
 		"PDRHeaderVersion":1,
 		"PDRType":"StateEffecter",
-		"effecterID":5,
+		"effecterID":7,
 		"effecterInit":"noInit",
 		"effecterDescriptionPDR":"false",
 		"compositeSensorCount":1,

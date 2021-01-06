@@ -35,7 +35,6 @@
 #endif
 
 #include <avr/pgmspace.h>
-#pragma
 #include "node.h"
 #include "mctp.h"
 #include "pldm.h"
@@ -53,10 +52,13 @@ static	mctp_struct *mctp;
 
 #define SERVO_CONTROL_MODE
 
-#define KFFA_EFFECTER_ID     1
-#define APROFILE_EFFECTER_ID 2
-#define VPROFILE_EFFECTER_ID 3
-#define PFINAL_EFFECTER_ID   4
+#define KFFA_EFFECTER_ID      1
+#define APROFILE_EFFECTER_ID  2
+#define VPROFILE_EFFECTER_ID  3
+#define PFINAL_EFFECTER_ID    4
+#define INTERLOCK_EFFECTER_ID 5
+#define TRIGGER_EFFECTER_ID   6
+#define START_EFFECTER_ID     7
 
 
 static void transmitByte(unsigned char data) {
@@ -338,6 +340,73 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
 
 
 //*******************************************************************
+// setStateEfffecterValue()
+//
+// set the value of a numeric state effecter if it exists.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void setStateEffecterStates(PldmRequestHeader* rxHeader) {
+    // extract the information from the body
+    unsigned int  effecter_id  = *((int*)((char*)rxHeader)+sizeof(PldmRequestHeader));
+    unsigned char effecter_count = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2);
+    unsigned char response = RESPONSE_SUCCESS; 
+    if (effecter_count != 1) {
+        response = RESPONSE_INVALID_STATE_VALUE; 
+    } 
+    else {
+        unsigned char action = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2 + 1);
+        unsigned char req_state = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2 + 1 + 1);
+        switch (effecter_id) {
+    #ifdef SERVO_CONTROL_MODE
+        case START_EFFECTER_ID:
+            if (action) {
+                if ((req_state==1)||(req_state==2)) {
+                    if (!control_setState(req_state)) response = RESPONSE_INVALID_STATE_VALUE;
+                } else {
+                    response = RESPONSE_UNSUPPORTED_EFFECTERSTATE;
+                }
+            }
+            break;
+    #endif
+        case TRIGGER_EFFECTER_ID:
+            if (action) {
+                if ((req_state==1)||(req_state==2)) {
+                    // TODO - set the TRIGGER output
+                } else {
+                    response = RESPONSE_UNSUPPORTED_EFFECTERSTATE;
+                }
+            }
+            break;
+        case INTERLOCK_EFFECTER_ID:
+            if (action) {
+                if ((req_state==1)||(req_state==2)) {
+                    // TODO - set the INTERLOCK output
+                } else {
+                    response = RESPONSE_UNSUPPORTED_EFFECTERSTATE;
+                }
+            }
+            break;
+        default:
+            response = RESPONSE_INVALID_EFFECTER_ID; 
+            break;
+        }
+    }
+
+    // send the response
+    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 4);
+        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);   // completion code
+        mctp_transmitFrameEnd(mctp);
+} 
+
+//*******************************************************************
 // setNumericEfffecterValue()
 //
 // set the value of a numeric state effecter if it exists.
@@ -350,10 +419,10 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
 //    the contents of the transmit buffer
 static void setNumericEffecterValue(PldmRequestHeader* rxHeader) {
     // extract the information from the body
-    unsigned int  effecter_number  = *((int*)((char*)rxHeader)+sizeof(PldmRequestHeader));
+    unsigned int  effecter_id  = *((int*)((char*)rxHeader)+sizeof(PldmRequestHeader));
     unsigned char effecter_numtype = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2);
-    unsigned char response = RESPONSE_ERROR; 
-    switch (effecter_number) {
+    unsigned char response = RESPONSE_SUCCESS; 
+    switch (effecter_id) {
 #ifdef SERVO_CONTROL_MODE
     case APROFILE_EFFECTER_ID:
         if (effecter_numtype == SINT32_TYPE) {
@@ -396,7 +465,58 @@ static void setNumericEffecterValue(PldmRequestHeader* rxHeader) {
         transmitByte(rxHeader->command);
         transmitByte(response);   // completion code
         mctp_transmitFrameEnd(mctp);
-} 
+}
+
+//*******************************************************************
+// getNumericEfffecterValue()
+//
+// set the value of a numeric state effecter if it exists.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void getNumericEffecterValue(PldmRequestHeader* rxHeader) {
+    // extract the information from the body
+    unsigned int  effecter_id  = *((int*)((char*)rxHeader)+sizeof(PldmRequestHeader));
+    unsigned char effecter_numtype;
+    unsigned char response = RESPONSE_SUCCESS; 
+    long          return_data;
+    switch (effecter_id) {
+#ifdef SERVO_CONTROL_MODE
+    case APROFILE_EFFECTER_ID:
+        return_data = requested_acceleration;
+        break;
+    case VPROFILE_EFFECTER_ID:
+        return_data = requested_velocity;
+        break;
+    case PFINAL_EFFECTER_ID:
+        return_data = requested_position;
+        break;
+    case KFFA_EFFECTER_ID:
+        return_data = requested_kffa;
+        break;
+#endif
+    default:
+        mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 4);
+        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(RESPONSE_INVALID_EFFECTER_ID);   // completion code
+        mctp_transmitFrameEnd(mctp);
+        break;
+    }
+
+    // send the response
+    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 4);
+        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);   // completion code
+        mctp_transmitFrameEnd(mctp);
+}
 
 //*******************************************************************
 // parseCommand()
@@ -431,7 +551,7 @@ static void parseCommand()
         //GetNumericEffecterValue(cmdBuffer);
         break;
     case CMD_SET_STATE_EFFECTER_STATES:
-        //SetStateEffecterStates(cmdBuffer);
+        setStateEffecterStates(rxHeader);
         break;
     case CMD_GET_STATE_EFFECTER_STATES:
         //GetStateEffecterStates(cmdBuffer);

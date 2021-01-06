@@ -49,6 +49,7 @@ extern FP16 requested_velocity;
 extern FP16 requested_acceleration;
 extern FP16 requested_kffa;
 
-void control_update();  // servo update loop (priority mode)
+void control_update();   // servo update loop (priority mode)
+unsigned char control_setState(unsigned char); // request a state change
 
 #endif
