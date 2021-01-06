@@ -319,6 +319,24 @@ bool PdrRepository::addPdrsFromNode(PldmNode& node1) {
 }
 
 //*******************************************************************
+// getPdrFromRecordHandle()
+//
+// return a pointer to a specific PDR if it exists in the repository,
+// otherwise, return null pointer.
+//
+// parameters:
+//    recordNumber - the number of the record handle to find.
+// returns:
+//    void
+GenericPdr * PdrRepository::getPdrFromRecordHandle(uint32 recordNumber) {
+    map<uint32, GenericPdr*>::iterator it = repository.find(recordNumber);
+    if (it != repository.end()) {
+        return it->second;
+    }
+    return 0;
+}
+
+//*******************************************************************
 // dump()
 //
 // dump the contents of this repository to the standard output device.

@@ -54,5 +54,6 @@ public:
 	~PdrRepository();
 	bool setDictionary(string dictionary_file);
 	bool addPdrsFromNode(PldmNode& node1);
+	GenericPdr * getPdrFromRecordHandle(uint32 recordNumber);
 	void dump();
 };
