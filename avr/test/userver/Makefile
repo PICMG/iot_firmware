@@ -38,7 +38,7 @@ build: clean $(OBJECTS) $(LIBOBJECTS)
 	avr-g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) $(LIBOBJECTS) -Wl,-Map=solution.map,--cref
 	
 # clean, build and run the project on atmega 328p hardware
-run: CXX_FLAGS += -O3
+run: CXX_FLAGS += -Os
 run: clean $(OBJECTS) $(LIBOBJECTS)
 	avr-g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) $(LIBOBJECTS) -Wl,-Map=solution.map,--cref
 	avr-objcopy -R .eeprom -R .fuse -R .lock -R .signature -O ihex $(EXECUTABLE) $(HEXFILE)
