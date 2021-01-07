@@ -482,7 +482,6 @@ static void getNumericEffecterValue(PldmRequestHeader* rxHeader) {
     // extract the information from the body
     unsigned int  effecter_id  = *((int*)((char*)rxHeader)+sizeof(PldmRequestHeader));
     unsigned char effecter_numtype;
-    unsigned char response = RESPONSE_SUCCESS; 
     long          return_data;
     switch (effecter_id) {
 #ifdef SERVO_CONTROL_MODE
@@ -510,11 +509,15 @@ static void getNumericEffecterValue(PldmRequestHeader* rxHeader) {
     }
 
     // send the response
-    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 4);
+    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 10 + 4);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
-        transmitByte(response);   // completion code
+        transmitByte(RESPONSE_SUCCESS);   // completion code
+        transmitByte(5); // data size = sint32
+        transmitByte(0); // enabled, pending
+        transmitLong(return_data);
+        transmitLong(return_data);
         mctp_transmitFrameEnd(mctp);
 }
 
@@ -548,7 +551,7 @@ static void parseCommand()
         setNumericEffecterValue(rxHeader);
         break;
     case CMD_GET_NUMERIC_EFFECTER_VALUE:
-        //GetNumericEffecterValue(cmdBuffer);
+        getNumericEffecterValue(rxHeader);
         break;
     case CMD_SET_STATE_EFFECTER_STATES:
         setStateEffecterStates(rxHeader);
