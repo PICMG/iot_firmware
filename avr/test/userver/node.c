@@ -50,7 +50,7 @@ static	mctp_struct *mctp;
 #define UINT32_TYPE 4
 #define SINT32_TYPE 5
 
-#define SERVO_CONTROL_MODE
+#define SERVO_CONTROL_MODE    1
 
 #define KFFA_EFFECTER_ID      1
 #define APROFILE_EFFECTER_ID  2
@@ -352,7 +352,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
 //    the contents of the transmit buffer
 static void setStateEffecterStates(PldmRequestHeader* rxHeader) {
     // extract the information from the body
-    unsigned int  effecter_id  = *((int*)((char*)rxHeader)+sizeof(PldmRequestHeader));
+    unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
     unsigned char effecter_count = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2);
     unsigned char response = RESPONSE_SUCCESS; 
     if (effecter_count != 1) {
@@ -419,7 +419,7 @@ static void setStateEffecterStates(PldmRequestHeader* rxHeader) {
 //    the contents of the transmit buffer
 static void setNumericEffecterValue(PldmRequestHeader* rxHeader) {
     // extract the information from the body
-    unsigned int  effecter_id  = *((int*)((char*)rxHeader)+sizeof(PldmRequestHeader));
+    unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
     unsigned char effecter_numtype = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2);
     unsigned char response = RESPONSE_SUCCESS; 
     switch (effecter_id) {
@@ -480,7 +480,7 @@ static void setNumericEffecterValue(PldmRequestHeader* rxHeader) {
 //    the contents of the transmit buffer
 static void getNumericEffecterValue(PldmRequestHeader* rxHeader) {
     // extract the information from the body
-    unsigned int  effecter_id  = *((int*)((char*)rxHeader)+sizeof(PldmRequestHeader));
+    unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
     unsigned char effecter_numtype;
     long          return_data;
     switch (effecter_id) {

@@ -329,9 +329,11 @@ bool PdrRepository::addPdrsFromNode(PldmNode& node1) {
 // returns:
 //    void
 GenericPdr * PdrRepository::getPdrFromRecordHandle(uint32 recordNumber) {
-    map<uint32, GenericPdr*>::iterator it = repository.find(recordNumber);
-    if (it != repository.end()) {
-        return it->second;
+    for (map<uint32, GenericPdr*>::iterator it = repository.begin(); it != repository.end(); ++it) {
+        GenericPdr * pdr = it->second;
+        if (pdr->keyExists("recordHandle")) {
+            if (atol(pdr->getValue("recordHandle").c_str())==recordNumber) return pdr;
+        }
     }
     return 0;
 }

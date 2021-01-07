@@ -378,7 +378,11 @@ string GenericPdr::getValue(string key) {
 		float f;
 		unsigned char* fp = (unsigned char*)&f;
 		for (int i = 0;i<4;i++) fp[i] = rawData[offset+i];
-		return to_string(f);
+		stringstream ss;
+		ss<<scientific<<f;
+		string result;
+		ss>>result;
+		return result;
 	}
 	return "";
 }

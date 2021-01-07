@@ -117,8 +117,8 @@ int uart_init(const char* name)
         return -1;
     }
 
-    // delay a bit to allow the endpoint to wake up.
-    delay_ms(5000);
+    // delay a bit to allow the uart changes to take place.
+    delay_ms(2500);
 
     return handle;
 }

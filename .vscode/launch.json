@@ -29,7 +29,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/test/pldm_cmd_test/pldm_cmd_test",
-            "args": [],
+            "args": ["${input:uartPort}"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/test/pldm_cmd_test",
             "environment": [],
