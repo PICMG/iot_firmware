@@ -1,4 +1,4 @@
-all : libraries pldm_test uart_c_test mctp_c_test pldm_client pldm_server
+all : libraries pldm_test uart_c_test mctp_c_test pldm_client pldm_server pldm_cmd_test
 
 libraries:
 	cd ./lib/json && make clean

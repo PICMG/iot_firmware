@@ -36,6 +36,11 @@
 #include "node.h"
 #include "PdrRepository.h"
 
+// global variables for communications channel and PLDM data structures
+PdrRepository pdrRepository;   // local copy of platform data repository
+mctp_struct   mctp1;           // parameters for MCTP communications
+node          node1;           // interface to device node (implements PLDM) 
+unsigned int  uart_handle;     // handle for uart device
 
 static void printMenu1(){
     cout<<"*******************************************************************\n"<<endl;
@@ -75,68 +80,9 @@ static double getUIdouble(const char* prompt){
     return db;
 }
 
-unsigned int dumpPDR(unsigned int uart_handle){
+static GenericPdr* pickEffecter(unsigned long requestedID){
     unsigned char buffer[256];
-    node node1;
-    
-    // load the dictionary from the specified file.  The dictionary
-    // includes meta-data that helps this program interpret the 
-    // information it receives from the server node.
-    PdrRepository pdrRepository;
-    if (!pdrRepository.setDictionary("pldm_definitions.json")) return -1;
-
-    // initialize the mctp connection
-    mctp_struct mctp;
-    mctp_init(uart_handle, &mctp);
-    node1.init(&mctp);
-
-    // get the repository information by sending the request through
-    // the mctp interface
-    PldmRequestHeader hdr;
-    hdr.flags1 = 0; hdr.flags2 = 0; hdr.command = CMD_GET_PDR_REPOSITORY_INFO;
-    node1.putCommand(&hdr, buffer, 0);
-
-    // wait for the packet to be available, processing bytes as they come in
-    while(mctp_isPacketAvailable(&mctp)==0){
-        mctp_updateRxFSM(&mctp);
-    }
-
-    unsigned char *response = mctp_getPacket(&mctp);
-    PldmResponseHeader* rxHeader = (PldmResponseHeader*)response;
-    GetPdrRepositoryInfoResponse* infoResponse = (GetPdrRepositoryInfoResponse*)(response + sizeof(PldmResponseHeader)-1);
-    if (infoResponse->completionCode != RESPONSE_SUCCESS) {
-        std::cout << "Error Getting PDR Info" << std::endl;
-        return -1;
-    }
-    cout << "PDR Info:" << endl;
-    cout << "   Records       " << infoResponse->recordCount << endl;
-    cout << "   MaxRecordSize " << infoResponse->largestRecordSize << endl;
-    cout << "   TotalSize     " << infoResponse->repositorySize << endl;
-    cout << endl;
-
-    pdrRepository.addPdrsFromNode(node1);
-
-    pdrRepository.dump();
-    return 1;
-}
-
-static GenericPdr* pickEffecter(unsigned long requestedID, unsigned int uart_handle){
-    unsigned char buffer[256];
-    node node1;
-    
-    // load the dictionary from the specified file.  The dictionary
-    // includes meta-data that helps this program interpret the 
-    // information it receives from the server node.
-    PdrRepository pdrRepository;
-    if (!pdrRepository.setDictionary("pldm_definitions.json")) return 0;
-
-    // initialize the mctp connection
-    mctp_struct mctp;
-    mctp_init(uart_handle, &mctp);
-    node1.init(&mctp);
-
-    pdrRepository.addPdrsFromNode(node1);
-    
+        
     int j = 1;
     while(1){
         GenericPdr* effecterPdr;
@@ -154,11 +100,11 @@ static GenericPdr* pickEffecter(unsigned long requestedID, unsigned int uart_han
 }
 
 
-static void setNumericEffecterMenu(unsigned int uart_handle){
+static void setNumericEffecterMenu(){
     cout<<"\ec"<<endl;
     GenericPdr* effecterpdr; 
     unsigned long effecterID = getUIlong("please enter an effecter ID");
-    effecterpdr = pickEffecter(effecterID,uart_handle);
+    effecterpdr = pickEffecter(effecterID);
     if(!effecterpdr){
         cout<<"Invalid ID"<<endl;
     }else{
@@ -172,9 +118,11 @@ static void setNumericEffecterMenu(unsigned int uart_handle){
         unsigned char buffer[7]; 
         double data = getUIdouble("please enter new value for numeric effecter");
         string dataSize   = effecterpdr->getValue("effecterDataSize");
-        double resolution = atol(effecterpdr->getValue("resolution").c_str());
-        double offset     = atol(effecterpdr->getValue("offset").c_str());
-        data = (data - offset)/resolution;
+        double resolution = atof(effecterpdr->getValue("resolution").c_str());
+        double offset     = atof(effecterpdr->getValue("offset").c_str());
+        
+        // perform the unit conversion (with rounding)
+        unsigned long scaledData = (data - offset)/resolution + 0.5;
         unsigned int body_len = 0;
 
         PldmRequestHeader header;
@@ -183,32 +131,32 @@ static void setNumericEffecterMenu(unsigned int uart_handle){
 
         if(dataSize=="uint8"){
             buffer[2] = 0; //effecter data size is uint8
-            buffer[3] = (uint8)data;
+            buffer[3] = (uint8)scaledData;
             body_len = 4;
         }
         else if(dataSize=="sint8"){
             buffer[2] = 1; //effecter data size is sint8
-            buffer[3] = (sint8)data;
+            buffer[3] = (sint8)scaledData;
             body_len = 4;
         }
         else if(dataSize=="uint16"){
             buffer[2] = 2; //effecter data size is uint16
-            *((uint16*)(&buffer[3])) = (uint16)data;
+            *((uint16*)(&buffer[3])) = (uint16)scaledData;
             body_len = 5;
         }
         else if(dataSize=="sint16"){
             buffer[2] = 3; //effecter data size is sint16
-            *((sint16*)(&buffer[3])) = (sint16)data;
+            *((sint16*)(&buffer[3])) = (sint16)scaledData;
             body_len = 5;
         }
         else if(dataSize=="uint32"){
             buffer[2] = 4; //effecter data size is uint32
-            *((uint32*)(&buffer[3])) = (uint32)data;
+            *((uint32*)(&buffer[3])) = (uint32)scaledData;
             body_len = 7;
         }
         else if(dataSize=="sint32"){
             buffer[2] = 5; //effecter data size is sint32
-            *((sint32*)(&buffer[3])) = (sint32)data;
+            *((sint32*)(&buffer[3])) = (sint32)scaledData;
             body_len = 7;
         }
 
@@ -244,15 +192,39 @@ void effecterTypeAMenu(){
 //
 // returns:
 //    0
-int main(){
+int main(unsigned int argc, char * argv[]) {
     unsigned char uiQuit = 1;
 
-    // initialize the uart connection
-    unsigned int uart_handle = uart_init("/dev/ttyUSB0");
+    // check for the proper number of program arguments
+    if (argc!=2) {
+        cerr<<"Wrong number of arguments. "<<endl;
+        cerr<<"Usage:  pldm_cmd_test port"<<endl;
+        return -1;
+
+    }
+    // Attempt to initialize the uart connection
+    uart_handle = uart_init(argv[1]);
     if (uart_handle<=0) {
-        std::cerr<<"error establishing uart connection."<<endl;
+        cerr<<"error establishing uart connection."<<endl;
         return -1;
     }
+
+    // initialize the mctp connection and read the PDRs from the device node
+    cout<<"Reading metadata file"<<endl;
+    if (!pdrRepository.setDictionary("pldm_definitions.json")) {
+        cerr<<"error loading dictionary file."<<endl;
+        return -1;
+    }
+
+    // initialize the mctp connection
+    cout<<"Initializing MCTP/PLDM interface"<<endl;
+    mctp_struct mctp;
+    mctp_init(uart_handle, &mctp);
+    node1.init(&mctp);
+
+    // Initialize the pdr repository from the device node
+    cout<<"Initializing local PDR repository"<<endl;
+    pdrRepository.addPdrsFromNode(node1);
 
     while(uiQuit){
         printMenu1();
@@ -261,11 +233,11 @@ int main(){
         switch(input){
             case '1':
                 cout<<"\ec"<<endl;
-                dumpPDR(uart_handle);
+                pdrRepository.dump();
                 getUIch("B - go back to menu");
             break;
             case '2':
-                setNumericEffecterMenu(uart_handle);
+                setNumericEffecterMenu();
                 getUIch("B - go back to menu");
             break;
             case '3':
@@ -285,5 +257,7 @@ int main(){
         }
         cout<<"\ec"<<endl;
     }
+    
+    uart_close(uart_handle);
     return 0;
 }
