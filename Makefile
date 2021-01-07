@@ -15,6 +15,9 @@ libraries:
 pldm_client : 
 	cd ./test/pldm_client && make build
 
+pldm_cmd_test : 
+	cd ./test/pldm_cmd_test && make build
+
 pldm_server : 
 	cd ./test/pldm_server && make build
 

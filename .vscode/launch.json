@@ -25,6 +25,26 @@
             "preLaunchTask": "build"
         },
         {
+            "name": "(gdb) Launch pldm cmd test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/pldm_cmd_test/pldm_cmd_test",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/test/pldm_cmd_test",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build"
+        },
+        {
             "name": "(gdb) Launch pldm client",
             "type": "cppdbg",
             "request": "launch",
