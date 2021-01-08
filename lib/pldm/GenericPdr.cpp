@@ -303,6 +303,35 @@ void GenericPdr::setDictionary(JsonObject* dict) {
 }
 
 //*******************************************************************
+// getEnumOptions()
+//
+// This function returns a list of enumeration options for the specified
+// key.
+//
+// parameters:
+//    key - the name of the field to get the value of.
+// returns:
+//    a stirng representaiton of the value of the PDR field.  If the 
+//    field is not found, an empty string ("") is returned.
+map<string,unsigned int> GenericPdr::getEnumOptions(string key) {
+	map<string,unsigned int> enums;
+	if (!keyExists(key)) return enums;
+
+	string type = getDataType(key);
+
+	if ((type.find("enum") != string::npos)||(type.find("bool") != string::npos)) {
+		JsonObject* meta = (JsonObject*)dict->find(key);
+		JsonArray* jenums = (JsonArray*)meta->find("values");
+
+		for (int enum_idx = 0; enum_idx < jenums->size();enum_idx++) {
+			JsonObject* enumdef = (JsonObject*)jenums->getElement(enum_idx);
+			enums.insert(pair<string,int>(enumdef->getValue("key"),enumdef->getInteger("value")));
+		}
+	}
+	return enums;
+}
+
+//*******************************************************************
 // getValue()
 //
 // This function returns the value of a specified PDR field by locating

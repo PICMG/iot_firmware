@@ -70,7 +70,7 @@ public:
 	bool keyExists(string key);
 	string getValue(string key);
 	string getDataType(string key);
-	list<string> getEnumOptions(string key);
+	map<string,unsigned int> getEnumOptions(string key);
 
 	// visualization
 	virtual void dump();

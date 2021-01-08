@@ -42,6 +42,15 @@ mctp_struct   mctp1;           // parameters for MCTP communications
 node          node1;           // interface to device node (implements PLDM) 
 unsigned int  uart_handle;     // handle for uart device
 
+//*******************************************************************
+// printMenu()
+//
+// This helper function prints out the main menu
+//
+// parameters:
+//	  none
+// returns:
+//    void
 static void printMenu1(){
     cout<<"*******************************************************************\n"<<endl;
     cout<<"Enter Option:\n"<<endl;
@@ -52,6 +61,16 @@ static void printMenu1(){
     cout<<"Q - Quit\n"<<endl;
 }
 
+//*******************************************************************
+// getUIch()
+//
+// This helper function gets user input for a char and then returns it.
+// This is a blocking function.
+//
+// parameters:
+//	  prompt - the desplayed message prompting for input.
+// returns:
+//    the user input
 static unsigned char getUIch(const char* prompt){
     char ch;
     cout<<prompt<<endl;
@@ -59,6 +78,16 @@ static unsigned char getUIch(const char* prompt){
     return ch;
 }
 
+//*******************************************************************
+// getUIstr()
+//
+// This helper function gets user input for a string and then returns it.
+// This is a blocking function.
+//
+// parameters:
+//	  prompt - the desplayed message prompting for input.
+// returns:
+//    the user input
 static string getUIstr(const char* prompt){
     string str;
     cout<<prompt<<endl;
@@ -66,6 +95,16 @@ static string getUIstr(const char* prompt){
     return str;
 }
 
+//*******************************************************************
+// getUIlong()
+//
+// This helper function gets user input for a long and then returns it.
+// This is a blocking function.
+//
+// parameters:
+//	  prompt - the desplayed message prompting for input.
+// returns:
+//    the user input
 static unsigned long getUIlong(const char* prompt){
     unsigned long lon;
     cout<<prompt<<endl;
@@ -73,6 +112,16 @@ static unsigned long getUIlong(const char* prompt){
     return lon;
 }
 
+//*******************************************************************
+// getUIdouble()
+//
+// This helper function gets user input for a double and then returns it.
+// This is a blocking function.
+//
+// parameters:
+//	  prompt - the desplayed message prompting for input.
+// returns:
+//    the user input
 static double getUIdouble(const char* prompt){
     double db;
     cout<<prompt<<endl;
@@ -80,6 +129,16 @@ static double getUIdouble(const char* prompt){
     return db;
 }
 
+//*******************************************************************
+// pickEffecter()
+//
+// This helper function takes an ID for an effecter pdr, searches
+// the repository for the pdr, and, if available, returns it.
+//
+// parameters:
+//	  requestedID - the id of the pdr
+// returns:
+//    the pdr, if it exists, or null
 static GenericPdr* pickEffecter(unsigned long requestedID){
     unsigned char buffer[256];
         
@@ -99,7 +158,17 @@ static GenericPdr* pickEffecter(unsigned long requestedID){
     }
 }
 
-
+//*******************************************************************
+// setNumericEffecterMenu()
+//
+// This helper function generates a CLI menu for the setNumericEffecter function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then change the value of the effecter.
+//
+// parameters:
+//	  none
+// returns:
+//    void
 static void setNumericEffecterMenu(){
     cout<<"\ec"<<endl;
     GenericPdr* effecterpdr; 
@@ -175,15 +244,35 @@ static void setNumericEffecterMenu(){
 }
 
 
-// there will be a different version of this for every type of sensor/effector
-void effecterTypeAMenu(){
-    //placeholder code... WIP
+//*******************************************************************
+// setStateEffecterMenu()
+//
+// This helper function generates a CLI menu for the setStateEffecter function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then change the value of the effecter.
+//
+// parameters:
+//	  none
+// returns:
+//    void
+static void setStateEffecterMenu(){
+    cout<<"\ec"<<endl;
+    GenericPdr* effecterpdr; 
+    unsigned long effecterID = getUIlong("please enter an effecter ID");
+    effecterpdr = pickEffecter(effecterID);
+    if(!effecterpdr){
+        cout<<"Invalid ID"<<endl;
+    }else{
+        cout<<"valid ID"<<endl;
+        
+        mctp_struct mctp1;
+        mctp_init(uart_handle,&mctp1);
+        node node1;
+        node1.init(&mctp1);
 
-    //print options
-    //get ui
-    //switch case commmands
+        map<string,unsigned int> enums = effecterpdr->getEnumOptions("");
+    }
 }
-
 
 //*******************************************************************
 // main()
@@ -226,22 +315,22 @@ int main(unsigned int argc, char * argv[]) {
     cout<<"Initializing local PDR repository"<<endl;
     pdrRepository.addPdrsFromNode(node1);
 
+    // CLI menu start
     while(uiQuit){
         printMenu1();
         unsigned char input;
         input = getUIch("");
         switch(input){
-            case '1':
+            case '1': // pdr dump
                 cout<<"\ec"<<endl;
                 pdrRepository.dump();
                 getUIch("B - go back to menu");
             break;
-            case '2':
+            case '2': // set Numeric Effecter
                 setNumericEffecterMenu();
-                getUIch("B - go back to menu");
             break;
-            case '3':
-                //run sensor pdr function
+            case '3': // set State Effecter
+                setStateEffecterMenu();
             break;
             case 'Q':
             case 'q':
