@@ -173,6 +173,7 @@
                     "ignoreFailures": true
                 }
             ],
+            "preLaunchTask": "build"
         }
     ],
     "inputs" : [

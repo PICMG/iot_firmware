@@ -29,13 +29,20 @@
 #include "uart.h"
 #include "mctp.h"
 #include "node.h"
+#include "vprofiler.h"
+#include "timer1.h"
 
 int main(void)
 {
   mctp_struct mctp1;
-
   // enable global interrupts
   SREG |= (1<<SREG_I);
+
+  // initialize the velocity profiler
+	vprofiler_setParameters(1000000L, TO_FP16(511), TO_FP16(1), 1);
+  
+  // initialize the global tick timer
+  timer1_init();
 
   // initilaize the uart 
   uart_init("");

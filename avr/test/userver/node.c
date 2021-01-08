@@ -465,6 +465,8 @@ static void setNumericEffecterValue(PldmRequestHeader* rxHeader) {
         transmitByte(rxHeader->command);
         transmitByte(response);   // completion code
         mctp_transmitFrameEnd(mctp);
+    
+    control_setState(1);
 }
 
 //*******************************************************************
