@@ -56,8 +56,8 @@ static void printMenu1(){
     cout<<"Enter Option:\n"<<endl;
     cout<<"*******************************************************************\n"<<endl;
     cout<<"1 - Dump PDR\n"<<endl;
-    cout<<"2 - Effecter #\n"<<endl;
-    cout<<"3 - Sensor #\n"<<endl;
+    cout<<"2 - Set Numeric Effecter Value\n"<<endl;
+    cout<<"3 - Set State Effecter State\n"<<endl;
     cout<<"Q - Quit\n"<<endl;
 }
 
@@ -127,6 +127,24 @@ static double getUIdouble(const char* prompt){
     cout<<prompt<<endl;
     cin>>db;
     return db;
+}
+
+
+//*******************************************************************
+// getUIint()
+//
+// This helper function gets user input for an int and then returns it.
+// This is a blocking function.
+//
+// parameters:
+//	  prompt - the desplayed message prompting for input.
+// returns:
+//    the user input
+static int getUIint(const char* prompt){
+    int i;
+    cout<<prompt<<endl;
+    cin>>i;
+    return i;
 }
 
 //*******************************************************************
@@ -270,7 +288,41 @@ static void setStateEffecterMenu(){
         node node1;
         node1.init(&mctp1);
 
-        map<string,unsigned int> enums = effecterpdr->getEnumOptions("");
+        map<unsigned int,string> enums = pdrRepository.getStateSet(atoi(effecterpdr->getValue("stateSetID").c_str()));
+        cout << "Please select a state" << endl;
+        for(auto i:enums){
+            cout << i.first << " - " << i.second << endl; 
+        }
+        
+        // send command
+        unsigned char buffer[5]; 
+        unsigned int body_len = 5;
+        
+        PldmRequestHeader header;
+        header.flags1 = 0; header.flags2 = 0; header.command = CMD_SET_STATE_EFFECTER_STATES;
+        *((uint16*)buffer) = effecterID;
+
+        uint8 compositeEffecterCount = 1;
+        enum8 setRequest = 1;
+        enum8 effecterState = getUIint("");
+
+        buffer[2] = compositeEffecterCount;
+        buffer[3] = setRequest;
+        buffer[4] = effecterState;
+
+        node1.putCommand(&header, buffer, body_len);
+
+        // get response
+        PldmResponseHeader* response;
+        response = (PldmResponseHeader*)node1.getResponse();
+        if(response->completionCode==RESPONSE_SUCCESS){
+            cout<<"Effecter state change successful"<<endl;
+        }else{
+            cout<<"Effecter state change failed"<<endl;
+        }
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+
     }
 }
 
@@ -314,6 +366,8 @@ int main(unsigned int argc, char * argv[]) {
     // Initialize the pdr repository from the device node
     cout<<"Initializing local PDR repository"<<endl;
     pdrRepository.addPdrsFromNode(node1);
+
+    cout<<"\ec"<<endl;
 
     // CLI menu start
     while(uiQuit){
