@@ -1,4 +1,159 @@
 {
+	"state_defs": [
+		{
+			"vendorId": 412,
+			"stateSetId": 1,
+			"name":"Health State",
+			"states":[
+				{"name":"Normal", "value":1},
+				{"name":"Non-Critial", "value":2},
+				{"name":"Critical", "value":3},
+				{"name":"Fatal", "value":4},
+				{"name":"Upper Non-Critical", "value":5},
+				{"name":"Lower Non-Critical", "value":6},
+				{"name":"Upper Critical", "value":7},
+				{"name":"Lower Critical", "value":8},
+				{"name":"Upper Fatal", "value":9},
+				{"name":"Lower Fatal", "value":10}
+			]
+		},
+		{
+			"vendorId": 412,
+			"stateSetId": 2,
+			"name":"Availability",
+			"states":[
+				{"name":"Enabled", "value":1},
+				{"name":"Disabled", "value":2},
+				{"name":"Shutdown", "value":3},
+				{"name":"Offline", "value":4},
+				{"name":"In Test", "value":5},
+				{"name":"Deferred", "value":6},
+				{"name":"Quiescent", "value":7},
+				{"name":"Rebooting", "value":8},
+				{"name":"Resetting", "value":9},
+				{"name":"Failed", "value":10},
+				{"name":"Not Installed", "value":11},
+				{"name":"Power Save Mode", "value":12},
+				{"name":"Paused", "value":13},
+				{"name":"Shutting Down", "value":14},
+				{"name":"Starting", "value":15},
+				{"name":"Not Responding", "value":16}
+			]
+		},
+		{
+			"vendorId": 412,
+			"stateSetId": 3,
+			"name":"Predictive Condition",
+			"states":[
+				{"name":"Normal", "value":1},
+				{"name":"Predictive Failure", "value":2}
+			]
+		},
+		{
+			"vendorId": 412,
+			"stateSetId": 4,
+			"name":"Redundancy Status",
+			"states":[
+				{"name":"Fully Redundant", "value":1},
+				{"name":"Redundancy Degraded", "value":2},
+				{"name":"Redundancy Lost", "value":3}
+			]
+		},
+		{
+			"vendorId": 412,
+			"stateSetId": 5,
+			"name":"Health/Redundancy Trend",
+			"states":[
+				{"name":"Unchnaged", "value":1},
+				{"name":"Improving", "value":2},
+				{"name":"Degrading", "value":3}
+			]
+		},
+		{
+			"vendorId": 412,
+			"stateSetId": 6,
+			"name":"Group Resource Level",
+			"states":[
+				{"name":"Sufficient Resources", "value":1},
+				{"name":"Excess Resources", "value":2},
+				{"name":"Insufficient Resources", "value":3}
+			]
+		},
+		{
+			"vendorId": 412,
+			"stateSetId": 7,
+			"name":"Redundancy Entity Role",
+			"states":[
+				{"name":"Is Hot Spare", "value":1},
+				{"name":"In Redundancy Group", "value":2},
+				{"name":"In (non-redundant) Group", "value":3}
+			]
+		},
+		{
+			"vendorId": 412,
+			"stateSetId": 8,
+			"name":"Operational Status",
+			"states":[
+				{"name":"Normal", "value":1},
+				{"name":"Degraded", "value":2},
+				{"name":"Completed", "value":3},
+				{"name":"Migrating", "value":4},
+				{"name":"Emigrating", "value":5},
+				{"name":"Immigrating", "value":6}
+			]
+		},
+		{
+			"vendorId": 412,
+			"stateSetId": 9,
+			"name":"Operational Stress Status",
+			"states":[
+				{"name":"Normal", "value":1},
+				{"name":"Stressed", "value":2}
+			]
+		},
+		{
+			"vendorId": 412,
+			"stateSetId": 10,
+			"name":"Operational Fault Status",
+			"states":[
+				{"name":"Normal", "value":1},
+				{"name":"Error", "value":2},
+				{"name":"Non-Recoverable Errror", "value":3}
+			]
+		},
+		{
+			"vendorId": 412,
+			"stateSetId": 11,
+			"name":"Operational Running Status",
+			"states":[
+				{"name":"Starting", "value":1},
+				{"name":"Stopping", "value":2},
+				{"name":"Stopped", "value":3},
+				{"name":"In Service", "value":4},
+				{"name":"Aborted", "value":5},
+				{"name":"Dormant", "value":6}
+			]
+		},
+		{
+			"vendorId": 412,
+			"stateSetId": 12,
+			"name":"Operational Connection Status",
+			"states":[
+				{"name":"Normal", "value":1},
+				{"name":"No Contact", "value":2},
+				{"name":"Lost Communication", "value":3}
+			]
+		},
+		{
+			"vendorId": 412,
+			"stateSetId": 67,
+			"name":"Switch State",
+			"states":[
+				{"name":"Pressed/On", "value":1},
+				{"name":"Released/Off", "value":2}
+			]
+		}
+	],
 	"pdr_defs": [
 		{
 			"recordHandle":"uint32",

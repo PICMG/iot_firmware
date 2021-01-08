@@ -284,6 +284,46 @@ int PdrRepository::getPdrPart(PldmNode& node1, uint32 recordHandle, uint32 & nex
     return 0;
 }
 
+//*******************************************************************
+// getStateSet()
+//
+// returns a map representation of a specified state set.  The stateSetId
+// parameter should match either a state set found in DSP0249, or the 
+// vendorStateSetHandle found pdr records.  The vendorID (if specified)
+// should match the OEM vendor id from the PDR record.  If the vendor
+// ID is not specified, the Vendor ID for DMTF is assumed.
+//
+// parameters:
+//    stateSetID - the Id of the state set to find
+//    vendorID - the vendor ID of the state set originator
+// returns:
+//    a map of the states in the state set, if found, otherwise an
+//    empty map.
+map<unsigned int,string> PdrRepository::getStateSet(uint32 stateSetId, uint32 vendorId) {
+    map<unsigned int,string> result;
+
+    // find the state set
+    JsonArray *setArray = ((JsonArray*)(dictionary->find("state_defs")));
+    if (!setArray) return result;
+
+    for (unsigned int i = 0; i< setArray->size(); i++) {
+        JsonObject *stateSet = ((JsonObject*)(setArray->getElement(i)));
+        if (!stateSet) continue;
+
+        if (stateSetId != stateSet->getInteger("stateSetId")) continue;
+        if (vendorId != stateSet->getInteger("vendorId")) continue;
+
+        // here if the state set has been found - populate the map
+        JsonArray *states = ((JsonArray*)(stateSet->find("states")));
+        if (!states) continue;
+        for (int j=0;j<states->size();j++) {
+            JsonObject *state = ((JsonObject*)(states->getElement(j)));
+            if (!state) continue;
+            result.insert(pair<unsigned int,string>(state->getInteger("value"),state->getValue("name")));
+        }
+    }
+    return result;
+}
 
 //*******************************************************************
 // addPdrsFromNode()
@@ -314,6 +354,59 @@ bool PdrRepository::addPdrsFromNode(PldmNode& node1) {
         if (result < 0) return false;
         recordHandle = nextRecordHandle;
         if (nextRecordHandle==0) break;
+    }
+
+    // search through the PDRs and find any OEM state records. 
+    // if a state record is found, add the state record to our dictionary
+    // of states
+    for (map<uint32,GenericPdr*>::iterator it = repository.begin();it!=repository.end();it++) {
+        GenericPdr *pdr = it->second;
+        if (pdr->getPdrType()==PDR_TYPE_OEM_STATE_SET) {
+            // this is an oem state set - check for required keys
+            if (!pdr->keyExists("OEMStateSetIDHandle")) continue;
+            if (!pdr->keyExists("vendorIANA")) continue;
+            if (!pdr->keyExists("stateCount")) continue;
+            
+            // create the new state set
+            JsonObject *stateSet = new JsonObject();
+            JsonValue * name       = new JsonValue("OEM State Set"); 
+            stateSet->put("name",name);
+            JsonValue * vendorId   = new JsonValue(pdr->getValue("vendorIANA")); 
+            stateSet->put("vendorId",vendorId);
+            JsonValue * stateSetId = new JsonValue(pdr->getValue("OEMStateSetIDHandle")); 
+            stateSet->put("stateSetId", stateSetId);
+            JsonArray * states     = new JsonArray();
+            for (unsigned int i=0; i< atoi(pdr->getValue("stateCount").c_str()); i++) {
+                // construct the names of the fields to search for
+                string minStateValue = "minStateValue[";
+                minStateValue.append(to_string(i+1));
+                minStateValue.append("]");
+                string stateName = "stateName[";
+                stateName.append(to_string(i+1));
+                stateName.append("][1]");
+
+                // check to see if the keys exist
+                if (!pdr->keyExists(stateName)) continue;
+                if (!pdr->keyExists(minStateValue)) continue;
+
+                // create the state object
+                JsonObject *state = new JsonObject;
+                
+                // create the fields
+                JsonValue * name  = new JsonValue(pdr->getValue(stateName)); 
+                state->put("name",name);
+                JsonValue * value = new JsonValue(pdr->getValue(minStateValue)); 
+                state->put("value", value);
+                
+                // add the new state to the object
+                states->add(state);
+            }
+            stateSet->put("states",states);
+            JsonArray *setArray = ((JsonArray*)(dictionary->find("state_defs")));
+            if (setArray) {
+                setArray->add(stateSet);
+            }
+        }
     }
     return true;
 }

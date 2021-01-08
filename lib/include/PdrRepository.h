@@ -55,5 +55,6 @@ public:
 	bool setDictionary(string dictionary_file);
 	bool addPdrsFromNode(PldmNode& node1);
 	GenericPdr * getPdrFromRecordHandle(uint32 recordNumber);
+	map<unsigned int,string> getStateSet(uint32 stateSetId, uint32 vendorId = 412);
 	void dump();
 };
