@@ -49,7 +49,7 @@ static int duty = 00;
 * changes:
 *    increments the 1 second tick counter.
 */
-ISR(TIMER1_COMPA_vect) {
+ISR(TIMER1_OVF_vect) {
     // the duty cycle is set to the velocity profiler output for now
     OCR1A = duty;
     control_update();
@@ -57,7 +57,7 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 /********************************************************************
-* timer0_init()
+* timer1_init()
 *
 * initialize the timer for pwm mode with a frame rate of 4kHz
 *
@@ -74,18 +74,22 @@ ISR(TIMER1_COMPA_vect) {
 */
 void timer1_init()
 {
-    /* set the top value to 3999 (divisor for 4khz) */
-    /* duty cycle set to 50% */
-    OCR1A = 2000;
-    ICR1 = 3999;
 
     /* set to fast pwm mode, OCR1A = top, clock divisor = 1*/
     TCCR1A = 0x82;
     TCCR1B = 0x19;
+
+    /* set the top value to 3999 (divisor for 4khz) */
+    /* duty cycle set to 50% */
+    OCR1A = 2000;
+    ICR1 = 3999;
 
     /* enable global interrupts if they are not already enabled */
     __builtin_avr_sei();
 
     /* enable interrupts on tov */
     TIMSK1 = 0x01;
+
+    /* enable the output of the timer */
+    DDRB |= 0x03;
 }

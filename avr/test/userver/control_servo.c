@@ -23,6 +23,10 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
+#ifndef __AVR_ATmega328P__ 
+#define __AVR_ATmega328P__
+#endif
+#include <avr/io.h>
 #include "vprofiler.h"
 #include "control_servo.h"
 
@@ -38,12 +42,12 @@ unsigned char servo_mode  = SERVO_MODE_NOWAIT;
 unsigned char servo_flags = 0x00;
 
 // buffered values for the requested position, velocity and acceleration
-long current_position = 0;;
-long requested_position;
-FP16 requested_velocity;
-FP16 requested_acceleration;
+long current_position       = 0;
+long requested_position     = 1000000L;
+FP16 requested_velocity     = TO_FP16(511);
+FP16 requested_acceleration = TO_FP16(1);
 FP16 requested_kffa;
-static char mode_scurve = 1;
+static char mode_scurve    = 1;
 static unsigned char state = STATE_IDLE;
 
 static unsigned char start_effecter_value = 2;  // initialize to STOP state;
@@ -77,7 +81,7 @@ void control_update() {
 
     switch (state) {
     case STATE_IDLE:
-        if (servo_flags | SERVO_FLAGS_ERROR) {
+        if (servo_flags & SERVO_FLAGS_ERROR) {
             // perform actions for entry to error state
             // error condition has priority over any other state
             // transistion
@@ -87,7 +91,7 @@ void control_update() {
 
             state = STATE_ERROR;
         }
-        else if ((servo_cmd == SERVO_CMD_RUN)&&(servo_mode == SERVO_MODE_NOWAIT)) {
+        else if ((servo_cmd == SERVO_CMD_RUN)&&(servo_mode != SERVO_MODE_NOWAIT)) {
             // set the motion parameters to the most recently requested
             long requested_deltax = requested_position - current_position;
             vprofiler_setParameters(requested_deltax, requested_velocity, requested_acceleration, mode_scurve);
@@ -102,7 +106,11 @@ void control_update() {
             // TODO: enable the current loop if required
             long requested_deltax = requested_position - current_position;
             vprofiler_setParameters(requested_deltax, requested_velocity, requested_acceleration, mode_scurve);
+            
+            // send a trigger pulse to the oscope and start the profiler
+            PORTB|=0x01;
             vprofiler_start();
+            PORTB&=0xFE;            vprofiler_start();
 
             // transition to the running state
             state = STATE_RUNNING;
@@ -112,7 +120,7 @@ void control_update() {
         // update the velocity profiler position - running is the only mode
         // in which this happens
         vprofiler_update();
-        if (servo_flags | SERVO_FLAGS_ERROR) {
+        if (servo_flags & SERVO_FLAGS_ERROR) {
             // perform actions for entry to error state
             // error condition has priority over any other state
             // transistion
@@ -122,7 +130,7 @@ void control_update() {
 
             state = STATE_ERROR;
         }
-        else if (servo_flags | SERVO_FLAGS_TRIGGER ) {
+        else if (servo_flags & SERVO_FLAGS_TRIGGER ) {
             // perform actions for entry to warn state
             // warning conition has priority over all but error
             // transition
@@ -152,7 +160,7 @@ void control_update() {
         }
         break;
     case STATE_WAITING:
-        if (servo_flags | SERVO_FLAGS_ERROR) {
+        if (servo_flags & SERVO_FLAGS_ERROR) {
             // perform actions for entry to error state
             // error condition has priority over any other state
             // transistion
@@ -160,7 +168,7 @@ void control_update() {
             // TODO: disable the current loop if required
             state = STATE_ERROR;
         }
-        else if (!(servo_flags | SERVO_FLAGS_TRIGGER )) {
+        else if (!(servo_flags & SERVO_FLAGS_TRIGGER )) {
             // when waiting, transition to running mode on negative
             // edge of global trigger 
             // TODO: disengage the brake if required
@@ -178,7 +186,7 @@ void control_update() {
         } 
         break;
     case STATE_DONE:
-        if (servo_flags | SERVO_FLAGS_ERROR) {
+        if (servo_flags & SERVO_FLAGS_ERROR) {
             // perform actions for entry to error state
             // error condition has priority over any other state
             // transistion
@@ -186,7 +194,7 @@ void control_update() {
             // TODO: disable the current loop if required
             state = STATE_ERROR;
         }
-        else if (servo_flags | SERVO_FLAGS_TRIGGER ) {
+        else if (servo_flags & SERVO_FLAGS_TRIGGER ) {
             // perform actions for entry to warnding state
             // warning conition has priority over all but error
             // transition
@@ -213,7 +221,7 @@ void control_update() {
         } 
         break;
     case STATE_COND:
-        if (servo_flags | SERVO_FLAGS_ERROR) {
+        if (servo_flags & SERVO_FLAGS_ERROR) {
             // perform actions for entry to error state
             // error condition has priority over any other state
             // transistion
