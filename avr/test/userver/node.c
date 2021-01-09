@@ -366,6 +366,7 @@ static void setStateEffecterStates(PldmRequestHeader* rxHeader) {
         case START_EFFECTER_ID:
             if (action) {
                 if ((req_state==1)||(req_state==2)) {
+                    // 1 = stop, 2 = run
                     if (!control_setState(req_state)) response = RESPONSE_INVALID_STATE_VALUE;
                 } else {
                     response = RESPONSE_UNSUPPORTED_EFFECTERSTATE;
@@ -464,9 +465,7 @@ static void setNumericEffecterValue(PldmRequestHeader* rxHeader) {
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response);   // completion code
-        mctp_transmitFrameEnd(mctp);
-    
-    control_setState(1);
+        mctp_transmitFrameEnd(mctp);    
 }
 
 //*******************************************************************

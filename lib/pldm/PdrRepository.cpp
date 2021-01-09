@@ -299,7 +299,7 @@ int PdrRepository::getPdrPart(PldmNode& node1, uint32 recordHandle, uint32 & nex
 // returns:
 //    a map of the states in the state set, if found, otherwise an
 //    empty map.
-map<unsigned int,string> PdrRepository::getStateSet(uint32 stateSetId, uint32 vendorId) {
+map<unsigned int,string> PdrRepository::getStateSet(uint32 stateSetId) {
     map<unsigned int,string> result;
 
     // find the state set
@@ -311,7 +311,6 @@ map<unsigned int,string> PdrRepository::getStateSet(uint32 stateSetId, uint32 ve
         if (!stateSet) continue;
 
         if (stateSetId != stateSet->getInteger("stateSetId")) continue;
-        if (vendorId != stateSet->getInteger("vendorId")) continue;
 
         // here if the state set has been found - populate the map
         JsonArray *states = ((JsonArray*)(stateSet->find("states")));

@@ -13,6 +13,9 @@ run : $(OBJECTS)
 fcs.o : $(PROJLIBS)/fcs/fcs.c
 	avr-gcc -c $< -o $(OUTPUT_DIR)/$@ $(CXX_FLAGS) -I$(INCLUDES) $(LIBINCLUDES)
      
+crc8.o : $(PROJLIBS)/pldm/crc8.c
+	avr-gcc -c $< -o $(OUTPUT_DIR)/$@ $(CXX_FLAGS) -I$(INCLUDES) $(LIBINCLUDES)
+
 mctp.o : $(PROJLIBS)/mctp/mctp.c
 	avr-gcc -c $< -o $(OUTPUT_DIR)/$@ $(CXX_FLAGS) -I$(INCLUDES) $(LIBINCLUDES)
 

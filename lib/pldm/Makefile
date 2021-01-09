@@ -1,7 +1,7 @@
 LIBFILE := libpldm.a
 LIBINCLUDES := ../include
 INCLUDES := .
-OBJECTS := GenericPdr.o PdrRepository.o
+OBJECTS := GenericPdr.o PdrRepository.o crc8.o
 
 build : $(OBJECTS)
 	ar -rc $(LIBFILE) $(OBJECTS)
