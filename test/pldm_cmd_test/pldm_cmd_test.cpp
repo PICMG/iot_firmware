@@ -58,6 +58,7 @@ static void printMenu1(){
     cout<<"1 - Dump PDR\n"<<endl;
     cout<<"2 - Set Numeric Effecter Value\n"<<endl;
     cout<<"3 - Set State Effecter State\n"<<endl;
+    cout<<"4 - Get Numeric Effecter Value\n"<<endl;
     cout<<"Q - Quit\n"<<endl;
 }
 
@@ -261,6 +262,97 @@ static void setNumericEffecterMenu(){
     }
 }
 
+//*******************************************************************
+// getNumericEffecterMenu()
+//
+// This helper function generates a CLI menu for the GetNumericEffecter function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then print the value of the effecter.
+//
+// parameters:
+//	  none
+// returns:
+//    void
+static void getNumericEffecterMenu(){
+    cout<<"\ec"<<endl;
+    GenericPdr* effecterpdr; 
+    unsigned long effecterID = getUIlong("please enter an effecter ID");
+    effecterpdr = pickEffecter(effecterID);
+    // checking ID
+    if(!effecterpdr){
+        cout<<"Invalid ID"<<endl;
+    }else{
+        cout<<"valid ID"<<endl;
+        
+        mctp_struct mctp1;
+        mctp_init(uart_handle,&mctp1);
+        node node1;
+        node1.init(&mctp1);
+        
+        unsigned char buffer[2]; 
+        double resolution = atof(effecterpdr->getValue("resolution").c_str());
+        double offset     = atof(effecterpdr->getValue("offset").c_str());
+        
+        unsigned int body_len = 2;
+
+        PldmRequestHeader header;
+        header.flags1 = 0; header.flags2 = 0; header.command = CMD_GET_NUMERIC_EFFECTER_VALUE;
+        *((uint16*)buffer) = effecterID;
+        
+        // sending the command
+        node1.putCommand(&header, buffer, body_len);
+
+        // recieving the response
+        PldmResponseHeader* response;
+        response = (PldmResponseHeader*)node1.getResponse();
+        
+        // processing the response
+        if(response->completionCode==RESPONSE_SUCCESS){
+            char* body = (char*)(response+1);
+            double data = 0;
+
+            // getting the data size
+            uint8 dataSize = *((uint8*)(&body[0]));
+
+            // switch depending on data size
+            if(dataSize==0){ // data size is uint8
+                uint8 value = *((uint8*)(&body[3]));
+                data = value;
+            }
+            else if(dataSize==1){ // data size is sint8
+                sint8 value = *((sint8*)(&body[3]));
+                data = value;
+            } 
+            else if(dataSize==2){ // data size is uint16
+                uint16 value = *((uint16*)(&body[4]));
+                data = value;
+            } 
+            else if(dataSize==3){ // data size is sint16
+                sint16 value = *((sint16*)(&body[4]));
+                data = value;
+            } 
+            else if(dataSize==4){ // data size is uint32
+                uint32 value = *((uint32*)(&body[6]));
+                data = value;
+            } 
+            else if(dataSize==5){ // data size is sint32
+                sint32 value = *((sint32*)(&body[6]));
+                data = value;
+            }
+
+            // perform the unit conversion (with rounding)
+            double scaledData = (data * resolution)+offset;
+        
+            cout<<"Effecter value is: "<<scaledData<<endl;
+
+        }else{
+            cout<<"Effecter value change failed"<<endl;
+        }
+
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+    }
+}
 
 //*******************************************************************
 // setStateEffecterMenu()
@@ -385,6 +477,9 @@ int main(unsigned int argc, char * argv[]) {
             break;
             case '3': // set State Effecter
                 setStateEffecterMenu();
+            break;
+            case '4': // get Numeric Effecter
+                getNumericEffecterMenu();
             break;
             case 'Q':
             case 'q':
