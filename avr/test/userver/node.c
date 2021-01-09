@@ -195,6 +195,7 @@ static unsigned int pdrSize(unsigned int index) {
 static void processCommandGetPdr(PldmRequestHeader* rxHeader) 
 {
     static char pdrTxState = 0;
+    static char crc8;
     static unsigned int pdrNextHandle;
     static unsigned long pdrRecord;
     unsigned int extractionPoint;
@@ -259,8 +260,11 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
         transmitShort(request->requestCount); // response->responseCount = request->requestCount;
         extractionPoint = request->dataTransferHandle+getPdrOffset(request->recordHandle);
         // insert the pdr
+        crc8 = 0;
         for (int i = 0;i < request->requestCount;i++) {
-            transmitByte(pgm_read_byte(&(__pdr_data[extractionPoint++])));
+            unsigned char byte = pgm_read_byte(&(__pdr_data[extractionPoint++])); 
+            transmitByte(byte);
+            crc8 = calc_new_crc8(crc8, byte);
         }
         mctp_transmitFrameEnd(mctp);
         pdrTxState = 1;
@@ -291,10 +295,10 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
             mctp_transmitFrameEnd(mctp);
             return;
         }
-        if (request->requestCount + request->dataTransferHandle >= getPdrOffset(request->recordHandle)+pdrSize(request->recordHandle)) {
+        if (request->requestCount + request->dataTransferHandle >= getPdrOffset(request->recordHandle)+pdrSize(request->recordHandle)+1) {
             // transfer end part of the data
             mctp_transmitFrameStart(mctp, sizeof(PldmResponseHeader) + sizeof(GetPdrResponse) + pdrSize(request->recordHandle) -
-                (request->dataTransferHandle-getPdrOffset(request->recordHandle)) + 4-1);
+                (request->dataTransferHandle-getPdrOffset(request->recordHandle)) + 4 - 1 + 1);
             transmitByte(rxHeader->flags1 | 0x80);
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
@@ -309,8 +313,11 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
             // insert the pdr
             for (int i = 0;i < pdrSize(request->recordHandle) -
                 (request->dataTransferHandle-getPdrOffset(request->recordHandle));i++) {
-                transmitByte(pgm_read_byte(&(__pdr_data[extractionPoint++])));
+                unsigned char byte = pgm_read_byte(&(__pdr_data[extractionPoint++])); 
+                transmitByte(byte);
+                crc8 = calc_new_crc8(crc8, byte);
             }
+            transmitByte(crc8);
             mctp_transmitFrameEnd(mctp);
             pdrTxState = 0;
             return;
@@ -329,7 +336,9 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
         unsigned int extractionPoint = request->dataTransferHandle;
         // insert the pdr
         for (int i = 0;i < request->requestCount;i++) {
-            transmitByte(pgm_read_byte(&(__pdr_data[extractionPoint++])));
+            unsigned char byte = pgm_read_byte(&(__pdr_data[extractionPoint++])); 
+            transmitByte(byte);
+            crc8 = calc_new_crc8(crc8, byte);
         }
         mctp_transmitFrameEnd(mctp);
         pdrTxState = 1;

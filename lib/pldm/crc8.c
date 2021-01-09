@@ -5,7 +5,7 @@
 // This brute force method will be somewhat slow, but it is only used
 // during when getting the PDR repository so it should not impact 
 // operational performance.
-unsigned char calc_new_crc(unsigned char old_crc, unsigned char new_byte) {
+unsigned char calc_new_crc8(unsigned char old_crc, unsigned char new_byte) {
     unsigned crc = old_crc ^ new_byte;
     for (int i = 0; i < 8; i++) crc = (crc << 1) ^ ((crc & 0x80) ? 0x07 : 0);
     return crc;
