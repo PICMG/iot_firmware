@@ -57,7 +57,7 @@ static unsigned char start_effecter_value = 2;  // initialize to STOP state;
 // request a state change.  This function is called from the 
 // low-priority loop.
 unsigned char control_setState(unsigned char reqState) {
-    if (reqState == 1) {
+    if (reqState == 2) {  // run requested
         if (state == STATE_IDLE) {
             // run command is only valid from the idle state
             servo_cmd = SERVO_CMD_RUN;

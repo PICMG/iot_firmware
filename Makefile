@@ -1,4 +1,4 @@
-all : libraries userver pldm_test uart_c_test mctp_c_test pldm_client pldm_server pldm_cmd_test
+all : libraries userver pldm_test uart_c_test mctp_c_test pldm_client pldm_server pldm_cmd_test pdrmaker
 
 libraries:
 	cd ./lib/json && make clean
@@ -14,6 +14,9 @@ libraries:
 	
 userver : 
 	cd ./avr/test/userver && make build
+
+pdrmaker : 
+	cd ./src/pdrmaker && make clean && make build
 
 pldm_client : 
 	cd ./test/pldm_client && make build

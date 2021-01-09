@@ -308,7 +308,7 @@ int main(int argc, char *argv[]) {
     ofstream outfile(argv[2]);
     if (!outfile.is_open()) {
         cerr << "error opening output file " << argv[2] << endl;
-        return NULL;
+        return 0;
     }
 
     unsigned long bytecount = 0;

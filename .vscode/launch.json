@@ -5,6 +5,26 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "(gdb) Launch pdrmaker",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/pdrmaker/pdrmaker",
+            "args": ["motion_control.json","pdr_data.c"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/src/pdrmaker",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build"
+        },
+        {
             "name": "(gdb) Launch mctp test",
             "type": "cppdbg",
             "request": "launch",

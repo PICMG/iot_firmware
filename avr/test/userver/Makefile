@@ -26,7 +26,7 @@ LIBPATH     := ../../../lib /usr/lib/avr
 AVRPROJLIBS := ../../lib
 INCLUDES    := -I. -I/usr/lib/avr/include -I../../../lib/include 
 OBJECTS     := main.o simulavr_info.o node.o pdr_data.o vprofiler.o control_servo.o timer1.o
-LIBOBJECTS  := uart.o fcs.o mctp.o
+LIBOBJECTS  := uart.o fcs.o mctp.o crc8.o
 CXX_FLAGS   := -Wall -mmcu=atmega328p -DF_CPU=16000000UL
 OUTPUT_DIR  := $(CURDIR)
 export      CXX_FLAGS
