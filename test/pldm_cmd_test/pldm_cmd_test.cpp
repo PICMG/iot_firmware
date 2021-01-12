@@ -59,6 +59,7 @@ static void printMenu1(){
     cout<<"2 - Set Numeric Effecter Value\n"<<endl;
     cout<<"3 - Set State Effecter State\n"<<endl;
     cout<<"4 - Get Numeric Effecter Value\n"<<endl;
+    cout<<"5 - Get State Effecter State\n"<<endl;
     cout<<"Q - Quit\n"<<endl;
 }
 
@@ -355,6 +356,67 @@ static void getNumericEffecterMenu(){
 }
 
 //*******************************************************************
+// getStateEffecterMenu()
+//
+// This helper function generates a CLI menu for the GetStateEffecter function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then print the value of the effecter.
+//
+// parameters:
+//	  none
+// returns:
+//    void
+static void getStateEffecterMenu(){
+    cout<<"\ec"<<endl;
+    GenericPdr* effecterpdr; 
+    unsigned long effecterID = getUIlong("please enter an effecter ID");
+    effecterpdr = pickEffecter(effecterID);
+    // checking ID
+    if(!effecterpdr){
+        cout<<"Invalid ID"<<endl;
+    }else{
+        cout<<"valid ID"<<endl;
+        
+        mctp_struct mctp1;
+        mctp_init(uart_handle,&mctp1);
+        node node1;
+        node1.init(&mctp1);
+        
+        unsigned char buffer[2]; 
+        
+        unsigned int body_len = 2;
+
+        PldmRequestHeader header;
+        header.flags1 = 0; header.flags2 = 0; header.command = CMD_GET_STATE_EFFECTER_STATES;
+        *((uint16*)buffer) = effecterID;
+        
+        // sending the command
+        node1.putCommand(&header, buffer, body_len);
+
+        // recieving the response
+        PldmResponseHeader* response;
+        response = (PldmResponseHeader*)node1.getResponse();
+        char* body = (char*)(response+1);
+        uint8 value = *((uint8*)(&body[3]));
+                
+        // processing the response
+        if(response->completionCode==RESPONSE_SUCCESS){
+            map<unsigned int,string> enums = pdrRepository.getStateSet(atoi(effecterpdr->getValue("stateSetID").c_str()));
+            for (std::map<unsigned int,string>::iterator it=enums.begin(); it!=enums.end(); it++){
+                if(it->first==value){
+                    cout << "presentState: " << it->second << endl;
+                }
+            }
+        }else{
+            cout<<"Effecter value retrival failed"<<endl;
+        }
+
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+    }
+}
+
+//*******************************************************************
 // setStateEffecterMenu()
 //
 // This helper function generates a CLI menu for the setStateEffecter function.
@@ -480,6 +542,9 @@ int main(unsigned int argc, char * argv[]) {
             break;
             case '4': // get Numeric Effecter
                 getNumericEffecterMenu();
+            break;
+            case '5': // get State Effecter
+                getStateEffecterMenu();
             break;
             case 'Q':
             case 'q':
