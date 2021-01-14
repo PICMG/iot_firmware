@@ -60,6 +60,8 @@ static void printMenu1(){
     cout<<"3 - Set State Effecter State\n"<<endl;
     cout<<"4 - Get Numeric Effecter Value\n"<<endl;
     cout<<"5 - Get State Effecter State\n"<<endl;
+    cout<<"6 - Get State Sensor Reading\n"<<endl;
+    cout<<"7 - Get Sensor Reading\n"<<endl;
     cout<<"Q - Quit\n"<<endl;
 }
 
@@ -172,6 +174,35 @@ static GenericPdr* pickEffecter(unsigned long requestedID){
             if(effecterPdr->keyExists("effecterID")){
                 unsigned long effecterID = atol(effecterPdr->getValue("effecterID").c_str());
                 if(effecterID==requestedID) return effecterPdr;
+            }
+        }
+        j++;
+    }
+}
+
+//*******************************************************************
+// pickSensor()
+//
+// This helper function takes an ID for an sensor pdr, searches
+// the repository for the pdr, and, if available, returns it.
+//
+// parameters:
+//	  requestedID - the id of the pdr
+// returns:
+//    the pdr, if it exists, or null
+static GenericPdr* pickSensor(unsigned long requestedID){
+    unsigned char buffer[256];
+        
+    int j = 1;
+    while(1){
+        GenericPdr* sensorPdr;
+        sensorPdr = pdrRepository.getPdrFromRecordHandle(j);
+        if(!sensorPdr){
+            return 0;
+        }else{
+            if(sensorPdr->keyExists("sensorID")){
+                unsigned long sensorID = atol(sensorPdr->getValue("sensorID").c_str());
+                if(sensorID==requestedID) return sensorPdr;
             }
         }
         j++;
@@ -416,6 +447,168 @@ static void getStateEffecterMenu(){
     }
 }
 
+
+//*******************************************************************
+// getStateSensorMenu()
+//
+// This helper function generates a CLI menu for the GetStateSensorReadings function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then print the value of the effecter.
+//
+// parameters:
+//	  none
+// returns:
+//    void
+static void getStateSensorMenu(){
+    cout<<"\ec"<<endl;
+    GenericPdr* sensorpdr; 
+    unsigned long sensorID = getUIlong("please enter an sensor ID");
+    sensorpdr = pickSensor(sensorID);
+    // checking ID
+    if(!sensorpdr){
+        cout<<"Invalid ID"<<endl;
+    }else{
+        cout<<"valid ID"<<endl;
+        
+        mctp_struct mctp1;
+        mctp_init(uart_handle,&mctp1);
+        node node1;
+        node1.init(&mctp1);
+        
+        unsigned char buffer[4]; 
+        
+        unsigned int body_len = 4;
+
+        PldmRequestHeader header;
+        header.flags1 = 0; header.flags2 = 0; header.command = CMD_GET_STATE_SENSOR_READINGS;
+        *((uint16*)buffer) = sensorID;
+        buffer[2]=1;
+        buffer[3]=0;        
+        
+        // sending the command
+        node1.putCommand(&header, buffer, body_len);
+
+        // recieving the response
+        PldmResponseHeader* response;
+        response = (PldmResponseHeader*)node1.getResponse();
+        char* body = (char*)(response+1);
+        uint8 value = *((uint8*)(&body[1]));
+                
+        // processing the response
+        if(response->completionCode==RESPONSE_SUCCESS){
+            map<unsigned int,string> enums = pdrRepository.getStateSet(atoi(sensorpdr->getValue("stateSetID").c_str()));
+            for (std::map<unsigned int,string>::iterator it=enums.begin(); it!=enums.end(); it++){
+                if(it->first==value){
+                    cout << "sensorOperationalState: " << it->second << endl;
+                }
+            }
+        }else{
+            cout<<"Sensor state retrival failed"<<endl;
+        }
+
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+    }
+}
+
+
+//*******************************************************************
+// getSensorMenu()
+//
+// This helper function generates a CLI menu for the GetSensorReadings function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then print the value of the effecter.
+//
+// parameters:
+//	  none
+// returns:
+//    void
+static void getSensorMenu(){
+    cout<<"\ec"<<endl;
+    GenericPdr* sensorpdr; 
+    unsigned long sensorID = getUIlong("please enter an sensor ID");
+    sensorpdr = pickSensor(sensorID);
+    // checking ID
+    if(!sensorpdr){
+        cout<<"Invalid ID"<<endl;
+    }else{
+        cout<<"valid ID"<<endl;
+        
+        mctp_struct mctp1;
+        mctp_init(uart_handle,&mctp1);
+        node node1;
+        node1.init(&mctp1);
+        
+        unsigned char buffer[3]; 
+        double resolution = atof(sensorpdr->getValue("resolution").c_str());
+        double offset     = atof(sensorpdr->getValue("offset").c_str());
+        
+        unsigned int body_len = 3;
+
+        PldmRequestHeader header;
+        header.flags1 = 0; header.flags2 = 0; header.command = CMD_GET_SENSOR_READING;
+        *((uint16*)buffer) = sensorID;
+        
+        // this changes the state of the state machine depending on value.
+        // if true, sets the sensor state to "initilizing" when called.
+        bool8 rearmEventState = true;
+        buffer[2] = rearmEventState;
+
+        // sending the command
+        node1.putCommand(&header, buffer, body_len);
+
+        // recieving the response
+        PldmResponseHeader* response;
+        response = (PldmResponseHeader*)node1.getResponse();
+        
+        // processing the response
+        if(response->completionCode==RESPONSE_SUCCESS){
+            char* body = (char*)(response+1);
+            double data = 0;
+
+            // getting the data size
+            uint8 dataSize = *((uint8*)(&body[0]));
+
+            // switch depending on data size
+            if(dataSize==0){ // data size is uint8
+                uint8 value = *((uint8*)(&body[6]));
+                data = value;
+            }
+            else if(dataSize==1){ // data size is sint8
+                sint8 value = *((sint8*)(&body[6]));
+                data = value;
+            } 
+            else if(dataSize==2){ // data size is uint16
+                uint16 value = *((uint16*)(&body[6]));
+                data = value;
+            } 
+            else if(dataSize==3){ // data size is sint16
+                sint16 value = *((sint16*)(&body[6]));
+                data = value;
+            } 
+            else if(dataSize==4){ // data size is uint32
+                uint32 value = *((uint32*)(&body[6]));
+                data = value;
+            } 
+            else if(dataSize==5){ // data size is sint32
+                sint32 value = *((sint32*)(&body[6]));
+                data = value;
+            }
+
+            // perform the unit conversion (with rounding)
+            double scaledData = (data * resolution)+offset;
+        
+            cout<<"Sensor value is: "<<scaledData<<endl;
+
+        }else{
+            cout<<"Sensor value failed"<<endl;
+        }
+
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+    }
+}
+
 //*******************************************************************
 // setStateEffecterMenu()
 //
@@ -545,6 +738,12 @@ int main(unsigned int argc, char * argv[]) {
             break;
             case '5': // get State Effecter
                 getStateEffecterMenu();
+            break;
+            case '6': // get State Sensor Reading
+                getStateSensorMenu();
+            break;
+            case '7': // get Sensor Reading
+                getSensorMenu();
             break;
             case 'Q':
             case 'q':
