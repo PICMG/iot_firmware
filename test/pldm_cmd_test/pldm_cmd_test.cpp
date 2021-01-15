@@ -52,17 +52,19 @@ unsigned int  uart_handle;     // handle for uart device
 // returns:
 //    void
 static void printMenu1(){
-    cout<<"*******************************************************************\n"<<endl;
-    cout<<"Enter Option:\n"<<endl;
-    cout<<"*******************************************************************\n"<<endl;
-    cout<<"1 - Dump PDR\n"<<endl;
-    cout<<"2 - Set Numeric Effecter Value\n"<<endl;
-    cout<<"3 - Set State Effecter State\n"<<endl;
-    cout<<"4 - Get Numeric Effecter Value\n"<<endl;
-    cout<<"5 - Get State Effecter State\n"<<endl;
-    cout<<"6 - Get State Sensor Reading\n"<<endl;
-    cout<<"7 - Get Sensor Reading\n"<<endl;
-    cout<<"Q - Quit\n"<<endl;
+    cout<<"*******************************************************************"<<endl;
+    cout<<"Enter Command:"<<endl;
+    cout<<"*******************************************************************"<<endl;
+    cout<<"1 - Dump PDR"<<endl;
+    cout<<"2 - Set Numeric Effecter Value"<<endl;
+    cout<<"3 - Set State Effecter State"<<endl;
+    cout<<"4 - Get Numeric Effecter Value"<<endl;
+    cout<<"5 - Get State Effecter State"<<endl;
+    cout<<"6 - Get State Sensor Reading"<<endl;
+    cout<<"7 - Get Sensor Reading"<<endl;
+    cout<<"8 - Set Numeric Effecter Enable"<<endl;
+    cout<<"9 - Set State Effecter Enable"<<endl;
+    cout<<"Q - Quit"<<endl;
 }
 
 //*******************************************************************
@@ -159,9 +161,10 @@ static int getUIint(const char* prompt){
 //
 // parameters:
 //	  requestedID - the id of the pdr
+//    effecterType - the name of the sensor (StateSensor/NumericSensor)
 // returns:
 //    the pdr, if it exists, or null
-static GenericPdr* pickEffecter(unsigned long requestedID){
+static GenericPdr* pickEffecter(unsigned long requestedID, string effecterType){
     unsigned char buffer[256];
         
     int j = 1;
@@ -172,8 +175,10 @@ static GenericPdr* pickEffecter(unsigned long requestedID){
             return 0;
         }else{
             if(effecterPdr->keyExists("effecterID")){
-                unsigned long effecterID = atol(effecterPdr->getValue("effecterID").c_str());
-                if(effecterID==requestedID) return effecterPdr;
+                if(effecterPdr->getValue("PDRType")==effecterType){
+                    unsigned long effecterID = atol(effecterPdr->getValue("effecterID").c_str());
+                    if(effecterID==requestedID) return effecterPdr;
+                }
             }
         }
         j++;
@@ -188,9 +193,10 @@ static GenericPdr* pickEffecter(unsigned long requestedID){
 //
 // parameters:
 //	  requestedID - the id of the pdr
+//    sensorType - the name of the sensor (StateSensor/NumericSensor)
 // returns:
 //    the pdr, if it exists, or null
-static GenericPdr* pickSensor(unsigned long requestedID){
+static GenericPdr* pickSensor(unsigned long requestedID, string sensorType){
     unsigned char buffer[256];
         
     int j = 1;
@@ -201,8 +207,10 @@ static GenericPdr* pickSensor(unsigned long requestedID){
             return 0;
         }else{
             if(sensorPdr->keyExists("sensorID")){
-                unsigned long sensorID = atol(sensorPdr->getValue("sensorID").c_str());
-                if(sensorID==requestedID) return sensorPdr;
+                if(sensorPdr->getValue("PDRType")==sensorType){
+                    unsigned long sensorID = atol(sensorPdr->getValue("sensorID").c_str());
+                    if(sensorID==requestedID) return sensorPdr;
+                }    
             }
         }
         j++;
@@ -224,7 +232,7 @@ static void setNumericEffecterMenu(){
     cout<<"\ec"<<endl;
     GenericPdr* effecterpdr; 
     unsigned long effecterID = getUIlong("please enter an effecter ID");
-    effecterpdr = pickEffecter(effecterID);
+    effecterpdr = pickEffecter(effecterID,"NumericEffecter");
     if(!effecterpdr){
         cout<<"Invalid ID"<<endl;
     }else{
@@ -309,7 +317,7 @@ static void getNumericEffecterMenu(){
     cout<<"\ec"<<endl;
     GenericPdr* effecterpdr; 
     unsigned long effecterID = getUIlong("please enter an effecter ID");
-    effecterpdr = pickEffecter(effecterID);
+    effecterpdr = pickEffecter(effecterID,"NumericEffecter");
     // checking ID
     if(!effecterpdr){
         cout<<"Invalid ID"<<endl;
@@ -401,7 +409,7 @@ static void getStateEffecterMenu(){
     cout<<"\ec"<<endl;
     GenericPdr* effecterpdr; 
     unsigned long effecterID = getUIlong("please enter an effecter ID");
-    effecterpdr = pickEffecter(effecterID);
+    effecterpdr = pickEffecter(effecterID,"StateEffecter");
     // checking ID
     if(!effecterpdr){
         cout<<"Invalid ID"<<endl;
@@ -428,7 +436,7 @@ static void getStateEffecterMenu(){
         PldmResponseHeader* response;
         response = (PldmResponseHeader*)node1.getResponse();
         char* body = (char*)(response+1);
-        uint8 value = *((uint8*)(&body[3]));
+        uint8 value = *((uint8*)(&body[1]));
                 
         // processing the response
         if(response->completionCode==RESPONSE_SUCCESS){
@@ -463,7 +471,7 @@ static void getStateSensorMenu(){
     cout<<"\ec"<<endl;
     GenericPdr* sensorpdr; 
     unsigned long sensorID = getUIlong("please enter an sensor ID");
-    sensorpdr = pickSensor(sensorID);
+    sensorpdr = pickSensor(sensorID,"StateSensor");
     // checking ID
     if(!sensorpdr){
         cout<<"Invalid ID"<<endl;
@@ -492,7 +500,7 @@ static void getStateSensorMenu(){
         PldmResponseHeader* response;
         response = (PldmResponseHeader*)node1.getResponse();
         char* body = (char*)(response+1);
-        uint8 value = *((uint8*)(&body[1]));
+        uint8 value = *((uint8*)(&body[3]));
                 
         // processing the response
         if(response->completionCode==RESPONSE_SUCCESS){
@@ -527,7 +535,7 @@ static void getSensorMenu(){
     cout<<"\ec"<<endl;
     GenericPdr* sensorpdr; 
     unsigned long sensorID = getUIlong("please enter an sensor ID");
-    sensorpdr = pickSensor(sensorID);
+    sensorpdr = pickSensor(sensorID,"NumericSensor");
     // checking ID
     if(!sensorpdr){
         cout<<"Invalid ID"<<endl;
@@ -624,7 +632,7 @@ static void setStateEffecterMenu(){
     cout<<"\ec"<<endl;
     GenericPdr* effecterpdr; 
     unsigned long effecterID = getUIlong("please enter an effecter ID");
-    effecterpdr = pickEffecter(effecterID);
+    effecterpdr = pickEffecter(effecterID,"StateEffecter");
     if(!effecterpdr){
         cout<<"Invalid ID"<<endl;
     }else{
@@ -666,6 +674,125 @@ static void setStateEffecterMenu(){
             cout<<"Effecter state change successful"<<endl;
         }else{
             cout<<"Effecter state change failed"<<endl;
+        }
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+
+    }
+}
+
+
+//*******************************************************************
+// setNumericEnableMenu()
+//
+// This helper function generates a CLI menu for the setNumericEffecterEnable function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then change the value of the effecter's enable state.
+//
+// parameters:
+//	  none
+// returns:
+//    void
+static void setNumericEnableMenu(){
+    cout<<"\ec"<<endl;
+    GenericPdr* effecterpdr; 
+    unsigned long effecterID = getUIlong("please enter an effecter ID");
+    effecterpdr = pickEffecter(effecterID,"NumericEffecter");
+    if(!effecterpdr){
+        cout<<"Invalid ID"<<endl;
+    }else{
+        cout<<"valid ID"<<endl;
+        
+        mctp_struct mctp1;
+        mctp_init(uart_handle,&mctp1);
+        node node1;
+        node1.init(&mctp1);
+
+        cout<<"Please enter enable state:"<<endl;
+        cout<<"1 - enabled"<<endl;
+        cout<<"2 - disabled"<<endl;
+        cout<<"3 - unavailable"<<endl;
+        uint8 enableState = getUIint("");
+        
+        // send command
+        unsigned char buffer[3]; 
+        unsigned int body_len = 3;
+        
+        PldmRequestHeader header;
+        header.flags1 = 0; header.flags2 = 0; header.command = CMD_SET_NUMERIC_EFFECTER_ENABLE;
+        *((uint16*)buffer) = effecterID;
+
+        buffer[2]=enableState;
+
+        node1.putCommand(&header, buffer, body_len);
+
+        // get response
+        PldmResponseHeader* response;
+        response = (PldmResponseHeader*)node1.getResponse();
+        if(response->completionCode==RESPONSE_SUCCESS){
+            cout<<"Effecter enable state change successful"<<endl;
+        }else{
+            cout<<"Effecter enable state change failed"<<endl;
+        }
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+
+    }
+}
+
+//*******************************************************************
+// setStateEnableMenu()
+//
+// This helper function generates a CLI menu for the setStateEffecterEnables function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then change the value of the effecter's enable state.
+//
+// parameters:
+//	  none
+// returns:
+//    void
+static void setStateEnableMenu(){
+    cout<<"\ec"<<endl;
+    GenericPdr* effecterpdr; 
+    unsigned long effecterID = getUIlong("please enter an effecter ID");
+    effecterpdr = pickEffecter(effecterID,"StateEffecter");
+    if(!effecterpdr){
+        cout<<"Invalid ID"<<endl;
+    }else{
+        cout<<"valid ID"<<endl;
+        
+        mctp_struct mctp1;
+        mctp_init(uart_handle,&mctp1);
+        node node1;
+        node1.init(&mctp1);
+
+        cout<<"Please enter enable state:"<<endl;
+        cout<<"1 - enabled"<<endl;
+        cout<<"2 - disabled"<<endl;
+        cout<<"3 - unavailable"<<endl;
+        uint8 enableState = getUIint("");
+        
+        // send command
+        unsigned char buffer[5]; 
+        unsigned int body_len = 5;
+        
+        PldmRequestHeader header;
+        header.flags1 = 0; header.flags2 = 0; header.command = CMD_SET_STATE_EFFECTER_ENABLES;
+        *((uint16*)buffer) = effecterID;
+
+        buffer[2]=1;
+        buffer[3]=enableState;
+        buffer[4]=1;
+
+        node1.putCommand(&header, buffer, body_len);
+
+        // get response
+        PldmResponseHeader* response;
+        response = (PldmResponseHeader*)node1.getResponse();
+        if(response->completionCode==RESPONSE_SUCCESS){
+            cout<<"Effecter enable state change successful"<<endl;
+        }else{
+            cout<<"Effecter enable state change failed"<<endl;
         }
         getUIch("B - go back to menu");
         cout<<"\ec"<<endl;
@@ -744,6 +871,12 @@ int main(unsigned int argc, char * argv[]) {
             break;
             case '7': // get Sensor Reading
                 getSensorMenu();
+            break;
+            case '8': // set Numeric Effecter Enable
+                setNumericEnableMenu();
+            break;
+            case '9': // set State Effecter Enable
+                setStateEnableMenu();
             break;
             case 'Q':
             case 'q':
