@@ -60,6 +60,21 @@ static	mctp_struct *mctp;
 #define TRIGGER_EFFECTER_ID   6
 #define START_EFFECTER_ID     7
 
+#define TRIGGER_SENSOR_ID     7
+#define INTERLOCK_SENSOR_ID   6
+#define MOTOR_STATE_SENSOR_ID 5
+#define POSITION_SENSOR_ID    3
+#define PERR_SENSOR_ID        1
+#define VELOCITY_SENSOR_ID    4
+#define VERR_SENSOR_ID        2
+#define POS_LIMIT_SENSOR_ID   8
+#define NEG_LIMIT_SENSOR_ID   9
+
+
+#ifdef SERVO_CONTROL_MODE
+    static  unsigned char requested_start_state = 2;  // initially stopped
+#endif
+
 
 static void transmitByte(unsigned char data) {
     // send the data to the MCTP buffer in little-endian fashion
@@ -376,7 +391,11 @@ static void setStateEffecterStates(PldmRequestHeader* rxHeader) {
             if (action) {
                 if ((req_state==1)||(req_state==2)) {
                     // 1 = stop, 2 = run
-                    if (!control_setState(req_state)) response = RESPONSE_INVALID_STATE_VALUE;
+                    if (!control_setState(req_state)) {
+                        response = RESPONSE_INVALID_STATE_VALUE;
+                    } else {
+                        requested_start_state = req_state;
+                    }
                 } else {
                     response = RESPONSE_UNSUPPORTED_EFFECTERSTATE;
                 }
@@ -413,6 +432,152 @@ static void setStateEffecterStates(PldmRequestHeader* rxHeader) {
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response);   // completion code
+        mctp_transmitFrameEnd(mctp);
+} 
+
+//*******************************************************************
+// setStateEfffecterEnables()
+//
+// set the value of a state effecter enable if it exists.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void setStateEffecterEnables(PldmRequestHeader* rxHeader) {
+    // extract the information from the body
+    unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+    unsigned char effecter_count = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2);
+    unsigned char effecter_op_state     = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+3);
+    unsigned char effecter_event_enable = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+4);
+    unsigned char response = RESPONSE_SUCCESS; 
+    if (effecter_count != 1) {
+        response = RESPONSE_INVALID_STATE_VALUE; 
+    } 
+    else {
+        switch (effecter_id) {
+    #ifdef SERVO_CONTROL_MODE
+        case START_EFFECTER_ID:
+            // TODO: do something with the enable setting
+            break;
+    #endif
+        case TRIGGER_EFFECTER_ID:
+            // TODO: do something with the enable setting
+            break;
+        case INTERLOCK_EFFECTER_ID:
+            // TODO: do something with the enable setting
+            break;
+        default:
+            response = RESPONSE_INVALID_EFFECTER_ID; 
+            // TODO: do something with the enable setting
+            break;
+        }
+    }
+
+    // send the response
+    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 4);
+        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);   // completion code
+        mctp_transmitFrameEnd(mctp);
+} 
+
+//*******************************************************************
+// getStateSensorReading()
+//
+// get the value of a state sensor state if it exists.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void getStateSensorReading(PldmRequestHeader* rxHeader) {
+    // extract the information from the body
+    unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+    unsigned char response = RESPONSE_SUCCESS; 
+    unsigned char body[5] = {1,1,0,0,0};  // 1 sensor, enabled, no update pending, 
+    unsigned char hasbody = 1;
+    switch (effecter_id) {
+#ifdef SERVO_CONTROL_MODE
+    case MOTOR_STATE_SENSOR_ID:
+        body[2] = control_getState();
+        body[3] = control_getState();
+        break;
+    case POS_LIMIT_SENSOR_ID:
+        // TODO, get the value of the position limit switch
+        break;
+    case NEG_LIMIT_SENSOR_ID:
+        // TODO, get the value of the position limit switch
+        break;
+#endif
+    case TRIGGER_SENSOR_ID:
+        // TODO, get the trigger state from the hardware
+        break;
+    case INTERLOCK_SENSOR_ID:
+        // TODO, get the interlock state from the hardware
+        break;
+    default:
+        response = RESPONSE_INVALID_EFFECTER_ID; 
+        hasbody = 0;
+        break;
+    }
+
+    // send the response
+    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 4 + ((hasbody)?5:1));
+        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);         // completion code
+        if (hasbody) mctp_transmitFrameData(mctp,body,5);
+        mctp_transmitFrameEnd(mctp);
+} 
+
+//*******************************************************************
+// getStateEfffecterStates()
+//
+// get the value of a numeric state effecter state if it exists.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void getStateEffecterStates(PldmRequestHeader* rxHeader) {
+    // extract the information from the body
+    unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+    unsigned char response = RESPONSE_SUCCESS; 
+    unsigned char body[4] = {1,1,0,0};  // 1 sensor, enabled, no update pending, 
+    switch (effecter_id) {
+#ifdef SERVO_CONTROL_MODE
+    case START_EFFECTER_ID:
+        body[2] = requested_start_state;
+        body[3] = requested_start_state;
+        break;
+#endif
+    case TRIGGER_EFFECTER_ID:
+        // TODO, get the trigger state from the hardware
+        break;
+    case INTERLOCK_EFFECTER_ID:
+        // TODO, get the interlock state from the hardware
+        break;
+    default:
+        response = RESPONSE_INVALID_EFFECTER_ID; 
+        break;
+    }
+
+    // send the response
+    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 4 + 4);
+        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);         // completion code
+        mctp_transmitFrameData(mctp,body,4);
         mctp_transmitFrameEnd(mctp);
 } 
 
@@ -491,8 +656,7 @@ static void setNumericEffecterValue(PldmRequestHeader* rxHeader) {
 static void getNumericEffecterValue(PldmRequestHeader* rxHeader) {
     // extract the information from the body
     unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
-    unsigned char effecter_numtype;
-    long          return_data;
+    long          return_data = 0;
     switch (effecter_id) {
 #ifdef SERVO_CONTROL_MODE
     case APROFILE_EFFECTER_ID:
@@ -532,6 +696,103 @@ static void getNumericEffecterValue(PldmRequestHeader* rxHeader) {
 }
 
 //*******************************************************************
+// getSensorReading()
+//
+// return the value of a numeric sensor.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void getSensorReading(PldmRequestHeader* rxHeader) {
+    // extract the information from the body
+    unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+    unsigned char body[6] = {5,1,0,0,0,0};
+    sint32   reading = 0;
+    unsigned char response_code = RESPONSE_SUCCESS;
+    switch (effecter_id) {
+#ifdef SERVO_CONTROL_MODE
+    case POSITION_SENSOR_ID:
+        // TODO: return actual sensor reading
+        reading = 10000;
+        break;
+    case PERR_SENSOR_ID:
+        // TODO: return actual sensor reading
+        reading = 0x00000001;
+        break;
+    case VELOCITY_SENSOR_ID:
+        // TODO: return actual sensor reading
+        reading = 0x00000100;
+        break;
+    case VERR_SENSOR_ID:
+        // TODO: return actual sensor reading
+        reading = 0x00001000;
+        break;
+#endif
+    default:
+        response_code = RESPONSE_INVALID_SENSOR_ID;   // completion code
+        break;
+    }
+
+    // send the response
+    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 10 + 4);
+        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response_code);   // completion code
+        mctp_transmitFrameData(mctp,body,6);
+        transmitLong(reading);
+        mctp_transmitFrameEnd(mctp);
+}
+
+//*******************************************************************
+// setNumericSensorEnable()
+//
+// set the enable for a numeric effecter.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void setNumericEffecterEnable(PldmRequestHeader* rxHeader) {
+    // extract the information from the body
+    unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+    unsigned int enable_state = *((char*)(((char*)rxHeader)+sizeof(PldmRequestHeader)+2));
+    unsigned char response_code = RESPONSE_SUCCESS;
+    switch (effecter_id) {
+#ifdef SERVO_CONTROL_MODE
+    case APROFILE_EFFECTER_ID:
+        // TODO: use the emable to do something
+        break;
+    case VPROFILE_EFFECTER_ID:
+        // TODO: use the emable to do something
+        break;
+    case PFINAL_EFFECTER_ID:
+        // TODO: use the emable to do something
+        break;
+    case KFFA_EFFECTER_ID:
+        // TODO: use the emable to do something
+        break;
+#endif
+    default:
+        response_code = RESPONSE_INVALID_EFFECTER_ID;   // completion code
+        break;
+    }
+
+    // send the response
+    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 4);
+        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response_code);   // completion code
+        mctp_transmitFrameEnd(mctp);
+}
+
+//*******************************************************************
 // parseCommand()
 //
 // parse a new PLDM command and take appropriate action.  It is assumed
@@ -552,10 +813,10 @@ static void parseCommand()
     // switch based on the command type byte in the header
     switch (rxHeader->command) {
     case CMD_GET_SENSOR_READING:
-        //GetSensorReading(cmdBuffer);
+        getSensorReading(rxHeader);
         break;
     case CMD_GET_STATE_SENSOR_READINGS:
-        //GetStateSensorReadings(cmdBuffer);
+        getStateSensorReading(rxHeader);
         break;
     case CMD_SET_NUMERIC_EFFECTER_VALUE:
         setNumericEffecterValue(rxHeader);
@@ -567,7 +828,7 @@ static void parseCommand()
         setStateEffecterStates(rxHeader);
         break;
     case CMD_GET_STATE_EFFECTER_STATES:
-        //GetStateEffecterStates(cmdBuffer);
+        getStateEffecterStates(rxHeader);
         break;
     case CMD_GET_PDR_REPOSITORY_INFO:
     {
@@ -588,6 +849,12 @@ static void parseCommand()
     }
     case CMD_GET_PDR:
         processCommandGetPdr(rxHeader);
+        break;
+    case CMD_SET_NUMERIC_EFFECTER_ENABLE:
+        setNumericEffecterEnable(rxHeader);
+        break;
+    case CMD_SET_STATE_EFFECTER_ENABLES:
+        setStateEffecterEnables(rxHeader);
         break;
     }
     return;

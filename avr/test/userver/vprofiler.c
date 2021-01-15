@@ -113,7 +113,7 @@ void vprofiler_start()
 		if (active_scurve) jerk = FP16_TO_FLOAT(active_acceleration)*4.0f / t2;
 		vplateau = FP16_TO_FLOAT(active_acceleration) * t2;
 	}
-	float dxt3 = (float)active_position - 2.0 * xt2;
+	// float dxt3 = (float)active_position - 2.0 * xt2;
 
 	// calculate the time points for each transition
 	// half way through the acceleration transient
