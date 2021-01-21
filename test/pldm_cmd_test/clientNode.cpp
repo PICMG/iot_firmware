@@ -446,12 +446,11 @@ unsigned char* clientNode::getResponse(void) {
 // specified by DMTF specification DSP0248_1.1.0
 //
 // parameters:
-//	  effecterID - the ID of the effecter being referenced
 //    effecterPdr - the PDR for the effecter
 //    data - the new value for the numeric effecter
 // returns:
 //    bool - whether the change was successful
-bool clientNode::setNumericEffecterValue(unsigned long effecterID, GenericPdr* effecterpdr, double data){
+bool clientNode::setNumericEffecterValue(GenericPdr* effecterpdr, double data){
     unsigned char buffer[7]; 
     std::string dataSize   = effecterpdr->getValue("effecterDataSize");
     double resolution = atof(effecterpdr->getValue("resolution").c_str());
@@ -463,7 +462,7 @@ bool clientNode::setNumericEffecterValue(unsigned long effecterID, GenericPdr* e
 
     PldmRequestHeader header;
     header.flags1 = 0; header.flags2 = 0; header.command = CMD_SET_NUMERIC_EFFECTER_VALUE;
-    *((uint16*)buffer) = effecterID;
+    *((uint16*)buffer) = atoi(effecterpdr->getValue("effecterID").c_str());
 
     if(dataSize=="uint8"){
         buffer[2] = 0; //effecter data size is uint8
@@ -515,11 +514,10 @@ bool clientNode::setNumericEffecterValue(unsigned long effecterID, GenericPdr* e
 // specified by DMTF specification DSP0248_1.1.0
 //
 // parameters:
-//	  effecterID - the ID of the effecter being referenced
 //    effecterPdr - the PDR for the effecter
 // returns:
 //    double - the value of the effecter or -1 for failure
-double clientNode::getNumericEffecterValue(unsigned long effecterID, GenericPdr* effecterpdr){
+double clientNode::getNumericEffecterValue(GenericPdr* effecterpdr){
     unsigned char buffer[2]; 
     double resolution = atof(effecterpdr->getValue("resolution").c_str());
     double offset     = atof(effecterpdr->getValue("offset").c_str());
@@ -528,7 +526,7 @@ double clientNode::getNumericEffecterValue(unsigned long effecterID, GenericPdr*
 
     PldmRequestHeader header;
     header.flags1 = 0; header.flags2 = 0; header.command = CMD_GET_NUMERIC_EFFECTER_VALUE;
-    *((uint16*)buffer) = effecterID;
+    *((uint16*)buffer) = atoi(effecterpdr->getValue("effecterID").c_str());
     
     // send the command
     putCommand(&header, buffer, body_len);
@@ -587,19 +585,18 @@ double clientNode::getNumericEffecterValue(unsigned long effecterID, GenericPdr*
 // specified by DMTF specification DSP0248_1.1.0
 //
 // parameters:
-//	  effecterID - the ID of the effecter being referenced
 //    effecterPdr - the PDR for the effecter
 //    data - the new state value for the state effecter
 // returns:
 //    bool - whether the change was successful
-bool clientNode::setStateEffecterStates(unsigned long effecterID, GenericPdr* effecterpdr, enum8 effecterState){
+bool clientNode::setStateEffecterStates(GenericPdr* effecterpdr, enum8 effecterState){
     // send command
     unsigned char buffer[5]; 
     unsigned int body_len = 5;
     
     PldmRequestHeader header;
     header.flags1 = 0; header.flags2 = 0; header.command = CMD_SET_STATE_EFFECTER_STATES;
-    *((uint16*)buffer) = effecterID;
+    *((uint16*)buffer) = atoi(effecterpdr->getValue("effecterID").c_str());
 
     uint8 compositeEffecterCount = 1;
     enum8 setRequest = 1;
@@ -627,18 +624,17 @@ bool clientNode::setStateEffecterStates(unsigned long effecterID, GenericPdr* ef
 // specified by DMTF specification DSP0248_1.1.0
 //
 // parameters:
-//	  effecterID - the ID of the effecter being referenced
 //    effecterPdr - the PDR for the effecter
 // returns:
 //    enum8 - state value
-enum8 clientNode::getStateEffecterStates(unsigned long effecterID, GenericPdr* effecterpdr){
+enum8 clientNode::getStateEffecterStates(GenericPdr* effecterpdr){
     unsigned char buffer[2]; 
     
     unsigned int body_len = 2;
 
     PldmRequestHeader header;
     header.flags1 = 0; header.flags2 = 0; header.command = CMD_GET_STATE_EFFECTER_STATES;
-    *((uint16*)buffer) = effecterID;
+    *((uint16*)buffer) = atoi(effecterpdr->getValue("effecterID").c_str());
     
     // send the command
     putCommand(&header, buffer, body_len);
@@ -658,11 +654,10 @@ enum8 clientNode::getStateEffecterStates(unsigned long effecterID, GenericPdr* e
 // specified by DMTF specification DSP0248_1.1.0
 //
 // parameters:
-//	  sensorID - the ID of the sensor being referenced
 //    sensorPdr - the PDR for the sensor
 // returns:
 //    double - the value of the sensor or -1 for failure
-double clientNode::getSensorReading(unsigned long sensorID, GenericPdr* sensorpdr){
+double clientNode::getSensorReading(GenericPdr* sensorpdr){
     unsigned char buffer[3]; 
     double resolution = atof(sensorpdr->getValue("resolution").c_str());
     double offset     = atof(sensorpdr->getValue("offset").c_str());
@@ -671,7 +666,7 @@ double clientNode::getSensorReading(unsigned long sensorID, GenericPdr* sensorpd
 
     PldmRequestHeader header;
     header.flags1 = 0; header.flags2 = 0; header.command = CMD_GET_SENSOR_READING;
-    *((uint16*)buffer) = sensorID;
+    *((uint16*)buffer) = atoi(sensorpdr->getValue("sensorID").c_str());
     
     // this changes the state of the state machine depending on value.
     // if true, sets the sensor state to "initilizing" when called.
@@ -740,14 +735,14 @@ double clientNode::getSensorReading(unsigned long sensorID, GenericPdr* sensorpd
 //    sensorPdr - the PDR for the sensor
 // returns:
 //    enum8 - state value
-enum8 clientNode::getStateSensorReadings(unsigned long sensorID, GenericPdr* sensorpdr){
+enum8 clientNode::getStateSensorReadings(GenericPdr* sensorpdr){
     unsigned char buffer[4]; 
     
     unsigned int body_len = 4;
 
     PldmRequestHeader header;
     header.flags1 = 0; header.flags2 = 0; header.command = CMD_GET_STATE_SENSOR_READINGS;
-    *((uint16*)buffer) = sensorID;
+    *((uint16*)buffer) = atoi(sensorpdr->getValue("sensorID").c_str());
     buffer[2]=1;
     buffer[3]=0;        
     
@@ -770,19 +765,18 @@ enum8 clientNode::getStateSensorReadings(unsigned long sensorID, GenericPdr* sen
 // specified by DMTF specification DSP0248_1.1.0
 //
 // parameters:
-//	  effecterID - the ID of the effecter being referenced
 //    effecterPdr - the PDR for the effecter
 //    enableState - the enable state of the effecter
 // returns:
 //    bool - whether the change was successful
-bool clientNode::setNumericEffecterEnable(unsigned long effecterID, GenericPdr* effecterpdr, uint8 enableState){   
+bool clientNode::setNumericEffecterEnable(GenericPdr* effecterpdr, uint8 enableState){   
     // send command
     unsigned char buffer[3]; 
     unsigned int body_len = 3;
     
     PldmRequestHeader header;
     header.flags1 = 0; header.flags2 = 0; header.command = CMD_SET_NUMERIC_EFFECTER_ENABLE;
-    *((uint16*)buffer) = effecterID;
+    *((uint16*)buffer) = atoi(effecterpdr->getValue("effecterID").c_str());
 
     buffer[2]=enableState;
 
@@ -805,19 +799,18 @@ bool clientNode::setNumericEffecterEnable(unsigned long effecterID, GenericPdr* 
 // specified by DMTF specification DSP0248_1.1.0
 //
 // parameters:
-//	  effecterID - the ID of the effecter being referenced
 //    effecterPdr - the PDR for the effecter
 //    enableState - the enable state of the effecter
 // returns:
 //    bool - whether the change was successful
-bool clientNode::setStateEffecterEnables(unsigned long effecterID, GenericPdr* effecterpdr, uint8 enableState){   
+bool clientNode::setStateEffecterEnables(GenericPdr* effecterpdr, uint8 enableState){   
     // send command
     unsigned char buffer[5]; 
     unsigned int body_len = 5;
     
     PldmRequestHeader header;
     header.flags1 = 0; header.flags2 = 0; header.command = CMD_SET_STATE_EFFECTER_ENABLES;
-    *((uint16*)buffer) = effecterID;
+    *((uint16*)buffer) = atoi(effecterpdr->getValue("effecterID").c_str());
 
     buffer[2]=1;
     buffer[3]=enableState;

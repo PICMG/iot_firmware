@@ -239,7 +239,7 @@ static void setNumericEffecterMenu(){
     }else{
         cout<<"valid ID"<<endl;
         double data = getUIdouble("please enter new value for numeric effecter");
-        if(node1.setNumericEffecterValue(effecterID,effecterpdr,data)){
+        if(node1.setNumericEffecterValue(effecterpdr,data)){
             cout<<"effecter value change successful"<<endl;
         }else{
             cout<<"effecter value change failed"<<endl;
@@ -271,7 +271,7 @@ static void getNumericEffecterMenu(){
         cout<<"Invalid ID"<<endl;
     }else{
         cout<<"valid ID"<<endl;
-        double scaledData = node1.getNumericEffecterValue(effecterID,effecterpdr); 
+        double scaledData = node1.getNumericEffecterValue(effecterpdr); 
         if(scaledData!=-1){
             cout<<"Effecter value is: "<<scaledData<<endl;
         }else{
@@ -310,7 +310,7 @@ static void setStateEffecterMenu(){
             cout << i.first << " - " << i.second << endl; 
         }
         enum8 effecterState = getUIint("");
-        if(node1.setStateEffecterStates(effecterID,effecterpdr,effecterState)){
+        if(node1.setStateEffecterStates(effecterpdr,effecterState)){
             cout<<"Effecter state change successful"<<endl;
         }else{
             cout<<"Effecter state change failed"<<endl;
@@ -343,7 +343,7 @@ static void getStateEffecterMenu(){
     }else{
         cout<<"valid ID"<<endl;
         
-        uint8 value = (uint8)node1.getStateEffecterStates(effecterID,effecterpdr);
+        uint8 value = (uint8)node1.getStateEffecterStates(effecterpdr);
         bool valuefound= false;                
         // process the response
         map<unsigned int,string> enums = pdrRepository.getStateSet(atoi(effecterpdr->getValue("stateSetID").c_str()));
@@ -380,7 +380,7 @@ static void getSensorMenu(){
         cout<<"Invalid ID"<<endl;
     }else{
         cout<<"valid ID"<<endl;
-        double scaledData=node1.getSensorReading(sensorID,sensorpdr);
+        double scaledData=node1.getSensorReading(sensorpdr);
 
         if(scaledData!=-1){
             cout<<"Sensor value is: "<<scaledData<<endl;
@@ -416,7 +416,7 @@ static void getStateSensorMenu(){
     }else{
         cout<<"valid ID"<<endl;
         
-        uint8 value = (uint8)node1.getStateSensorReadings(sensorID,sensorpdr);
+        uint8 value = (uint8)node1.getStateSensorReadings(sensorpdr);
         bool valuefound= false;                
         // process the response
         map<unsigned int,string> enums = pdrRepository.getStateSet(atoi(sensorpdr->getValue("stateSetID").c_str()));
@@ -460,7 +460,7 @@ static void setNumericEnableMenu(){
         cout<<"3 - unavailable"<<endl;
         uint8 enableState = getUIint("");
         
-        if(node1.setNumericEffecterEnable(effecterID,effecterpdr,enableState)){
+        if(node1.setNumericEffecterEnable(effecterpdr,enableState)){
             cout<<"Effecter enable state change successful"<<endl;
         }else{
             cout<<"Effecter enable state change failed"<<endl;
@@ -497,7 +497,7 @@ static void setStateEnableMenu(){
         cout<<"3 - unavailable"<<endl;
         uint8 enableState = getUIint("");
         
-        if(node1.setStateEffecterEnables(effecterID,effecterpdr,enableState)){
+        if(node1.setStateEffecterEnables(effecterpdr,enableState)){
             cout<<"Effecter enable state change successful"<<endl;
         }else{
             cout<<"Effecter enable state change failed"<<endl;

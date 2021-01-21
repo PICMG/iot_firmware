@@ -56,13 +56,13 @@ public:
 	virtual unsigned char* getResponse(void);
 
 	// PLDM commands
-	bool setNumericEffecterValue(unsigned long effecterID, GenericPdr* effecterpdr, double data);
-	double getNumericEffecterValue(unsigned long effecterID, GenericPdr* effecterpdr);
-	bool setStateEffecterStates(unsigned long effecterID, GenericPdr* effecterpdr, enum8 effecterState);
-	enum8 getStateEffecterStates(unsigned long effecterID, GenericPdr* effecterpdr);
-	double getSensorReading(unsigned long sensorID, GenericPdr* sensorpdr);
-	enum8 getStateSensorReadings(unsigned long sensorID, GenericPdr* sensorpdr);
-	bool setNumericEffecterEnable(unsigned long effecterID, GenericPdr* effecterpdr, uint8 enableState);
-	bool setStateEffecterEnables(unsigned long effecterID, GenericPdr* effecterpdr, uint8 enableState);
+	bool setNumericEffecterValue(GenericPdr* effecterpdr, double data);
+	double getNumericEffecterValue(GenericPdr* effecterpdr);
+	bool setStateEffecterStates(GenericPdr* effecterpdr, enum8 effecterState);
+	enum8 getStateEffecterStates(GenericPdr* effecterpdr);
+	double getSensorReading(GenericPdr* sensorpdr);
+	enum8 getStateSensorReadings(GenericPdr* sensorpdr);
+	bool setNumericEffecterEnable(GenericPdr* effecterpdr, uint8 enableState);
+	bool setStateEffecterEnables(GenericPdr* effecterpdr, uint8 enableState);
 };
 
