@@ -325,6 +325,41 @@ map<unsigned int,string> PdrRepository::getStateSet(uint32 stateSetId) {
 }
 
 //*******************************************************************
+// getEntityTypeString()
+//
+// returns string representation of the entity type.  For standard
+// entity types defined in DSP0249, the defined string is returned.
+// for OEM entity types, the entity name defined in the OEMEntityId PDR
+// is returned.
+//
+// parameters:
+//    entityType - the type of the string to find
+// returns:
+//    the string entity name
+string PdrRepository::getEntityTypeString(uint16 entityType) {
+    // handle different ranges differently
+    if ((entityType>=8192)&&(entityType<=16383)) {
+        return "Chassis-specific";
+    }
+    if ((entityType>=16383)&&(entityType<=24575)) {
+        return "Board-set specific";
+    }
+
+    // find the entity types set
+    JsonArray *entityNameArray = ((JsonArray*)(dictionary->find("entity_defs")));
+    if (!entityNameArray) return "Unknown";
+
+    for (unsigned int i = 0; i< entityNameArray->size(); i++) {
+        JsonObject *entity = ((JsonObject*)(entityNameArray->getElement(i)));
+        if (!entity) continue;
+        if (entity->getInteger("value")==entityType) {
+            return entity->getValue("name");
+        }
+    }
+    return "Unknown";
+}
+
+//*******************************************************************
 // addPdrsFromNode()
 //
 // this function successively sends GetPDR pldm commands through the 
@@ -407,6 +442,31 @@ bool PdrRepository::addPdrsFromNode(PldmNode& node1) {
             }
         }
     }
+
+    // search through the PDRs and find any OEMEntityID records. 
+    for (map<uint32,GenericPdr*>::iterator it = repository.begin();it!=repository.end();it++) {
+        GenericPdr *pdr = it->second;
+        if (pdr->getPdrType()==PDR_TYPE_OEM_ENTITY_ID) {
+            // this is an oem entity id - check for required keys
+            if (!pdr->keyExists("OEMEntityIDHandle")) continue;
+            if (!pdr->keyExists("entityIDName[1]")) continue;
+            
+            // create the entity object
+            JsonObject *entity = new JsonObject;
+                
+            // create the fields
+            JsonValue * name  = new JsonValue(pdr->getValue("entityIDName[1]")); 
+            entity->put("name",name);
+            JsonValue * value = new JsonValue(pdr->getValue("OEMEntityIDHandle")); 
+            entity->put("value", value);
+                
+            JsonArray *entityArray = ((JsonArray*)(dictionary->find("entity_defs")));
+            if (entityArray) {
+                entityArray->add(entity);
+            }
+        }
+    }
+
     return true;
 }
 
