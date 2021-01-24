@@ -1,4 +1,4 @@
-all : libraries userver pldm_test uart_c_test mctp_c_test pldm_client pldm_server pldm_cmd_test pdrmaker
+all : libraries userver pldm_test uart_c_test mctp_c_test pldm_client pldm_server pldm_cmd_test pdrmaker script_test
 
 libraries:
 	cd ./lib/json && make clean
@@ -11,6 +11,8 @@ libraries:
 	cd ./lib/pldm && make build
 	cd ./lib/mctp && make build
 	cd ./lib/uart && make build
+	cd ./test/script_test && make clean
+	cd ./test/script_test && make build
 	
 userver : 
 	cd ./avr/test/userver && make build
@@ -43,6 +45,10 @@ avr_uart_test :
 	cd ./avr/test/uart_test && make clean
 	cd ./avr/test/uart_test && make build
 
+script_test :
+	cd ./test/script_test && make clean
+	cd ./test/script_test && make build
+
 clean:
 	cd ./lib/fcs && make clean
 	cd ./lib/uart && make clean
@@ -53,3 +59,4 @@ clean:
 	cd ./test/uart && make clean
 	cd ./test/mctp && make clean
 	cd ./avr/test/uart_test && make clean
+	cd ./test/script_test && make clean
