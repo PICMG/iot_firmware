@@ -51,5 +51,5 @@ extern FP16 requested_kffa;
 
 void control_update();   // servo update loop (priority mode)
 unsigned char control_setState(unsigned char); // request a state change
-
+unsigned char control_getState();  // get the current state;
 #endif
