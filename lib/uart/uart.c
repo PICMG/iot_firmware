@@ -71,54 +71,20 @@ int uart_init(const char* name)
 
     memset((void*)(&tty), 0, sizeof(struct termios));
 
-    // attempt to open the USB connection
-    printf("opening ");
-    printf("%s",name);
-    printf("\n");
+    // Set the parameters for uart communication using a system
+    // command - this is a work-around to prevent arduino devices
+    // from resetting when opening the connection.
+    char setcmd[255];
+    strcpy(setcmd,"stty raw -hupcl 9600 -F ");
+    strcat(setcmd,name);
+    system(setcmd);
+
+    // open the device
     handle = open(name, O_RDWR | O_NOCTTY);
-    printf("%d",(handle));
-    printf("\n");
     if(handle<=0)
     {
-        printf("invalid usb port\n");
         return -1;
     }
-
-    /* get the current attributes for the usb connection */
-    if (tcgetattr(handle, &tty) != 0) return 0;
-
-    /* Set Baud Rate */
-    cfsetospeed(&tty, (speed_t)B9600);
-    cfsetispeed(&tty, (speed_t)B9600);
-
-    /* Setting other Port Stuff */
-    tty.c_cflag &= ~PARENB;            // Make 8n1
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-
-    tty.c_cflag &= ~CRTSCTS;           // no flow control
-    tty.c_cc[VMIN] = 0;                  // read doesn't block
-    tty.c_cc[VTIME] = 5;                  // 0.5 seconds read timeout
-    tty.c_cflag |= CREAD | CLOCAL;     // turn on READ & ignore ctrl lines
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);// turn off s/w flow ctrl
-    tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); // make raw
-    tty.c_oflag &= ~OPOST;              // make raw
-
-    /* Make raw */
-    cfmakeraw(&tty);
-
-    /* Flush Port, then applies attributes */
-    printf("flushing port\n");
-    tcflush(handle, TCIFLUSH);
-
-    if (tcsetattr(handle, TCSANOW, &tty) != 0)
-    {
-        return -1;
-    }
-
-    // delay a bit to allow the uart changes to take place.
-    delay_ms(2500);
 
     return handle;
 }

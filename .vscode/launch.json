@@ -85,6 +85,26 @@
             "preLaunchTask": "build"
         },
         {
+            "name": "(gdb) Launch discovery",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/discovery/discovery",
+            "args": ["/dev/ttyU"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/test/discovery",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build"
+        },
+        {
             "name": "(gdb) Launch pldm server",
             "type": "cppdbg",
             "request": "launch",

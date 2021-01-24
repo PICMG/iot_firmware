@@ -1,11 +1,10 @@
 //*******************************************************************
-//    PdrRepository.h
+//    node.h
 //
-//    This file defines a PDR repositiory class that is
-//    intended to be used as part of the PICMG pldm library reference
-//    code. This class contains a collection of GenericPdr ojects and 
-//    a dictionary Json object that can be used to decode the bytes within 
-//    the PDRs.
+//    This file includes definitions for a simulated PLDM connector node.
+//    This node behaves like an extenal embedded device, that communicates
+//    with PLDM commands and responses.   This is only intended for use 
+//    in PLDM testing.
 //
 //    Portions of this code are based on the Platform Level Data Model
 //    (PLDM) specifications from the Distributed Management Task Force 
@@ -32,30 +31,27 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 #pragma once
-#include <map>
-#include "JsonAbstractValue.h"
-#include "JsonValue.h"
-#include "JsonObject.h"
-#include "JsonValue.h"
-#include "GenericPdr.h"
+#include "mctp.h"
 #include "pldm.h"
 #include "pldmnode.h"
 
-class PdrRepository 
-{	
-private:
-	map<uint32, GenericPdr*> repository;
-	JsonObject* dictionary;
-	int getPdrPart(PldmNode& node1, uint32 recordHandle, uint32& nextRecordHandle);
-	JsonObject* findPdrTemplateFromId(unsigned long id);
-    JsonAbstractValue* loadJsonFile(const char* filename);
+class node : public PldmNode
+{
+//	unsigned char rxBuffer[512];
+//	unsigned char txBuffer[512];
+	mctp_struct *mctp;
+
+	unsigned char  pdrCount;
+	unsigned int   nextByte;
+	unsigned int   maxPDRSize = 64;
+
+	unsigned int pdrSize(unsigned int index);
+	void processCommandGetPdr(PldmRequestHeader* rxHeader);
 public:
-	PdrRepository();
-	~PdrRepository();
-	bool setDictionary(string dictionary_file);
-	string getEntityTypeString(uint16 entityType);
-	bool addPdrsFromNode(PldmNode& node1);
-	GenericPdr * getPdrFromRecordHandle(uint32 recordNumber);
-	map<unsigned int,string> getStateSet(uint32 stateSetId);
-	void dump();
+	void init(mctp_struct *);
+	node();
+	void parseCommand();
+	virtual void putCommand(PldmRequestHeader* hdr, unsigned char* command, unsigned int size);
+	virtual unsigned char* getResponse(void);
 };
+

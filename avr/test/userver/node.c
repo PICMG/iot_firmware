@@ -42,6 +42,7 @@
 #include "control_servo.h"
 
 static	mctp_struct *mctp;
+uint8   tid;
 
 #define UINT8_TYPE  0
 #define SINT8_TYPE  1
@@ -101,6 +102,7 @@ static void transmitLong(unsigned long data) {
 void node_init(mctp_struct *mctp_ptr) {
 //    pdrCount = __pdr_number_of_records;
     mctp=mctp_ptr;
+    tid = 0;
 }
 
 //*******************************************************************
@@ -793,6 +795,52 @@ static void setNumericEffecterEnable(PldmRequestHeader* rxHeader) {
 }
 
 //*******************************************************************
+// setTID()
+//
+// return a value for the terminus id for this node
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+void setTid(PldmRequestHeader* rxHeader) {
+    tid = *((uint8*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+    unsigned char response_code = RESPONSE_SUCCESS;
+    // send the response
+    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 4);
+        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response_code);   // completion code
+        mctp_transmitFrameEnd(mctp);
+}
+
+//*******************************************************************
+// getTID()
+//
+// get the value of the terminus id for this node
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+void getTid(PldmRequestHeader* rxHeader) {
+    unsigned char response_code = RESPONSE_SUCCESS;
+    // send the response
+    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 1 + 4);
+        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response_code);   // completion code
+        transmitByte(tid);
+        mctp_transmitFrameEnd(mctp);
+}
+
+//*******************************************************************
 // parseCommand()
 //
 // parse a new PLDM command and take appropriate action.  It is assumed
@@ -812,6 +860,12 @@ static void parseCommand()
 
     // switch based on the command type byte in the header
     switch (rxHeader->command) {
+    case CMD_GET_TID:
+        getTid(rxHeader);
+        break;
+    case CMD_SET_TID:
+        setTid(rxHeader);
+        break;
     case CMD_GET_SENSOR_READING:
         getSensorReading(rxHeader);
         break;

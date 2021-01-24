@@ -316,7 +316,7 @@ int main(int argc, char *argv[]) {
     unsigned long number_of_records = 0;
     // for each value in the pdrjson
     outfile << "#include \"pdrdata.h\""<<endl<<endl;
-    outfile << "PDR_BYTE_TYPE __pdr_data[] = { ";
+    outfile << "PDR_BYTE_TYPE __pdr_data[] PDR_DATA_ATTRIBUTES = { ";
     for (int i = 0;i < ((JsonArray*)pdrjson)->size();i++) {
         unsigned char bytes_on_line = 0;
         unsigned long record_start_byte = bytecount;
