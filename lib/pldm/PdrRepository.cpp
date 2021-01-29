@@ -325,6 +325,28 @@ map<unsigned int,string> PdrRepository::getStateSet(uint32 stateSetId) {
 }
 
 //*******************************************************************
+// getStateNumberFromName()
+//
+// returns a state enumeration number that corresponds to a given
+// state set and state set enumeration name.  If the state is not 
+// found in the set, or if the set is not found, -1 is returned.
+//
+// parameters:
+//    stateSetID - the Id of the state set to search
+//    stateName - the state name to match
+// returns:
+//    the state number, if found, else -1.
+sint32 PdrRepository::getStateNumberFromName(uint32 stateSetId, string stateName) {
+    map <unsigned int, string> stateSet = getStateSet(stateSetId);
+    if  (stateSet.size()==0) return -1;
+
+    for (map<unsigned int, string>::iterator it = stateSet.begin(); it != stateSet.end(); ++it) {
+        if ((*it).second == stateName) return (*it).first;
+    }
+    return -1;
+}
+
+//*******************************************************************
 // getEntityTypeString()
 //
 // returns string representation of the entity type.  For standard

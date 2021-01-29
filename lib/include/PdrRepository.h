@@ -57,5 +57,6 @@ public:
 	bool addPdrsFromNode(PldmNode& node1);
 	GenericPdr * getPdrFromRecordHandle(uint32 recordNumber);
 	map<unsigned int,string> getStateSet(uint32 stateSetId);
+	sint32 getStateNumberFromName(uint32 stateSetId, string stateName);
 	void dump();
 };

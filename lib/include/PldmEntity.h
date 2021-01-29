@@ -61,6 +61,8 @@ public:
     bool link(PdrRepository &repository, uint8 tid);
     bool link(GenericPdr &entity_association, PdrRepository & repository, uint8 tid);
     bool attachChildren(GenericPdr &entity_association, PdrRepository & repository, uint8 tid);
+    bool getPdrFromURI(string uri, GenericPdr *&pdr, unsigned int &tid);
+
     bool setName(string name);
     bool removeChild();
     void dump();

@@ -1,38 +1,59 @@
+//*******************************************************************
+//    PldmEngine.cpp
+//
+//    This file implements a client-side pldm engine that manages
+//    a collection of endpoints and allows interaction with the 
+//    endpoints through sending commands and receiving responses.
+//
+//    Portions of this code are based on the Platform Level Data Model
+//    (PLDM) specifications from the Distributed Management Task Force 
+//    (DMTF).  More information about PLDM can be found on the DMTF
+//    web site (www.dmtf.org).
+//
+//    More information on the PICMG IoT data model can be found within
+//    the PICMG family of IoT specifications.  For more information,
+//    please visit the PICMG web site (www.picmg.org)
+//
+//    Copyright (C) 2020,  PICMG
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
 #include <iostream>
 #include <string>
+#include <map>
 #include <list>
 #include <dirent.h>
 #include <chrono>
-#include "uart.h"
-#include "mctp.h"
-#include "clientNode.h"
-#include "PdrRepository.h"
-#include "PldmEntity.h"
+#include "PldmEngine.h"
 
-using namespace std;
-
-
-class Terminus {
-    public:
-        int           deviceHandle;
-        mctp_struct   mctpContext;
-        node          pldmEndpoint;
-        PdrRepository localRepository;
-
-        Terminus();
-        ~Terminus();
-};
-
-Terminus::Terminus() : deviceHandle(0) {};
-Terminus::~Terminus() {if (deviceHandle) uart_close(deviceHandle);}
-
-// these are file-scope variables for now.  When this
-// file is converted to a class, they will become member data
+//********************************************************************
+// sendGetTidCommand
+//  
+// send the GetTid command to the PLDM endpoint.  This command is
+// used as part of the discovery process to determine if a device is
+// present on a given port.
+// NOTE: the function that sends this command should await a response
+//   from the endpoint.
 //
-static map<int, Terminus *> termini;       // a map of all known termini in the system
-PldmEntity entity;                 // root node of system entity map
-
-void sendGetTidCommand(node &pldm_node) {
+// NOTE: the function that sends this command should await a response
+//   from the endpoint.
+//
+// parameters:
+//   pldm_node - a reference to a pldm node to send the command to
+// returns:
+//   nothing
+void PldmEngine::sendGetTidCommand(clientNode &pldm_node) {
     // form the command
     PldmRequestHeader header;
     header.flags1 = 0; header.flags2 = 0; header.command = CMD_GET_TID;
@@ -41,7 +62,22 @@ void sendGetTidCommand(node &pldm_node) {
     pldm_node.putCommand(&header, 0, 0);
 }
 
-void sendSetTidCommand(node &pldm_node, uint8 newTid) {
+//********************************************************************
+// sendSetTidCommand
+//  
+// send the GetTid command to the PLDM endpoint.  This command is
+// used as part of the discovery process to determine if a device is
+// present on a given port.
+//
+// NOTE: the function that sends this command should await a response
+//   from the endpoint.
+//
+// parameters:
+//   pldm_node - a reference to a pldm node to send the command to
+//   newTid - the new terminus Id for the node
+// returns:
+//   nothing
+void PldmEngine::sendSetTidCommand(clientNode &pldm_node, uint8 newTid) {
     // form the command
     PldmRequestHeader header;
     header.flags1 = 0; header.flags2 = 0; header.command = CMD_SET_TID;
@@ -50,7 +86,19 @@ void sendSetTidCommand(node &pldm_node, uint8 newTid) {
     pldm_node.putCommand(&header, &newTid, 1);
 }
 
-// wait up to 1 second for a response
+//*******************************************************************
+// waitForResponse()
+//
+// wait up to 1 second for a response from the specified mctp stack.
+// This function is used in conjunction with the discovery process 
+// in order to determine if a node is running a PLDM stack.
+//
+// parameters:
+//   mctp - a pointer to an initialized mctp structure
+//   response - on success, this pointer will be updated to point 
+//      to the response that was received
+// returns:
+//   1 on success, otherwise 0
 int waitForResponse(mctp_struct *mctp, unsigned char **response) {
     chrono::high_resolution_clock::time_point tstart = chrono::high_resolution_clock::now();
     
@@ -69,8 +117,8 @@ int waitForResponse(mctp_struct *mctp, unsigned char **response) {
 //
 // send a PldmCommand to the pldm endpoint specified by the address
 // paramter.  Parameters to send with the command are stored in the 
-// list<string> argument of this function.  Return values from the 
-// function are placed in the list<string> return value with each
+// map<int,string> argument of this function.  Return values from the 
+// function are placed in the list<int,string> return value with each
 // return value represented in a seperate string.
 //
 // parameters:
@@ -80,10 +128,10 @@ int waitForResponse(mctp_struct *mctp, unsigned char **response) {
 // returns:
 //    a list of the fields returned by the pldm response with the
 //    first entry as the response code.
-list<string> sendPldmCommand(string command, string address, list<string> parameters)
+map<int, string> sendPldmCommand(string command, string address, map<int, string> parameters)
 {
-    list<string> result;
-    int tid;
+    map<int,string> result;
+    unsigned int tid;
     GenericPdr *pdr;
     static map<string, uint8> commands = {
         {"SET_EVENT_RECEIVER",              0x04}, // SetEventReceiver
@@ -107,23 +155,22 @@ list<string> sendPldmCommand(string command, string address, list<string> parame
     
     // if the command is not supported, return "unspported command" error
     if (!commands.count(command)) {
-        result.push_back(to_string(RESPONSE_ERROR_UNSUPPORTED_PLDM_CMD));
+        result.insert(pair<int,string>(0,to_string(RESPONSE_ERROR_UNSUPPORTED_PLDM_CMD)));
         return result;
     }
 
     // see if the endpoint exists
     if (!entity.getPdrFromURI(address,pdr,tid)) {
-        result.push_back(to_string(RESPONSE_INVALID_SENSOR_ID));
+        result.insert(pair<int,string>(0,to_string(RESPONSE_INVALID_SENSOR_ID)));
         return result;
     }
 
     // find the terminus associated with the endpoint
     if (termini.count(tid)==0) {
         // this error would be the natural response to an invalid terminus
-        result.push_back(to_string(RESPONSE_TRANSFER_TIMEOUT));
+        result.insert(pair<int,string>(0,to_string(RESPONSE_TRANSFER_TIMEOUT)));
         return result;
     }
-
     Terminus *terminus = termini.find(tid)->second;
 
     // here if the command is known and the uri exists
@@ -134,11 +181,11 @@ list<string> sendPldmCommand(string command, string address, list<string> parame
 //        break;
 //    case CMD_POLL_FOR_PLATFORM_EVENT_MESSAGE:
 //        break;
-    case CMD_SET_NUMERIC_SENSOR_ENABLE:
-        terminus->pldmEndpoint
-        break;
+//    case CMD_SET_NUMERIC_SENSOR_ENABLE:
+//        break;
     case CMD_GET_SENSOR_READING:
-        break;
+        // call the endpoint to get he reading
+        return terminus->pldmEndpoint.getSensorReading(pdr, parameters);            
 //    case CMD_GET_SENSOR_THRESHOLDS:
 //        break;
 //    case CMD_SET_SENSOR_THRESHOLDS:
@@ -149,24 +196,25 @@ list<string> sendPldmCommand(string command, string address, list<string> parame
 //        break;
 //    case CMD_SET_SENSOR_HYSTERESIS:
 //        break;
-    case CMD_SET_STATE_SENSOR_ENABLES:
-        break;
+//    case CMD_SET_STATE_SENSOR_ENABLES:
+//        break;
     case CMD_GET_STATE_SENSOR_READINGS:
-        break;
-    case CMD_SET_NUMERIC_EFFECTER_ENABLE:
-        break;
+        return terminus->pldmEndpoint.getStateSensorReadings(pdr, parameters, terminus->localRepository);
+//    case CMD_SET_NUMERIC_EFFECTER_ENABLE:
+//        return terminus->pldmEndpoint.setNumericEffecterEnable(pdr, parameters);
     case CMD_SET_NUMERIC_EFFECTER_VALUE:
-        break;
+        return terminus->pldmEndpoint.setNumericEffecterValue(pdr, parameters);
     case CMD_GET_NUMERIC_EFFECTER_VALUE:
-        break;
-    case CMD_SET_STATE_EFFECTER_ENABLES:
-        break;
+        return terminus->pldmEndpoint.getNumericEffecterValue(pdr, parameters);
+//    case CMD_SET_STATE_EFFECTER_ENABLES:
+//        return terminus->pldmEndpoint.setStateEffecterEnables(pdr, parameters);
     case CMD_SET_STATE_EFFECTER_STATES:
-        break;
+        return terminus->pldmEndpoint.setStateEffecterStates(pdr, parameters, terminus->localRepository);
 //    case CMD_GET_STATE_EFFECTER_STATES:
 //        break;
     }
 }
+
 
 //*******************************************************************
 // main entry point.
@@ -295,7 +343,7 @@ int main(int argc, char *argv[]) {
 
     int tid;
     GenericPdr *pdr;
-    entity.getPdrFromURI("System/IO_module_1/MotionController_1/NumericSensor_3",pdr,tid);
+    entity.getPdrFromURI("System/IO_module_1/MotionController_1/NumericSensor_3",pdr,termini[tid]);
     entity.getPdrFromURI("System/IO_module_2/MotionController_1/NumericEffecter_3",pdr,tid);
     
     // delete memory allocated in the terminus map

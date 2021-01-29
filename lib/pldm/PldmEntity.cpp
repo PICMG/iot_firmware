@@ -78,10 +78,10 @@ PldmEntity::PldmEntity(GenericPdr &pdr, PdrRepository &repository, uint8 tid) {
     for (int i = 1;i <= containedEntityCount; i++) {
         PldmEntity *child = new PldmEntity;
         child->tid  = tid;
-        child->containerId = containerEntityContainerId;
         parent = this;
         string key = "containedEntityContainerID[" + to_string(i) + "]";
         child->containerEntityContainerId =    atoi(pdr.getValue(key.c_str()).c_str());
+        child->containerId = child->containerEntityContainerId;
         key = "containedEntityInstanceNumber[" + to_string(i) + "]";
         child->containerEntityInstanceNumber = atoi(pdr.getValue(key.c_str()).c_str());
         child->branchInstance = child->containerEntityInstanceNumber;
@@ -171,7 +171,12 @@ bool PldmEntity::link(GenericPdr &pdr, PdrRepository &repository, uint8 tid) {
         (pdr.getPdrType()!=PDR_TYPE_NUMERIC_EFFECTER) &&
         (pdr.getPdrType()!=PDR_TYPE_STATE_EFFECTER)) return false;
 
-    if ((atoi(pdr.getValue("containerID").c_str())==this->containerId) && (this->tid == tid)) {
+    uint16 containerId = atoi(pdr.getValue("containerID").c_str());
+    uint16 entityInstanceNumber = atoi(pdr.getValue("entityInstanceNumber").c_str());
+    uint16 entityType = atoi(pdr.getValue("entityType").c_str());
+    if ((atoi(pdr.getValue("containerID").c_str())==this->containerId) && 
+        (atoi(pdr.getValue("entityInstanceNumber").c_str())==this->containerEntityInstanceNumber) &&
+        (atoi(pdr.getValue("entityType").c_str())== this->containerEntityType) && (this->tid == tid) ) {
         // here if the pdr is associated with this entity - add it
         pdrs.push_back(&pdr);
         return true;        
@@ -239,6 +244,9 @@ bool PldmEntity::attach(GenericPdr &pdr, PdrRepository &repository, uint8 tid) {
     // This is because, the node should have already been added to the tree as a child of
     // a previous node.
     if (this->tid != tid) return false;   // the terminus id does not even match no need to check further
+    uint16 containerId = atoi(pdr.getValue("containerEntityContainerID").c_str());
+    uint16 entityInstanceNumber = atoi(pdr.getValue("containerEntityInstanceNumber").c_str());
+    uint16 entityType = atoi(pdr.getValue("containerEntityType").c_str());
     if ((atoi(pdr.getValue("containerEntityContainerID").c_str())==this->containerEntityContainerId)&&
         (atoi(pdr.getValue("containerEntityInstanceNumber").c_str())== this->containerEntityInstanceNumber)&&
         (atoi(pdr.getValue("containerEntityType").c_str())== this->containerEntityType)) {
@@ -312,6 +320,93 @@ bool PldmEntity::attachChildren(GenericPdr &pdr, PdrRepository &repository, uint
     return result;
 }
 
+static string getPdrURIPart(GenericPdr *pdr) {
+    string name="";
+    switch (pdr->getPdrType()) {
+    case PDR_TYPE_STATE_SENSOR:
+        name = "StateSensor_";
+        name += pdr->getValue("sensorID");
+        break;
+    case PDR_TYPE_NUMERIC_SENSOR:
+        name = "NumericSensor_";
+        name += pdr->getValue("sensorID");
+        break;
+    case PDR_TYPE_NUMERIC_EFFECTER:
+        name = "NumericEffecter_";
+        name += pdr->getValue("effecterID");
+        break;
+    case PDR_TYPE_STATE_EFFECTER:
+        name = "StateEffecter_";
+        name += pdr->getValue("effecterID");
+        break;
+    default:
+        break;
+    }
+    return name;
+}
+
+//*******************************************************************
+// getPdrFromURI()
+//
+// given a dot notation of an object, get the associated PDR and
+// terminus id.  If a match is found, return true, otherwise,
+// return false.
+//
+// uri parameters should be of the form:
+//   part1/part2/part3 ...
+//
+// parameters:
+//    uri - a string that contains the URI
+//    pdr - on return the pointer will be updaed to point to the 
+//          pdr that matches the uri.  If no match is found, the 
+//          pointer will not be altered.
+//    tid - on return this will be updated to point to the
+//          terminus number that matches the uri.  If no match
+//          is found, the value will not be altered.
+// returns:
+//    true if a match is found, otherwise false.
+bool PldmEntity::getPdrFromURI(string uri, GenericPdr *&pdr, unsigned int & tid ) {
+    // extract the first part and remaining part of the uri
+    std::size_t found = uri.find_first_of("/");
+    string first_part = uri.substr(0,found);
+    string remaining = uri.substr(found+1, string::npos);
+
+    // check to see if the first part of the uri matches this node
+    if ((this->containerId == 0)&&(this->containerEntityType==0)) {
+        if (first_part != "System") return false;
+    } 
+    else {
+        string node_name = name + "_" + to_string(branchInstance);
+        if (first_part != node_name) return false;
+    }
+
+    // here if the node name matches - check children if there
+    // there is still a backslash character in the remaining uri
+    found = (remaining.find_first_of("/"));
+    if (found != string::npos) {
+        // there are still more parts to the URI - recurse the
+        // children to find a match
+        for (list<PldmEntity*>::iterator it = children.begin(); it != children.end(); ++it) {
+            if ((*it)->getPdrFromURI(remaining, pdr, tid)) return true;
+        }
+        // here if no match is found
+        return false;
+    }
+
+    // here if there are no more slashes in the URI - check 
+    // the remaining name against the names of the children 
+    for (list<GenericPdr *>::iterator it = pdrs.begin(); it != pdrs.end(); ++it) {
+        GenericPdr *childpdr = *it;
+        string name = getPdrURIPart(childpdr);
+        if (remaining == name) {
+            pdr = childpdr;
+            tid = this->tid;
+            return true;
+        }
+    }
+    return false;
+}
+
 
 void PldmEntity::dump() {
     static string indentstring = "";
@@ -334,12 +429,12 @@ void PldmEntity::dump() {
         if ((++it2)==children.end()) {
             // last entity in the list
             cout<<indentstring<<elbow<<leftright;
-            cout<<child->name<<child->branchInstance<<", tid "<<child->tid<<endl;
+            cout<<child->name<<"_"<<child->branchInstance<<", tid "<<child->tid<<endl;
             indentstring = indentstring + "    ";
         } 
         else {
             cout<<indentstring<<tee<<leftright;
-            cout<<child->name<<child->branchInstance<<", tid "<<child->tid<<endl;
+            cout<<child->name<<"_"<<child->branchInstance<<", tid "<<child->tid<<endl;
             indentstring = indentstring + updown + "   ";
         }
         child->dump();
@@ -347,32 +442,12 @@ void PldmEntity::dump() {
     }
 
     // for each pldm linked to this node
-    indentstring = indentstring + "    ";
+    indentstring = indentstring;
     for (list<GenericPdr *>::iterator it = pdrs.begin(); it != pdrs.end(); ++it) {
         GenericPdr *pdr = *it;
         list<GenericPdr*>::iterator it2 = it;
         // get the information to print
-        string name;
-        switch (pdr->getPdrType()) {
-        case PDR_TYPE_STATE_SENSOR:
-            name = "StateSensor_";
-            name += pdr->getValue("sensorID");
-            break;
-        case PDR_TYPE_NUMERIC_SENSOR:
-            name = "NumericSensor_";
-            name += pdr->getValue("sensorID");
-            break;
-        case PDR_TYPE_NUMERIC_EFFECTER:
-            name = "NumericEffecter_";
-            name += pdr->getValue("effecterID");
-            break;
-        case PDR_TYPE_STATE_EFFECTER:
-            name = "StateEffecter_";
-            name += pdr->getValue("effecterID");
-            break;
-        default:
-            continue;
-        }
+        string name = getPdrURIPart(pdr);
         if ((++it2)==pdrs.end()) {
             // last pdr in the list
             cout<<indentstring<<elbow<<leftright;

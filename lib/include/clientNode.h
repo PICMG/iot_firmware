@@ -1,5 +1,5 @@
 //*******************************************************************
-//    node.h
+//    clientNode.h
 //
 //    This file includes definitions for a simulated PLDM connector node.
 //    This node behaves like an extenal embedded device, that communicates
@@ -34,24 +34,39 @@
 #include "mctp.h"
 #include "pldm.h"
 #include "pldmnode.h"
+#include "PdrRepository.h"
 
-class node : public PldmNode
+class clientNode : public PldmNode
 {
-//	unsigned char rxBuffer[512];
-//	unsigned char txBuffer[512];
+
 	mctp_struct *mctp;
 
-	unsigned char  pdrCount;
-	unsigned int   nextByte;
 	unsigned int   maxPDRSize = 64;
 
-	unsigned int pdrSize(unsigned int index);
-	void processCommandGetPdr(PldmRequestHeader* rxHeader);
 public:
 	void init(mctp_struct *);
-	node();
-	void parseCommand();
+	clientNode();
 	virtual void putCommand(PldmRequestHeader* hdr, unsigned char* command, unsigned int size);
 	virtual unsigned char* getResponse(void);
+
+	// PLDM commands (shortcuts)
+	bool setNumericEffecterValue(GenericPdr* effecterpdr, double data);
+	double getNumericEffecterValue(GenericPdr* effecterpdr);
+	bool setStateEffecterStates(GenericPdr* effecterpdr, enum8 effecterState);
+	enum8 getStateEffecterStates(GenericPdr* effecterpdr);
+	double getSensorReading(GenericPdr* sensorpdr);
+	enum8 getStateSensorReadings(GenericPdr* sensorpdr);
+	bool setNumericEffecterEnable(GenericPdr* effecterpdr, uint8 enableState);
+	bool setStateEffecterEnables(GenericPdr* effecterpdr, uint8 enableState);
+
+	// complete PLDM commands
+	map<int,string> setNumericEffecterValue(GenericPdr* pdr, map<int,string> &params);
+	map<int,string> getNumericEffecterValue(GenericPdr* pdr, map<int,string> &params);
+	map<int,string> setStateEffecterStates(GenericPdr* pdr, map<int,string> &params, PdrRepository &repo);
+	map<int,string> getStateEffecterStates(GenericPdr* pdr, map<int,string> &params, PdrRepository &repo);
+	map<int,string> getSensorReading(GenericPdr* pdr, map<int,string> &params);
+	map<int,string> getStateSensorReadings(GenericPdr* pdr, map<int,string> &params, PdrRepository &repo);
+	map<int,string> setNumericEffecterEnable(GenericPdr* pdr, map<int,string> &params);
+	map<int,string> setStateEffecterEnables(GenericPdr* pdr, map<int,string> &params);
 };
 

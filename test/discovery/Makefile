@@ -2,7 +2,7 @@ EXECUTABLE := discovery
 LIBINCLUDES := ../../lib/include
 LIBPATH := ../../lib
 INCLUDES := .
-OBJECTS := discovery.o node.o PldmEntity.o $(LIBPATH)/pldm/libpldm.a $(LIBPATH)/mctp/libmctp.a $(LIBPATH)/uart/libuartc.a $(LIBPATH)/fcs/libfcsc.a
+OBJECTS := discovery.o $(LIBPATH)/pldm/libpldm.a $(LIBPATH)/mctp/libmctp.a $(LIBPATH)/uart/libuartc.a $(LIBPATH)/fcs/libfcsc.a
 CXX_FLAGS := -std=c++11 -ggdb
 
 build : clean $(OBJECTS)
