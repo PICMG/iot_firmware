@@ -152,6 +152,7 @@ bool PldmEntity::link(PdrRepository &repository, uint8 tid) {
         recordNumber++;
         pdr = repository.getPdrFromRecordHandle(recordNumber);
     }
+    return result;
 }
 
 //===================================================================
@@ -408,7 +409,7 @@ bool PldmEntity::getPdrFromURI(string uri, GenericPdr *&pdr, unsigned int & tid 
 }
 
 
-void PldmEntity::dump() {
+void PldmEntity::dump(ostream &out) {
     static string indentstring = "";
     const char* elbow  = "\u255a";
     const char* tee    = "\u2560";
@@ -417,7 +418,7 @@ void PldmEntity::dump() {
 
     if ((this->containerId == 0)&&(this->containerEntityType==0)) {  
         // root node
-        cout<<this->name<<endl;
+        out<<this->name<<endl;
         indentstring = "   ";
     }
 
@@ -428,16 +429,16 @@ void PldmEntity::dump() {
         list<PldmEntity *>::iterator it2 = it;
         if ((++it2)==children.end()) {
             // last entity in the list
-            cout<<indentstring<<elbow<<leftright;
-            cout<<child->name<<"_"<<child->branchInstance<<", tid "<<child->tid<<endl;
+            out<<indentstring<<elbow<<leftright;
+            out<<child->name<<"_"<<child->branchInstance<<", tid "<<child->tid<<endl;
             indentstring = indentstring + "    ";
         } 
         else {
-            cout<<indentstring<<tee<<leftright;
-            cout<<child->name<<"_"<<child->branchInstance<<", tid "<<child->tid<<endl;
+            out<<indentstring<<tee<<leftright;
+            out<<child->name<<"_"<<child->branchInstance<<", tid "<<child->tid<<endl;
             indentstring = indentstring + updown + "   ";
         }
-        child->dump();
+        child->dump(out);
         indentstring = indentsave;
     }
 
@@ -450,12 +451,12 @@ void PldmEntity::dump() {
         string name = getPdrURIPart(pdr);
         if ((++it2)==pdrs.end()) {
             // last pdr in the list
-            cout<<indentstring<<elbow<<leftright;
+            out<<indentstring<<elbow<<leftright;
         } 
         else {
-            cout<<indentstring<<tee<<leftright;
+            out<<indentstring<<tee<<leftright;
         }
-        cout<<name<<endl;
+        out<<name<<endl;
     }
     indentstring = indentsave;
     

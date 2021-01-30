@@ -45,7 +45,7 @@
 class PldmEngine {
     // internal representation
     PldmEntity pldmRoot;                 // root node of system entity map
-    static map<int, Terminus *> termini; // a map of all known termini in the system
+    map<int, Terminus *> termini; // a map of all known termini in the system
 
     void sendGetTidCommand(clientNode &pldm_node);
     void sendSetTidCommand(clientNode &pldm_node, uint8 newTid);
@@ -56,7 +56,7 @@ public:
     ~PldmEngine();
 
     // initialize the pldm engine and enumerate the endpoints
-    void init(string porttype);
+    bool init(string porttype);
 
     // display a map of PLDM endpoints to the specified output stream
     void showMap(ostream &out);

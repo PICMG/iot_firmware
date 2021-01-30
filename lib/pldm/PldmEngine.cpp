@@ -37,6 +37,26 @@
 #include <chrono>
 #include "PldmEngine.h"
 
+//*******************************************************************
+// Constructor
+//
+PldmEngine::PldmEngine() {
+
+}
+
+//*******************************************************************
+// Destructor
+//
+PldmEngine::~PldmEngine() {
+    // delete memory allocated in the terminus map
+    // This will also close any open ports.
+    while (termini.size()) {
+        Terminus * t = termini.begin()->second;
+        termini.erase(termini.begin());
+        delete t;
+    }
+}
+
 //********************************************************************
 // sendGetTidCommand
 //  
@@ -99,7 +119,7 @@ void PldmEngine::sendSetTidCommand(clientNode &pldm_node, uint8 newTid) {
 //      to the response that was received
 // returns:
 //   1 on success, otherwise 0
-int waitForResponse(mctp_struct *mctp, unsigned char **response) {
+int PldmEngine::waitForResponse(mctp_struct *mctp, unsigned char **response) {
     chrono::high_resolution_clock::time_point tstart = chrono::high_resolution_clock::now();
     
     while (!mctp_isPacketAvailable(mctp)) {
@@ -128,7 +148,7 @@ int waitForResponse(mctp_struct *mctp, unsigned char **response) {
 // returns:
 //    a list of the fields returned by the pldm response with the
 //    first entry as the response code.
-map<int, string> sendPldmCommand(string command, string address, map<int, string> parameters)
+map<int, string> PldmEngine::sendPldmCommand(string command, string address, map<int, string> &parameters)
 {
     map<int,string> result;
     unsigned int tid;
@@ -138,7 +158,7 @@ map<int, string> sendPldmCommand(string command, string address, map<int, string
         {"GET_EVENT_RECEIVER",              0x05}, // GetEventReceiver
         {"SET_NUMERIC_SENSOR_ENABLE",       0x10}, // SetNumericSensorEnable
         {"GET_SENSOR_READING",              0x11}, // GetSensorReading
-        {"GET_SENSOR_THRESHOLDS",           0x12}, // GetSensorThresholds
+        {"GET_SENSOR_THRESHOLDcdS",           0x12}, // GetSensorThresholds
         {"SET_SENSOR_THRESHOLDS",           0x13}, // SetSensorThresholds
         {"RESTORE_SENSOR_THRESHOLDS",       0x14}, // RestoreSensorThresholds
         {"GET_SENSOR_HYSTERESIS",           0x15}, // GetSensorHysteresis
@@ -160,7 +180,7 @@ map<int, string> sendPldmCommand(string command, string address, map<int, string
     }
 
     // see if the endpoint exists
-    if (!entity.getPdrFromURI(address,pdr,tid)) {
+    if (!pldmRoot.getPdrFromURI(address,pdr,tid)) {
         result.insert(pair<int,string>(0,to_string(RESPONSE_INVALID_SENSOR_ID)));
         return result;
     }
@@ -213,11 +233,11 @@ map<int, string> sendPldmCommand(string command, string address, map<int, string
 //    case CMD_GET_STATE_EFFECTER_STATES:
 //        break;
     }
+    return result;
 }
 
-
 //*******************************************************************
-// main entry point.
+// init()
 // this function attempts to detect PICMG IoT devices attached to 
 // a subset of serial ports (specified by the command line parameter).
 //
@@ -233,33 +253,32 @@ map<int, string> sendPldmCommand(string command, string address, map<int, string
 // once the ports are initialized, the discovery agent will periodically
 // poll the ports to see if there have been any changes.  The process is
 // the same as discovery.
-int main(int argc, char *argv[]) {
+//
+// parameters:
+//   porttype - the partial porttype to add to the repository. The
+//      function searches for any ports that begin with the specified
+//      porttype and end with a number.  For instance, port type
+//      /dev/ttyUSB, will find devices connected to ttyUSB0, ttyUSB1, etc.
+//
+// returns:
+//   true if no errors, otherwise false;
+bool PldmEngine::init(string porttype) 
+{
     DIR *dir;
     struct dirent *entry;       
     list<string> device_list;   
 
-    // check the number of arguments
-    if (argc!=2) {
-        cerr<<"Wrong number of arguments."<<endl;
-        cerr<<"Usage: discovery devpath"<<endl;
-        cerr<<"devpath is the path to the devices to check along with the beginning"<<endl;
-        cerr<<"part of the device name to match."<<endl;
-        cerr<<"Examples:"<<endl;
-        cerr<<"    /dev/ttyUSB will match all devices that start with ttyUSB"<<endl;
-        cerr<<"    /dev/       will match all devices in the dev folder"<<endl;
-        return -1;
-    }
-
     // separate the partial file name from the folder
-    string path = argv[1];
+    string path = porttype;
     string filename;
     size_t slashpos = path.find_last_of("/"); 
     if ( slashpos == string::npos) {
         // here if the string does not contain a forward slash - assume the
         // argument is a partial filename only
-        filename = argv[1];
+        filename = porttype;
         path = ".";
-    } else {
+    } 
+    else {
         filename = path.substr(slashpos+1,string::npos);
         path = path.substr(0,slashpos);
     }
@@ -268,7 +287,7 @@ int main(int argc, char *argv[]) {
     dir = opendir(path.c_str()); 
     if (!dir) {
         cerr<<"error opening directory."<<endl;
-        return -1;
+        false;
     }
 
     // loop for each entry in the directory
@@ -331,26 +350,20 @@ int main(int argc, char *argv[]) {
             cout<<"Found node at: "<<it->c_str()<<endl;
             terminus->localRepository.setDictionary("pldm_definitions.json");
             terminus->localRepository.addPdrsFromNode(terminus->pldmEndpoint);
-            entity.attach(terminus->localRepository, terminus->deviceHandle);
-            entity.link(terminus->localRepository, terminus->deviceHandle);
+            pldmRoot.attach(terminus->localRepository, terminus->deviceHandle);
+            pldmRoot.link(terminus->localRepository, terminus->deviceHandle);
             termini.insert(pair<int,Terminus *>(terminus->deviceHandle,terminus));
         }       
     }
     
+    return true;
+}
 
-    // close all uart connections
-    entity.dump();
-
-    int tid;
-    GenericPdr *pdr;
-    entity.getPdrFromURI("System/IO_module_1/MotionController_1/NumericSensor_3",pdr,termini[tid]);
-    entity.getPdrFromURI("System/IO_module_2/MotionController_1/NumericEffecter_3",pdr,tid);
-    
-    // delete memory allocated in the terminus map
-    while (termini.size()) {
-        Terminus * t = termini.begin()->second;
-        termini.erase(termini.begin());
-        delete t;
-    }
-    return 0;
+//*******************************************************************
+// showMap()
+//
+// output a map of the device endpoints to the specified output stream
+//
+void PldmEngine::showMap(ostream &out) {
+    pldmRoot.dump(out);
 }

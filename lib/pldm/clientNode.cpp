@@ -730,7 +730,7 @@ map<int,string> clientNode::getNumericEffecterValue(GenericPdr* pdr, map<int,str
 }
 
 //*******************************************************************
-// getStateEffecterStates()
+// setStateEffecterStates()
 //
 // This function contains implementation of the getStateEffecterStates command
 // specified by DMTF specification DSP0248_1.1.0
@@ -1058,34 +1058,137 @@ map<int,string> clientNode::getSensorReading(GenericPdr* pdr, map<int,string> &p
         // switch depending on data size
         switch (body[0]) { 
         case 0: // data size is uint8
-            uint8 value = *((uint8*)(&body[6]));
-            result.insert(pair<int,string>(7,to_string(((double)value)*resolution + offset)));
+            result.insert(pair<int,string>(7,to_string(((double)(*((uint8*)(&body[6]))))*resolution + offset)));
             break;
         case 1: // data size is sint8
-            sint8 value = *((sint8*)(&body[6]));
-            result.insert(pair<int,string>(7,to_string(((double)value)*resolution + offset)));
+            result.insert(pair<int,string>(7,to_string(((double)(*((sint8*)(&body[6]))))*resolution + offset)));
             break;
         case 2: // data size is uint16
-            uint16 value = *((uint16*)(&body[6]));
-            result.insert(pair<int,string>(7,to_string(((double)value)*resolution + offset)));
+            result.insert(pair<int,string>(7,to_string(((double)(*((uint16*)(&body[6]))))*resolution + offset)));
             break;
         case 3: // data size is sint16
-            sint16 value = *((sint16*)(&body[6]));
-            result.insert(pair<int,string>(7,to_string(((double)value)*resolution + offset)));
+            result.insert(pair<int,string>(7,to_string(((double)(*((sint16*)(&body[6]))))*resolution + offset)));
             break;
         case 4: // data size is uint32
-            uint32 value = *((uint32*)(&body[6]));
-            result.insert(pair<int,string>(7,to_string(((double)value)*resolution + offset)));
+            result.insert(pair<int,string>(7,to_string(((double)(*((uint32*)(&body[6]))))*resolution + offset)));
             break;
         case 5: // data size is sint32
-            sint32 value = *((sint32*)(&body[6]));
-            result.insert(pair<int,string>(7,to_string(((double)value)*resolution + offset)));
+            result.insert(pair<int,string>(7,to_string(((double)(*((sint32*)(&body[6]))))*resolution + offset)));
             break;
         default:
             result.insert(pair<int,string>(7,"0"));
             break;
+        }
     }
-
     return result;
 }
 
+//*******************************************************************
+// getStateSensorReadings()
+//
+// This function contains implementation of the getStateSensorReadings command
+// specified by DMTF specification DSP0248_1.1.0
+//
+// parameters:
+//    pdr - the PDR for the sensor
+//    params - a map of the parameters for this function.  The values expected are:
+//       0 = sensorRearm bitfield as a base10 integer.
+// returns:
+//    a map of response parameters.  The values are:
+//       0 = completion code (as an enumerated value)
+//       1 = composite sensor count (as an integer)
+//       2 = operational state (as a string)
+//       3 = present state (as a string)
+//       4 = previous state (as a string)
+//       5 = event state (as a string)
+//       ..  more set requests and effecter states as needed for effecter count
+map<int,string> clientNode::getStateSensorReadings(GenericPdr* pdr, map<int,string> &params, PdrRepository &repo) {
+    static const map<int,string> opState = {
+        {0,"enabled-updatePending"},{1,"enabled-noUpdatePending"},{2,"disabled"},
+        {3,"unavailable"},{4,"statusUnknown"},{5,"failed"},{6,"initializing"},
+        {7,"shuttingDown"},{8,"inTest"}};
+    map<int,string> result;
+
+    // check the right keys
+    if ((!pdr->keyExists("sensorID"))||(!pdr->keyExists("stateSetID"))) {
+        // this pdr is not for an state sensor, or it is missing fields
+        result.insert(pair<int,string>(0,to_string(RESPONSE_INVALID_EFFECTER_ID)));
+        return result;
+    }
+
+    // check the number of parameters
+    if (params.size() !=1) {
+        result.insert(pair<int,string>(0,to_string(RESPONSE_ERROR_INVALID_DATA)));
+        return result;
+    }
+    if (!params.count(0)) {
+        result.insert(pair<int,string>(0,to_string(RESPONSE_ERROR_INVALID_DATA)));
+        return result;
+    }
+
+    // prepare the request
+    unsigned char buffer[4];     
+    unsigned int body_len = 4;
+    PldmRequestHeader header;
+    header.flags1 = 0; header.flags2 = 0; header.command = CMD_GET_STATE_SENSOR_READINGS;
+    *((uint16*)buffer) = atoi(pdr->getValue("sensorID").c_str());
+    buffer[2] = atoi(params.find(0)->second.c_str());
+    buffer[3] = 0;
+
+    // send the command
+    putCommand(&header, buffer, body_len);
+
+    // recieve the response
+    PldmResponseHeader* response;
+    response = (PldmResponseHeader*)getResponse();
+    char* body = (char*)(response+1);
+
+    // get the state set for this endpoint
+    unsigned long setId = atol(pdr->getValue("stateSetID").c_str());
+    map<unsigned int,string> states = repo.getStateSet(setId);
+
+    // build the result structure from the response data 
+    // result 0 - completion code
+    result.insert(pair<int,string>(0,to_string((uint16)response->completionCode)));
+
+    // result 1 - composite sensor count
+    uint8 compositeSensorCount = body[0];
+    result.insert(pair<int,string>(1,to_string((uint16)compositeSensorCount)));
+
+    for (uint8 i = 0; i<compositeSensorCount; i++) {
+        // get the operational state
+        uint8 sensorOperationalState = body[1+i*4];
+        // result 2 = sensor operational state (as string)
+        // get the operational state
+        if (sensorOperationalState) {
+            result.insert(pair<int,string>(2+i*4,opState.find(sensorOperationalState)->second));
+        } 
+        else {
+            result.insert(pair<int,string>(2+i*4,"unknown"));
+        }
+        
+        uint8 presentState = body[2+i*4];
+        if (states.count(presentState)) {
+            result.insert(pair<int,string>(4+i*4,states[presentState]));
+        } 
+        else {
+            result.insert(pair<int,string>(4+i*4,"unknown"));
+        }
+        uint8 previousState = body[3+i*4];
+        if (states.count(previousState)) {
+            result.insert(pair<int,string>(5+i*4,states[previousState]));
+        } 
+        else {
+            result.insert(pair<int,string>(5+i*4,"unknown"));
+        }
+        uint8 eventState = body[4+i*4];
+        if (states.count(eventState)) {
+            result.insert(pair<int,string>(5+i*4,states[eventState]));
+        } 
+        else {
+            result.insert(pair<int,string>(5+i*4,"unknown"));
+        }
+    }
+    // return the result
+    return result;
+}

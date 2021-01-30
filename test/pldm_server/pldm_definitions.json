@@ -968,7 +968,7 @@
 					{"value":1,"key":"true"}
 				]
 			},
-			"compositeSensorCount":"uint8",
+			"compositeEffecterCount":"uint8",
 			"stateSetID":"uint16",
 			"possibleStatesSize":"uint8",
 			"possibleStates":"bitfield8"

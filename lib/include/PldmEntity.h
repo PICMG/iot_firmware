@@ -65,5 +65,5 @@ public:
 
     bool setName(string name);
     bool removeChild();
-    void dump();
+    void dump(ostream &out);
 };

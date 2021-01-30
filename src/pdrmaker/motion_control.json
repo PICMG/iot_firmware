@@ -380,7 +380,7 @@
 		"containerID":1,
 		"effecterInit":"noInit",
 		"effecterDescriptionPDR":"false",
-		"compositeSensorCount":1,
+		"compositeEffecerCount":1,
 		"stateSetID":40002,
 		"possibleStatesSize":1,
 		"possibleStates":3
@@ -396,7 +396,7 @@
 		"containerID":1,
 		"effecterInit":"noInit",
 		"effecterDescriptionPDR":"false",
-		"compositeSensorCount":1,
+		"compositeEffecterCount":1,
 		"stateSetID":40002,
 		"possibleStatesSize":1,
 		"possibleStates":3
@@ -412,7 +412,7 @@
 		"containerID":1,
 		"effecterInit":"noInit",
 		"effecterDescriptionPDR":"false",
-		"compositeSensorCount":1,
+		"compositeEffecterCount":1,
 		"stateSetID":40001,
 		"possibleStatesSize":1,
 		"possibleStates":3
