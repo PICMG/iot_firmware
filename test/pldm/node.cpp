@@ -1,10 +1,58 @@
+//*******************************************************************
+//    node.cpp
+//
+//    This file includes implementation for a simulated PLDM connector node.
+//    This node behaves like an extenal embedded device, that communicates
+//    with PLDM commands and responses.   This is only intended for use 
+//    in PLDM testing.
+//
+//    Portions of this code are based on the Platform Level Data Model
+//    (PLDM) specifications from the Distributed Management Task Force 
+//    (DMTF).  More information about PLDM can be found on the DMTF
+//    web site (www.dmtf.org).
+//
+//    More information on the PICMG IoT data model can be found within
+//    the PICMG family of IoT specifications.  For more information,
+//    please visit the PICMG web site (www.picmg.org)
+//
+//    Copyright (C) 2020,  PICMG
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
 #include "node.h"
 #include "pdrdata.h"
 
-static PdrCommonHeader* getPdrHeader(unsigned int index) {
-    // iterate through the repository to find the header for the pdr indexed by
-    // the given index parameter.
+//*******************************************************************
+// node()
+//
+// default constructor
+node::node() {
+    pdrCount = __pdr_number_of_records;
+    nextByte = 0;
+}
 
+//*******************************************************************
+// getPdrHeader()
+//
+// iterate through the repository to find the header for the pdr indexed by
+// the given index parameter.
+//
+// parameters:
+//    index - the index of the pdr to get
+// returns:
+//    a pointer to the pdr header for the specified pdr
+static PdrCommonHeader* getPdrHeader(unsigned int index) {
     // adjust the index for the pdr structure - assume records start at 1,
     // and increase sequentially.  0 is a special case which will also retrieve
     // the first record
@@ -23,10 +71,17 @@ static PdrCommonHeader* getPdrHeader(unsigned int index) {
     return result;
 }
 
+//*******************************************************************
+// getPdrHeader()
+//
+// iterate through the repository to find the header for the pdr indexed by
+// the given index parameter.
+//
+// parameters:
+//    index - the index of the pdr offset to get
+// returns:
+//    the data offset for the specified pdr
 static unsigned int getPdrOffset(unsigned int index) {
-    // iterate through the repository to find the header for the pdr indexed by
-    // the given index parameter.
-
     // adjust the index for the pdr structure - assume records start at 1,
     // and increase sequentially.  0 is a special case which will also retrieve
     // the first record
@@ -46,6 +101,15 @@ static unsigned int getPdrOffset(unsigned int index) {
     return offset;
 }
 
+//*******************************************************************
+// getNextRecord()
+//
+// get the record number for the next record in the repository
+//
+// parameters:
+//    index - the index of the pdr offset to get
+// returns:
+//    the number of the next record in the repository
 static unsigned long  getNextRecord(unsigned long index) {
     unsigned result = 0;
     if (index == 0) result = 2;
@@ -53,18 +117,35 @@ static unsigned long  getNextRecord(unsigned long index) {
     return result;
 }
 
-node::node() {
-    pdrCount = __pdr_number_of_records;
-    nextByte = 0;
-}
 
+//*******************************************************************
+// pdrSize()
+//
 // returns the total pdr size (including the header)
+//
+// parameters:
+//    index - the index of the pdr to get size of
+// returns:
+//    the size in bytes of the indexed pdr
 unsigned int node::pdrSize(unsigned int index) {
     PdrCommonHeader * header = getPdrHeader(index);
     if (!header) return 0;
     return header->dataLength + sizeof(PdrCommonHeader);
 }
 
+//*******************************************************************
+// processCommandGetPdr()
+//
+// processes a getPdr command, implemeting the PLDM state machine for
+// packet disassembly, if required.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+//    txHeader - a pointer to the response header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
 void node::processCommandGetPdr(PldmRequestHeader* rxHeader, PldmResponseHeader* txHeader) 
 {
     static char pdrTxState = 0;
@@ -193,6 +274,18 @@ void node::processCommandGetPdr(PldmRequestHeader* rxHeader, PldmResponseHeader*
     }
 }
 
+//*******************************************************************
+// parseCommand()
+//
+// parse a new PLDM command and take appropriate action.  It is assumed
+// that the new PLDM request is stored in the rx buffer.
+//
+// parameters:
+//    none
+// returns:
+//    none
+// changes:
+//    the contents of the tx buffer may be altered.
 void node::parseCommand()
 {
     // cast the relevant portions of the header so that
@@ -242,11 +335,32 @@ void node::parseCommand()
     return;
 }
 
+//*******************************************************************
+// getResponse()
+//
+// a public entry point for the connector node to get a response 
+// to the most recent command.
+//
+// parameters:
+//    none
+// returns:
+//    a pointer to the response message
 unsigned char* node::getResponse() {
     parseCommand();
     return txBuffer;
 }
 
+//*******************************************************************
+// putCommand()
+//
+// a public entry point to send a command to the connector node.
+//
+// parameters:
+//    hdr - a pointer to the request header
+//    command - a pointer to the body of the command
+//    size - the number of bytes in the command body
+// returns:
+//    void
 void node::putCommand(PldmRequestHeader* hdr, unsigned char* command, unsigned int size) {
     unsigned char* cp = rxBuffer;
     unsigned char* cmdptr = (unsigned char*)hdr;

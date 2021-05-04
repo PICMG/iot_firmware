@@ -1,12 +1,39 @@
-﻿//Description: cpp file for Frame Check Sequence
-//Authors: Douglas Sandy, David Sandy
-//Copyright 2020 PICMG all rights reserved
+﻿//*******************************************************************
+//    fcs.c
+//
+//    This file provides implementation for a Frame Check Sequence used
+//    as part of the PICMG pldm library reference code. It contains a
+//    reference table and formula for calculating the FCS.
+//    
+//    Portions of this code are based on the IETF RFC 1662 
+//    as required by the DMTF MCTP and PLDM protocols.
+//    More information about PLDM and MCTP can be found on the DMTF
+//    web site (www.dmtf.org).
+//
+//    More information on the PICMG IoT data model can be found within
+//    the PICMG family of IoT specifications.  For more information,
+//    please visit the PICMG web site (www.picmg.org)
+//
+//    Copyright (C) 2020,  PICMG
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
 
 #include "fcs.h"
-using namespace std;
 
-// frame check sequence table from RFC 1662
-const unsigned int FrameCheckSequence::fcstab[256] = {
+//frame check sequence table from RFC 1662
+static unsigned int fcstab[256] = {
    0x0000, 0x1189, 0x2312, 0x329b, 0x4624, 0x57ad, 0x6536, 0x74bf,
    0x8c48, 0x9dc1, 0xaf5a, 0xbed3, 0xca6c, 0xdbe5, 0xe97e, 0xf8f7,
    0x1081, 0x0108, 0x3393, 0x221a, 0x56a5, 0x472c, 0x75b7, 0x643e,
@@ -41,16 +68,21 @@ const unsigned int FrameCheckSequence::fcstab[256] = {
    0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78
 };
 
-
 //*******************************************************************
-//Function name: calcFcs
-//Description: Takes new data and returns an updated fcs value as an int.This function is adapted from RFC1662.
-//Parameters: fcs - the old FCS: cp - the data being processed: len - the length of the data
-//Returns: The updated FCS as an int
-//Changes:
-unsigned int FrameCheckSequence::calcFcs(unsigned int fcs, unsigned char* cp, unsigned int len)
+// fcs_calcFcs()
+//
+// This function updates the frame check sequence and returns
+// the updated value.
+//
+// parameters:
+//	  fcs - the origninal value for the frame check sequence
+//   cp - a temporary value for the copy
+//   lenth - the length of the FCS
+// returns:
+//    fcs - updated value for the frame check sequence
+unsigned int fcs_calcFcs(unsigned int fcs, unsigned char* cp, unsigned int len)
 {
 	while (len--)
-		fcs = 0xffff&(fcs >> 8) ^ fcstab[(fcs ^ *cp++) & 0xff];
+		fcs = 0xffff&((fcs >> 8) ^ fcstab[(fcs ^ *cp++) & 0xff]);
 	return (fcs);
 }

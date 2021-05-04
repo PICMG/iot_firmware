@@ -1,19 +1,57 @@
+//*******************************************************************
+//    pldm.h
+//
+//    This file provides definitions of common pldm structures and 
+//    numeric codes. This header is intended to be used as part of 
+//    the PICMG pldm library reference code. 
+//    
+//    Portions of this code are based on the Platform Level Data Model
+//    (PLDM) specifications from the Distributed Management Task Force 
+//    (DMTF).  More information about PLDM can be found on the DMTF
+//    web site (www.dmtf.org).
+//
+//    More information on the PICMG IoT data model can be found within
+//    the PICMG family of IoT specifications.  For more information,
+//    please visit the PICMG web site (www.picmg.org)
+//
+//    Copyright (C) 2020,  PICMG
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
 #pragma once
-typedef unsigned short uint16;
-typedef short          sint16;
-typedef unsigned char  enum8;
-typedef unsigned char  bool8;
-typedef unsigned char  uint8;
-typedef unsigned char  bitfield8;
-typedef signed char    sint8;
+#ifdef __cplusplus
+    #include <cstdint>
+#else
+    #include <stdint.h>
+#endif
+
+// data types
+typedef uint16_t uint16;
+typedef int16_t  sint16;
+typedef uint8_t  enum8;
+typedef uint8_t  bool8;
+typedef uint8_t  uint8;
+typedef uint8_t  bitfield8;
+typedef int8_t    sint8;
 typedef float          real32;
-typedef long           sint32;
-typedef unsigned long  uint32;
+typedef int32_t        sint32;
+typedef uint32_t       uint32;
 typedef struct {
-    unsigned char bytes[13];
+    uint8_t bytes[13];
 } timestamp104;
 
-
+// common data values
 #define PDR_TYPE_TERMINUS_LOCATOR                1
 #define PDR_TYPE_NUMERIC_SENSOR                  2
 #define PDR_TYPE_NUMERIC_SENSOR_INITIALIZATION   3
@@ -123,7 +161,6 @@ typedef struct {
 } PldmResponseHeader;
 
 typedef struct {
-    enum8        test;
     enum8        completionCode;
     enum8        repositoryState;
     timestamp104 updateTime;
@@ -160,568 +197,5 @@ typedef struct {
     uint16 recordChangeNumber;
     uint16 dataLength;
 } PdrCommonHeader;
-
-
-////////////////////////////////////////////////////////////////////
-// Terminus Locator
-////////////////////////////////////////////////////////////////////
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    enum8 validity;
-    uint8 TID;
-    uint16 containerID;
-    enum8 terminusLocatorType;
-    uint8 terminusLocatorValueSize;
-    uint8 EID; 
-} PdrTerminusLocatorMctp;
-
-////////////////////////////////////////////////////////////////////
-// numeric sensor pdrs
-////////////////////////////////////////////////////////////////////
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 sensorID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    enum8 sensorInit;
-    bool8 sensorAuxiliaryNamesPDR;
-    enum8 baseUnit;
-    sint8 unitModifier;
-    enum8 rateUnit;
-    uint8 baseOEMUnitHandle;
-    enum8 auxUnit;
-    sint8 auxUnitModifier;
-    enum8 auxrateUnit;
-    enum8 rel;
-    uint8 auxOEMUnitHandle;
-    bool8 isLinear;
-    enum8 sensorDataSize;
-    real32 resolution;
-    real32 offset;
-    uint16 accuracy;
-    uint8 plusTolerance;
-    uint8 minusTolerance;
-    sint32 hysteresis;
-    bitfield8 supportedThresholds;
-    bitfield8 thresholdAndHysteresisVolatility;
-    real32 stateTransitionInterval;
-    real32 updateInterval;
-    sint32 maxReadable;
-    sint32 minReadable;
-    enum8 rangeFieldFormat;
-    bitfield8 rangeFieldSupport;
-    sint32 nominalValue;
-    sint32 normalMax;
-    sint32 normalMin;
-    sint32 warningHigh;
-    sint32 warningLow;
-    sint32 criticalHigh;
-    sint32 criticalLow;
-    sint32 fatalHigh;
-    sint32 fatalLow;
-} PdrNumericSensorSint32;
-
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 sensorID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    enum8 sensorInit;
-    bool8 sensorAuxiliaryNamesPDR;
-    enum8 baseUnit;
-    sint8 unitModifier;
-    enum8 rateUnit;
-    uint8 baseOEMUnitHandle;
-    enum8 auxUnit;
-    sint8 auxUnitModifier;
-    enum8 auxrateUnit;
-    enum8 rel;
-    uint8 auxOEMUnitHandle;
-    bool8 isLinear;
-    enum8 sensorDataSize;
-    real32 resolution;
-    real32 offset;
-    uint16 accuracy;
-    uint8 plusTolerance;
-    uint8 minusTolerance;
-    uint32 hysteresis;
-    bitfield8 supportedThresholds;
-    bitfield8 thresholdAndHysteresisVolatility;
-    real32 stateTransitionInterval;
-    real32 updateInterval;
-    uint32 maxReadable;
-    uint32 minReadable;
-    enum8 rangeFieldFormat;
-    bitfield8 rangeFieldSupport;
-    uint32 nominalValue;
-    uint32 normalMax;
-    uint32 normalMin;
-    uint32 warningHigh;
-    uint32 warningLow;
-    uint32 criticalHigh;
-    uint32 criticalLow;
-    uint32 fatalHigh;
-    uint32 fatalLow;
-} PdrNumericSensorUint32;
-
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 sensorID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    enum8 sensorInit;
-    bool8 sensorAuxiliaryNamesPDR;
-    enum8 baseUnit;
-    sint8 unitModifier;
-    enum8 rateUnit;
-    uint8 baseOEMUnitHandle;
-    enum8 auxUnit;
-    sint8 auxUnitModifier;
-    enum8 auxrateUnit;
-    enum8 rel;
-    uint8 auxOEMUnitHandle;
-    bool8 isLinear;
-    enum8 sensorDataSize;
-    real32 resolution;
-    real32 offset;
-    uint16 accuracy;
-    uint8 plusTolerance;
-    uint8 minusTolerance;
-    sint16 hysteresis;
-    bitfield8 supportedThresholds;
-    bitfield8 thresholdAndHysteresisVolatility;
-    real32 stateTransitionInterval;
-    real32 updateInterval;
-    sint16 maxReadable;
-    sint16 minReadable;
-    enum8 rangeFieldFormat;
-    bitfield8 rangeFieldSupport;
-    sint16 nominalValue;
-    sint16 normalMax;
-    sint16 normalMin;
-    sint16 warningHigh;
-    sint16 warningLow;
-    sint16 criticalHigh;
-    sint16 criticalLow;
-    sint16 fatalHigh;
-    sint16 fatalLow;
-} PdrNumericSensorSint16;
-
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 sensorID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    enum8 sensorInit;
-    bool8 sensorAuxiliaryNamesPDR;
-    enum8 baseUnit;
-    sint8 unitModifier;
-    enum8 rateUnit;
-    uint8 baseOEMUnitHandle;
-    enum8 auxUnit;
-    sint8 auxUnitModifier;
-    enum8 auxrateUnit;
-    enum8 rel;
-    uint8 auxOEMUnitHandle;
-    bool8 isLinear;
-    enum8 sensorDataSize;
-    real32 resolution;
-    real32 offset;
-    uint16 accuracy;
-    uint8 plusTolerance;
-    uint8 minusTolerance;
-    uint16 hysteresis;
-    bitfield8 supportedThresholds;
-    bitfield8 thresholdAndHysteresisVolatility;
-    real32 stateTransitionInterval;
-    real32 updateInterval;
-    uint16 maxReadable;
-    uint16 minReadable;
-    enum8 rangeFieldFormat;
-    bitfield8 rangeFieldSupport;
-    uint16 nominalValue;
-    uint16 normalMax;
-    uint16 normalMin;
-    uint16 warningHigh;
-    uint16 warningLow;
-    uint16 criticalHigh;
-    uint16 criticalLow;
-    uint16 fatalHigh;
-    uint16 fatalLow;
-} PdrNumericSensorUint16;
-
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 sensorID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    enum8 sensorInit;
-    bool8 sensorAuxiliaryNamesPDR;
-    enum8 baseUnit;
-    sint8 unitModifier;
-    enum8 rateUnit;
-    uint8 baseOEMUnitHandle;
-    enum8 auxUnit;
-    sint8 auxUnitModifier;
-    enum8 auxrateUnit;
-    enum8 rel;
-    uint8 auxOEMUnitHandle;
-    bool8 isLinear;
-    enum8 sensorDataSize;
-    real32 resolution;
-    real32 offset;
-    uint16 accuracy;
-    uint8 plusTolerance;
-    uint8 minusTolerance;
-    sint8 hysteresis;
-    bitfield8 supportedThresholds;
-    bitfield8 thresholdAndHysteresisVolatility;
-    real32 stateTransitionInterval;
-    real32 updateInterval;
-    sint8 maxReadable;
-    sint8 minReadable;
-    enum8 rangeFieldFormat;
-    bitfield8 rangeFieldSupport;
-    sint8 nominalValue;
-    sint8 normalMax;
-    sint8 normalMin;
-    sint8 warningHigh;
-    sint8 warningLow;
-    sint8 criticalHigh;
-    sint8 criticalLow;
-    sint8 fatalHigh;
-    sint8 fatalLow;
-} PdrNumericSensorSint8;
-
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 sensorID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    enum8 sensorInit;
-    bool8 sensorAuxiliaryNamesPDR;
-    enum8 baseUnit;
-    sint8 unitModifier;
-    enum8 rateUnit;
-    uint8 baseOEMUnitHandle;
-    enum8 auxUnit;
-    sint8 auxUnitModifier;
-    enum8 auxrateUnit;
-    enum8 rel;
-    uint8 auxOEMUnitHandle;
-    bool8 isLinear;
-    enum8 sensorDataSize;
-    real32 resolution;
-    real32 offset;
-    uint16 accuracy;
-    uint8 plusTolerance;
-    uint8 minusTolerance;
-    uint8 hysteresis;
-    bitfield8 supportedThresholds;
-    bitfield8 thresholdAndHysteresisVolatility;
-    real32 stateTransitionInterval;
-    real32 updateInterval;
-    uint8 maxReadable;
-    uint8 minReadable;
-    enum8 rangeFieldFormat;
-    bitfield8 rangeFieldSupport;
-    uint8 nominalValue;
-    uint8 normalMax;
-    uint8 normalMin;
-    uint8 warningHigh;
-    uint8 warningLow;
-    uint8 criticalHigh;
-    uint8 criticalLow;
-    uint8 fatalHigh;
-    uint8 fatalLow;
-} PdrNumericSensorUint8;
-
-////////////////////////////////////////////////////////////////////
-// state sensor pdrs
-////////////////////////////////////////////////////////////////////
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 sensorID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    enum8 sensorInit;
-    bool8 sensorAuxiliaryNamesPDR;
-    uint8 compositeSensorCount;
-    uint16 stateSetID;
-    uint8 possibleStatesSize;
-    bitfield8 possibleStates;
-} PdrStateSensorSingle;
-
-////////////////////////////////////////////////////////////////////
-// numeric effecter pdrs
-////////////////////////////////////////////////////////////////////
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 effecterID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    uint16 effecterSemanticID;
-    enum8 effecterInit;
-    bool8 effecterAuxiliaryNamesPDR;
-    enum8 baseUnit;
-    sint8 unitModifier;
-    enum8 rateUnit;
-    uint8 baseOEMUnitHandle;
-    enum8 auxUnit;
-    sint8 auxUnitModifier;
-    enum8 auxrateUnit;
-    uint8 auxOEMUnitHandle;
-    bool8 isLinear;
-    enum8 effecterDataSize;
-    real32 resolution;
-    real32 offset;
-    uint16 accuracy;
-    uint8 plusTolerance;
-    uint8 minusTolerance;
-    real32 stateTransitionInterval;
-    real32 transitionInterval;
-    sint32 maxSettable;
-    sint32 minSettable;
-    enum8 rangeFieldFormat;
-    bitfield8 rangeFieldSupport;
-    sint32 nominalValue;
-    sint32 normalMax;
-    sint32 normalMin;
-    sint32 ratedMax;
-    sint32 ratedMin;
-} PdrNumericEffecterSint32;
-
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 effecterID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    uint16 effecterSemanticID;
-    enum8 effecterInit;
-    bool8 effecterAuxiliaryNamesPDR;
-    enum8 baseUnit;
-    sint8 unitModifier;
-    enum8 rateUnit;
-    uint8 baseOEMUnitHandle;
-    enum8 auxUnit;
-    sint8 auxUnitModifier;
-    enum8 auxrateUnit;
-    uint8 auxOEMUnitHandle;
-    bool8 isLinear;
-    enum8 effecterDataSize;
-    real32 resolution;
-    real32 offset;
-    uint16 accuracy;
-    uint8 plusTolerance;
-    uint8 minusTolerance;
-    real32 stateTransitionInterval;
-    real32 transitionInterval;
-    uint32 maxSettable;
-    uint32 minSettable;
-    enum8 rangeFieldFormat;
-    bitfield8 rangeFieldSupport;
-    uint32 nominalValue;
-    uint32 normalMax;
-    uint32 normalMin;
-    uint32 ratedMax;
-    uint32 ratedMin;
-} PdrNumericEffecterUint32;
-
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 effecterID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    uint16 effecterSemanticID;
-    enum8 effecterInit;
-    bool8 effecterAuxiliaryNamesPDR;
-    enum8 baseUnit;
-    sint8 unitModifier;
-    enum8 rateUnit;
-    uint8 baseOEMUnitHandle;
-    enum8 auxUnit;
-    sint8 auxUnitModifier;
-    enum8 auxrateUnit;
-    uint8 auxOEMUnitHandle;
-    bool8 isLinear;
-    enum8 effecterDataSize;
-    real32 resolution;
-    real32 offset;
-    uint16 accuracy;
-    uint8 plusTolerance;
-    uint8 minusTolerance;
-    real32 stateTransitionInterval;
-    real32 transitionInterval;
-    sint16 maxSettable;
-    sint16 minSettable;
-    enum8 rangeFieldFormat;
-    bitfield8 rangeFieldSupport;
-    sint16 nominalValue;
-    sint16 normalMax;
-    sint16 normalMin;
-    sint16 ratedMax;
-    sint16 ratedMin;
-} PdrNumericEffecterSint16;
-
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 effecterID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    uint16 effecterSemanticID;
-    enum8 effecterInit;
-    bool8 effecterAuxiliaryNamesPDR;
-    enum8 baseUnit;
-    sint8 unitModifier;
-    enum8 rateUnit;
-    uint8 baseOEMUnitHandle;
-    enum8 auxUnit;
-    sint8 auxUnitModifier;
-    enum8 auxrateUnit;
-    uint8 auxOEMUnitHandle;
-    bool8 isLinear;
-    enum8 effecterDataSize;
-    real32 resolution;
-    real32 offset;
-    uint16 accuracy;
-    uint8 plusTolerance;
-    uint8 minusTolerance;
-    real32 stateTransitionInterval;
-    real32 transitionInterval;
-    uint16 maxSettable;
-    uint16 minSettable;
-    enum8 rangeFieldFormat;
-    bitfield8 rangeFieldSupport;
-    uint16 nominalValue;
-    uint16 normalMax;
-    uint16 normalMin;
-    uint16 ratedMax;
-    uint16 ratedMin;
-} PdrNumericEffecterUint16;
-
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 effecterID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    uint16 effecterSemanticID;
-    enum8 effecterInit;
-    bool8 effecterAuxiliaryNamesPDR;
-    enum8 baseUnit;
-    sint8 unitModifier;
-    enum8 rateUnit;
-    uint8 baseOEMUnitHandle;
-    enum8 auxUnit;
-    sint8 auxUnitModifier;
-    enum8 auxrateUnit;
-    uint8 auxOEMUnitHandle;
-    bool8 isLinear;
-    enum8 effecterDataSize;
-    real32 resolution;
-    real32 offset;
-    uint16 accuracy;
-    uint8 plusTolerance;
-    uint8 minusTolerance;
-    real32 stateTransitionInterval;
-    real32 transitionInterval;
-    sint8 maxSettable;
-    sint8 minSettable;
-    enum8 rangeFieldFormat;
-    bitfield8 rangeFieldSupport;
-    sint8 nominalValue;
-    sint8 normalMax;
-    sint8 normalMin;
-    sint8 ratedMax;
-    sint8 ratedMin;
-} PdrNumericEffecterSint8;
-
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 effecterID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    uint16 effecterSemanticID;
-    enum8 effecterInit;
-    bool8 effecterAuxiliaryNamesPDR;
-    enum8 baseUnit;
-    sint8 unitModifier;
-    enum8 rateUnit;
-    uint8 baseOEMUnitHandle;
-    enum8 auxUnit;
-    sint8 auxUnitModifier;
-    enum8 auxrateUnit;
-    uint8 auxOEMUnitHandle;
-    bool8 isLinear;
-    enum8 effecterDataSize;
-    real32 resolution;
-    real32 offset;
-    uint16 accuracy;
-    uint8 plusTolerance;
-    uint8 minusTolerance;
-    real32 stateTransitionInterval;
-    real32 transitionInterval;
-    uint8 maxSettable;
-    uint8 minSettable;
-    enum8 rangeFieldFormat;
-    bitfield8 rangeFieldSupport;
-    uint8 nominalValue;
-    uint8 normalMax;
-    uint8 normalMin;
-    uint8 ratedMax;
-    uint8 ratedMin;
-} PdrNumericEffecterUint8;
-
-/////////////////////////////////////////////////////////////////////////////////////////
-// State Effecter PDR
-/////////////////////////////////////////////////////////////////////////////////////////
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 effecterID;
-    uint16 entityType;
-    uint16 entityInstanceNumber;
-    uint16 containerID;
-    uint16 effecterSemanticId;
-    enum8 effecterInit;
-    bool8 effecterDescriptionPDR;
-    uint8 compositeSensorCount;
-    uint16 stateSetID;
-    uint8 possibleStatesSize;
-    bitfield8 possibleStates;
-} PdrStateEffecterSingle;
-
-/////////////////////////////////////////////////////////////////////////////////////////
-// Oem State Set PDR
-/////////////////////////////////////////////////////////////////////////////////////////
-typedef struct {
-    uint16 PLDMTerminusHandle;
-    uint16 OEMStateSetIDHandle;
-    uint32 vendorIANA;
-    enum8  unspecifiedValueHint;
-    uint8  stateCount;
-} PdrOemStateSet;
-
-/////////////////////////////////////////////////////////////////////////////////////////
-// Oem State Value PDR
-/////////////////////////////////////////////////////////////////////////////////////////
-typedef struct {
-    uint8  minStateValue;
-    uint8  maxStateValue;
-    uint8  stringCount;
-    // ascii null terminated string language code
-    // utf null terminated state name;
-} OemStateValue;
 #pragma pack(pop)
 

@@ -1,0 +1,194 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch mctp test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/mctp/mctp_c_test",
+            "args": ["${input:uartPort}"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/test/mctp",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build"
+        },
+        {
+            "name": "(gdb) Launch pldm cmd test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/pldm_cmd_test/pldm_cmd_test",
+            "args": ["${input:uartPort}"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/test/pldm_cmd_test",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build"
+        },
+        {
+            "name": "(gdb) Launch pldm client",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/pldm_client/pldm_client",
+            "args": ["pldm_definitions.json","${input:uartPort}"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/test/pldm_client",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build"
+        },
+        {
+            "name": "(gdb) Launch pldm server",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/pldm_server/pldm_server",
+            "args": ["${input:uartPort}"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/test/pldm_server",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+        },
+        {
+            "name": "(gdb) Launch uart test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/uart/uart_c_test",
+            "args": ["/dev/ttyUSB0"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/test/uart",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+        },
+        {
+            "name": "(gdb) Launch avr uart_test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/avr/test/uart_test/uart_test.elf",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/avr/test/uart_test",
+            "environment": [],
+            "externalConsole": false,
+            "miDebuggerPath": "/usr/bin/avr-gdb",
+            "miDebuggerServerAddress": "127.0.0.1:1212",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "kill any existing copies of simulavr",
+                    "text": "shell killall simulavr",
+                    "ignoreFailures":false
+                },
+                {
+                    "description": "launch simulavr",
+                    "text": "shell gnome-terminal -- /bin/sh -c \"stty erase 127 -isig -brkint -ignbrk -icanon -ctlecho -echo -inlcr; ~/simulavr/src/simulavr -g -d atmega328 -f ${workspaceFolder}/avr/test/uart_test/uart_test.elf\" &",
+                    "ignoreFailures":true
+                },
+                {
+                    "description":"load program",
+                    "text":"load",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+        },
+        {
+            "name": "(gdb) Launch avr userver",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/avr/test/userver/userver.elf",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/avr/test/userver",
+            "environment": [],
+            "externalConsole": false,
+            "miDebuggerPath": "/usr/bin/avr-gdb",
+            "miDebuggerServerAddress": "127.0.0.1:1212",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "kill any existing copies of simulavr",
+                    "text": "shell killall simulavr",
+                    "ignoreFailures":false
+                },
+                {
+                    "description": "launch simulavr",
+                    "text": "shell gnome-terminal -- /bin/sh -c \"stty erase 127 -isig -brkint -ignbrk -icanon -ctlecho -echo -inlcr; ~/simulavr/src/simulavr -g -d atmega328 -f ${workspaceFolder}/avr/test/userver/userver.elf\" &",
+                    "ignoreFailures":true
+                },
+                {
+                    "description":"load program",
+                    "text":"load",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build"
+        }
+    ],
+    "inputs" : [
+        {
+            "type": "pickString",
+            "id": "uartPort",
+            "description": "What port should this application connect to?",
+            "options": [
+                "/dev/ttyUSB0",
+                "/dev/pts/2",
+                "/dev/pts/3",
+                "/dev/pts/4",
+                "/dev/pts/5"
+            ],
+            "default": "/dev/ttyUSB0"
+        }
+    ]
+}
