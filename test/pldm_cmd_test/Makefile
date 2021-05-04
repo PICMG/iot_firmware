@@ -2,7 +2,7 @@ EXECUTABLE := pldm_cmd_test
 LIBINCLUDES := ../../lib/include
 LIBPATH := ../../lib
 INCLUDES := .
-OBJECTS := pldm_cmd_test.o pdr_data.o node.o $(LIBPATH)/json/libjson.a $(LIBPATH)/pldm/libpldm.a $(LIBPATH)/mctp/libmctp.a $(LIBPATH)/uart/libuartc.a $(LIBPATH)/fcs/libfcsc.a
+OBJECTS := pldm_cmd_test.o pdr_data.o clientNode.o $(LIBPATH)/json/libjson.a $(LIBPATH)/pldm/libpldm.a $(LIBPATH)/mctp/libmctp.a $(LIBPATH)/uart/libuartc.a $(LIBPATH)/fcs/libfcsc.a
 CXX_FLAGS := -std=c++11 -ggdb
 
 build : clean $(OBJECTS)

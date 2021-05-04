@@ -34,6 +34,13 @@
 #include "control_servo.h"
 
 static int duty = 00;
+
+#define DELAY_INSTANCES 4
+static unsigned int delay_count[DELAY_INSTANCES];
+static unsigned int delay_limit[DELAY_INSTANCES];
+static unsigned int delay_newlimit[DELAY_INSTANCES];
+static unsigned char delay_limit_changed[DELAY_INSTANCES];
+
 /********************************************************************
 * __vector_11
 *
@@ -47,13 +54,32 @@ static int duty = 00;
 * returns:
 *    void
 * changes:
-*    increments the 1 second tick counter.
+*    updates the motor controller (if used).
+*    updates any delay counters
 */
+static unsigned char tick = 0;
 ISR(TIMER1_OVF_vect) {
+
     // the duty cycle is set to the velocity profiler output for now
     OCR1A = duty;
     control_update();
     duty = (unsigned int)(current_velocity>>14)+2048L;
+
+    // update delay counters every fourth clock
+    if (tick == 0) {
+        for (unsigned char i = 0; i<DELAY_INSTANCES; i++)
+            // if the delay limit has changed, update the limit, and clear the count
+            if (delay_limit_changed[i]) {
+                delay_limit[i] = delay_newlimit[i];
+                delay_count[i] = 0;
+                delay_limit_changed[i] = 0;
+            } else {
+                // otherwise, update the delay count 
+                if (delay_count[i]<delay_limit[i]) delay_count[i]++;
+            }
+    }
+    tick = (tick+1)&0x03;
+
 }
 
 /********************************************************************
@@ -74,6 +100,13 @@ ISR(TIMER1_OVF_vect) {
 */
 void timer1_init()
 {
+    /* clear all the delay counters */
+    for (unsigned char i = 0; i<DELAY_INSTANCES; i++) {
+        delay_count[i] = 0;
+        delay_limit[i] = 0;
+        delay_newlimit[i] = 0;
+        delay_limit_changed[i] = 0;
+    }
 
     /* set to fast pwm mode, OCR1A = top, clock divisor = 1*/
     TCCR1A = 0x82;
@@ -92,4 +125,60 @@ void timer1_init()
 
     /* enable the output of the timer */
     DDRB |= 0x03;
+}
+
+/********************************************************************
+* delay_set()
+*
+* Set the delay timeout for the specified delay counter.
+*
+* parameters:
+*    delay_instance - the instance of the delay to set
+*    limit - the new delay value in milliseconds
+*
+* returns:
+*    void
+*
+* changes:
+*
+*/
+void delay_set(unsigned char delay_instance, unsigned int limit) {
+    // ignore delay instances that are beyond the number supported
+    if (delay_instance >= DELAY_INSTANCES) return;
+
+    // set the new value.  On the next 1ms tick, the value will be
+    // set.
+    delay_newlimit[delay_instance] = limit;
+    delay_limit_changed[delay_instance] = 1;
+}
+
+/********************************************************************
+* delay_isdone()
+*
+* check to see if the specified delay timer has timed out.
+*
+* parameters:
+*    delay_instance - the instance of the delay to check
+*
+* returns:
+*    void
+*
+* changes:
+*    updates the delay instance for the specified timeout.
+*
+*/
+unsigned char delay_isDone(unsigned char delay_instance) {
+    // ignore delay instances that are beyond the number supported
+    // delay will never be done because it does not exist
+    if (delay_instance >= DELAY_INSTANCES) return 0;
+
+    if (delay_limit_changed[delay_instance]) {
+        // a change to the limit has been requested by has not yet been
+        // accepted.  Return false, unless the delay value is zero.
+        return (delay_newlimit[delay_instance]==0);
+    }
+    
+    // check to see if the delay count has reached the limit.  
+    // no need for synchronization here
+    return (delay_count[delay_instance] == delay_limit[delay_instance]);
 }

@@ -199,3 +199,6 @@ typedef struct {
 } PdrCommonHeader;
 #pragma pack(pop)
 
+// update a CRC-8 value when transmitting a new character of data.
+unsigned char calc_new_crc8(unsigned char old_crc, unsigned char new_byte);
+

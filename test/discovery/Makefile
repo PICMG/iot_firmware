@@ -1,14 +1,13 @@
-EXECUTABLE := pdrmaker
+EXECUTABLE := discovery
 LIBINCLUDES := ../../lib/include
 LIBPATH := ../../lib
 INCLUDES := .
-OBJECTS := PdrMaker.o $(LIBPATH)/json/libjson.a $(LIBPATH)/pldm/libpldm.a
+OBJECTS := discovery.o $(LIBPATH)/pldm/libpldm.a $(LIBPATH)/mctp/libmctp.a $(LIBPATH)/uart/libuartc.a $(LIBPATH)/fcs/libfcsc.a
 CXX_FLAGS := -std=c++11 -ggdb
 
-build : $(OBJECTS)
-	g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) -L$(LIBPATH)/json -L$(LIBPATH)/pldm -ljson -lpldm
+build : clean $(OBJECTS)
+	g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) -L$(LIBPATH)/json -L$(LIBPATH)/pldm -L$(LIBPATH)/mctp -L$(LIBPATH)/uart -L$(LIBPATH)/fcs -ljson -lpldm -lmctp -luartc -lfcsc
 	cp ../../samples/pldm_definitions.json ./pldm_definitions.json
-	cp ../../samples/motion_control.json ./motion_control.json
 
 %.o : %.cpp
 	g++ $(CXX_FLAGS) -c $< -I$(INCLUDES) -I$(LIBINCLUDES)

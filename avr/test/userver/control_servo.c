@@ -30,12 +30,12 @@
 #include "vprofiler.h"
 #include "control_servo.h"
 
-#define STATE_IDLE       0
-#define STATE_RUNNING    1
-#define STATE_WAITING    2
-#define STATE_ERROR      3
-#define STATE_COND       4
-#define STATE_DONE       5
+#define STATE_IDLE       1
+#define STATE_RUNNING    2
+#define STATE_WAITING    3
+#define STATE_DONE       4
+#define STATE_COND       5
+#define STATE_ERROR      6
 
 unsigned char servo_cmd   = SERVO_CMD_NONE;
 unsigned char servo_mode  = SERVO_MODE_NOWAIT;
@@ -57,7 +57,7 @@ static unsigned char start_effecter_value = 2;  // initialize to STOP state;
 // request a state change.  This function is called from the 
 // low-priority loop.
 unsigned char control_setState(unsigned char reqState) {
-    if (reqState == 1) {
+    if (reqState == 2) {  // run requested
         if (state == STATE_IDLE) {
             // run command is only valid from the idle state
             servo_cmd = SERVO_CMD_RUN;
@@ -245,4 +245,13 @@ void control_update() {
         state = STATE_IDLE;
     }
     servo_cmd = SERVO_CMD_NONE;       
+}
+
+//****************************************************************
+// getState()
+// this is a low-priority task that returns the current state of
+// the motor controller.
+//
+unsigned char control_getState() { 
+    return state;
 }

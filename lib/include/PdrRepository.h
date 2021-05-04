@@ -53,8 +53,10 @@ public:
 	PdrRepository();
 	~PdrRepository();
 	bool setDictionary(string dictionary_file);
+	string getEntityTypeString(uint16 entityType);
 	bool addPdrsFromNode(PldmNode& node1);
 	GenericPdr * getPdrFromRecordHandle(uint32 recordNumber);
-	map<unsigned int,string> getStateSet(uint32 stateSetId, uint32 vendorId = 412);
+	map<unsigned int,string> getStateSet(uint32 stateSetId);
+	sint32 getStateNumberFromName(uint32 stateSetId, string stateName);
 	void dump();
 };

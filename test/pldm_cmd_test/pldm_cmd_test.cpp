@@ -27,19 +27,18 @@
 
 #include <iostream>
 #include <fstream>
-#include <iostream>
 #include <uchar.h>
 #include <map>
 #include "uart.h"
 #include "mctp.h"
 #include "pldm.h"
-#include "node.h"
+#include "clientNode.h"
 #include "PdrRepository.h"
 
 // global variables for communications channel and PLDM data structures
 PdrRepository pdrRepository;   // local copy of platform data repository
 mctp_struct   mctp1;           // parameters for MCTP communications
-node          node1;           // interface to device node (implements PLDM) 
+clientNode          node1;           // interface to device node (implements PLDM) 
 unsigned int  uart_handle;     // handle for uart device
 
 //*******************************************************************
@@ -52,13 +51,19 @@ unsigned int  uart_handle;     // handle for uart device
 // returns:
 //    void
 static void printMenu1(){
-    cout<<"*******************************************************************\n"<<endl;
-    cout<<"Enter Option:\n"<<endl;
-    cout<<"*******************************************************************\n"<<endl;
-    cout<<"1 - Dump PDR\n"<<endl;
-    cout<<"2 - Effecter #\n"<<endl;
-    cout<<"3 - Sensor #\n"<<endl;
-    cout<<"Q - Quit\n"<<endl;
+    cout<<"*******************************************************************"<<endl;
+    cout<<"Enter Command:"<<endl;
+    cout<<"*******************************************************************"<<endl;
+    cout<<"1 - Dump PDR"<<endl;
+    cout<<"2 - Set Numeric Effecter Value"<<endl;
+    cout<<"3 - Set State Effecter State"<<endl;
+    cout<<"4 - Get Numeric Effecter Value"<<endl;
+    cout<<"5 - Get State Effecter State"<<endl;
+    cout<<"6 - Get State Sensor Reading"<<endl;
+    cout<<"7 - Get Sensor Reading"<<endl;
+    cout<<"8 - Set Numeric Effecter Enable"<<endl;
+    cout<<"9 - Set State Effecter Enable"<<endl;
+    cout<<"Q - Quit"<<endl;
 }
 
 //*******************************************************************
@@ -129,6 +134,24 @@ static double getUIdouble(const char* prompt){
     return db;
 }
 
+
+//*******************************************************************
+// getUIint()
+//
+// This helper function gets user input for an int and then returns it.
+// This is a blocking function.
+//
+// parameters:
+//	  prompt - the desplayed message prompting for input.
+// returns:
+//    the user input
+static int getUIint(const char* prompt){
+    int i;
+    cout<<prompt<<endl;
+    cin>>i;
+    return i;
+}
+
 //*******************************************************************
 // pickEffecter()
 //
@@ -137,9 +160,10 @@ static double getUIdouble(const char* prompt){
 //
 // parameters:
 //	  requestedID - the id of the pdr
+//    effecterType - the name of the sensor (StateSensor/NumericSensor)
 // returns:
 //    the pdr, if it exists, or null
-static GenericPdr* pickEffecter(unsigned long requestedID){
+static GenericPdr* pickEffecter(unsigned long requestedID, string effecterType){
     unsigned char buffer[256];
         
     int j = 1;
@@ -150,8 +174,42 @@ static GenericPdr* pickEffecter(unsigned long requestedID){
             return 0;
         }else{
             if(effecterPdr->keyExists("effecterID")){
-                unsigned long effecterID = atol(effecterPdr->getValue("effecterID").c_str());
-                if(effecterID==requestedID) return effecterPdr;
+                if(effecterPdr->getValue("PDRType")==effecterType){
+                    unsigned long effecterID = atol(effecterPdr->getValue("effecterID").c_str());
+                    if(effecterID==requestedID) return effecterPdr;
+                }
+            }
+        }
+        j++;
+    }
+}
+
+//*******************************************************************
+// pickSensor()
+//
+// This helper function takes an ID for an sensor pdr, searches
+// the repository for the pdr, and, if available, returns it.
+//
+// parameters:
+//	  requestedID - the id of the pdr
+//    sensorType - the name of the sensor (StateSensor/NumericSensor)
+// returns:
+//    the pdr, if it exists, or null
+static GenericPdr* pickSensor(unsigned long requestedID, string sensorType){
+    unsigned char buffer[256];
+        
+    int j = 1;
+    while(1){
+        GenericPdr* sensorPdr;
+        sensorPdr = pdrRepository.getPdrFromRecordHandle(j);
+        if(!sensorPdr){
+            return 0;
+        }else{
+            if(sensorPdr->keyExists("sensorID")){
+                if(sensorPdr->getValue("PDRType")==sensorType){
+                    unsigned long sensorID = atol(sensorPdr->getValue("sensorID").c_str());
+                    if(sensorID==requestedID) return sensorPdr;
+                }    
             }
         }
         j++;
@@ -170,71 +228,52 @@ static GenericPdr* pickEffecter(unsigned long requestedID){
 // returns:
 //    void
 static void setNumericEffecterMenu(){
+    // clear terminal
     cout<<"\ec"<<endl;
-    GenericPdr* effecterpdr; 
+    GenericPdr* effecterpdr;
     unsigned long effecterID = getUIlong("please enter an effecter ID");
-    effecterpdr = pickEffecter(effecterID);
+    effecterpdr = pickEffecter(effecterID,"NumericEffecter");
+    //check PDR validity
     if(!effecterpdr){
         cout<<"Invalid ID"<<endl;
     }else{
         cout<<"valid ID"<<endl;
-        
-        mctp_struct mctp1;
-        mctp_init(uart_handle,&mctp1);
-        node node1;
-        node1.init(&mctp1);
-
-        unsigned char buffer[7]; 
         double data = getUIdouble("please enter new value for numeric effecter");
-        string dataSize   = effecterpdr->getValue("effecterDataSize");
-        double resolution = atof(effecterpdr->getValue("resolution").c_str());
-        double offset     = atof(effecterpdr->getValue("offset").c_str());
-        
-        // perform the unit conversion (with rounding)
-        unsigned long scaledData = (data - offset)/resolution + 0.5;
-        unsigned int body_len = 0;
+        if(node1.setNumericEffecterValue(effecterpdr,data)){
+            cout<<"effecter value change successful"<<endl;
+        }else{
+            cout<<"effecter value change failed"<<endl;
+        }
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+    }
+}
 
-        PldmRequestHeader header;
-        header.flags1 = 0; header.flags2 = 0; header.command = CMD_SET_NUMERIC_EFFECTER_VALUE;
-        *((uint16*)buffer) = effecterID;
-
-        if(dataSize=="uint8"){
-            buffer[2] = 0; //effecter data size is uint8
-            buffer[3] = (uint8)scaledData;
-            body_len = 4;
-        }
-        else if(dataSize=="sint8"){
-            buffer[2] = 1; //effecter data size is sint8
-            buffer[3] = (sint8)scaledData;
-            body_len = 4;
-        }
-        else if(dataSize=="uint16"){
-            buffer[2] = 2; //effecter data size is uint16
-            *((uint16*)(&buffer[3])) = (uint16)scaledData;
-            body_len = 5;
-        }
-        else if(dataSize=="sint16"){
-            buffer[2] = 3; //effecter data size is sint16
-            *((sint16*)(&buffer[3])) = (sint16)scaledData;
-            body_len = 5;
-        }
-        else if(dataSize=="uint32"){
-            buffer[2] = 4; //effecter data size is uint32
-            *((uint32*)(&buffer[3])) = (uint32)scaledData;
-            body_len = 7;
-        }
-        else if(dataSize=="sint32"){
-            buffer[2] = 5; //effecter data size is sint32
-            *((sint32*)(&buffer[3])) = (sint32)scaledData;
-            body_len = 7;
-        }
-
-        node1.putCommand(&header, buffer, body_len);
-
-        PldmResponseHeader* response;
-        response = (PldmResponseHeader*)node1.getResponse();
-        if(response->completionCode==RESPONSE_SUCCESS){
-            cout<<"Effecter value change successful"<<endl;
+//*******************************************************************
+// getNumericEffecterMenu()
+//
+// This helper function generates a CLI menu for the GetNumericEffecter function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then print the value of the effecter.
+//
+// parameters:
+//	  none
+// returns:
+//    void
+static void getNumericEffecterMenu(){
+    // clear terminal
+    cout<<"\ec"<<endl;
+    GenericPdr* effecterpdr; 
+    unsigned long effecterID = getUIlong("please enter an effecter ID");
+    effecterpdr = pickEffecter(effecterID,"NumericEffecter");
+    // check PDR validity
+    if(!effecterpdr){
+        cout<<"Invalid ID"<<endl;
+    }else{
+        cout<<"valid ID"<<endl;
+        double scaledData = node1.getNumericEffecterValue(effecterpdr); 
+        if(scaledData!=-1){
+            cout<<"Effecter value is: "<<scaledData<<endl;
         }else{
             cout<<"Effecter value change failed"<<endl;
         }
@@ -242,7 +281,6 @@ static void setNumericEffecterMenu(){
         cout<<"\ec"<<endl;
     }
 }
-
 
 //*******************************************************************
 // setStateEffecterMenu()
@@ -256,21 +294,217 @@ static void setNumericEffecterMenu(){
 // returns:
 //    void
 static void setStateEffecterMenu(){
+    // clear terminal
     cout<<"\ec"<<endl;
     GenericPdr* effecterpdr; 
     unsigned long effecterID = getUIlong("please enter an effecter ID");
-    effecterpdr = pickEffecter(effecterID);
+    effecterpdr = pickEffecter(effecterID,"StateEffecter");
+    // check PDR validity
+    if(!effecterpdr){
+        cout<<"Invalid ID"<<endl;
+    }else{
+        cout<<"valid ID"<<endl;
+        map<unsigned int,string> enums = pdrRepository.getStateSet(atoi(effecterpdr->getValue("stateSetID").c_str()));
+        cout << "Please select a state" << endl;
+        for(auto i:enums){
+            cout << i.first << " - " << i.second << endl; 
+        }
+        enum8 effecterState = getUIint("");
+        if(node1.setStateEffecterStates(effecterpdr,effecterState)){
+            cout<<"Effecter state change successful"<<endl;
+        }else{
+            cout<<"Effecter state change failed"<<endl;
+        }
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+    }
+}
+
+//*******************************************************************
+// getStateEffecterMenu()
+//
+// This helper function generates a CLI menu for the GetStateEffecter function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then print the value of the effecter.
+//
+// parameters:
+//	  none
+// returns:
+//    void
+static void getStateEffecterMenu(){
+    // clear terminal
+    cout<<"\ec"<<endl;
+    GenericPdr* effecterpdr; 
+    unsigned long effecterID = getUIlong("please enter an effecter ID");
+    effecterpdr = pickEffecter(effecterID,"StateEffecter");
+    // check PDR validity
     if(!effecterpdr){
         cout<<"Invalid ID"<<endl;
     }else{
         cout<<"valid ID"<<endl;
         
-        mctp_struct mctp1;
-        mctp_init(uart_handle,&mctp1);
-        node node1;
-        node1.init(&mctp1);
+        uint8 value = (uint8)node1.getStateEffecterStates(effecterpdr);
+        bool valuefound= false;                
+        // process the response
+        map<unsigned int,string> enums = pdrRepository.getStateSet(atoi(effecterpdr->getValue("stateSetID").c_str()));
+        for (std::map<unsigned int,string>::iterator it=enums.begin(); it!=enums.end(); it++){
+            if(it->first==value){
+                cout << "presentState: " << it->second << endl;
+                valuefound = true;
+            }
+        }
+        if(!valuefound) cout<<"Effecter value retrival failed"<<endl;
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+    }
+}
 
-        map<string,unsigned int> enums = effecterpdr->getEnumOptions("");
+//*******************************************************************
+// getSensorMenu()
+//
+// This helper function generates a CLI menu for the GetSensorReadings function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then print the value of the effecter.
+//
+// parameters:
+//	  none
+// returns:
+//    void
+static void getSensorMenu(){
+    cout<<"\ec"<<endl;
+    GenericPdr* sensorpdr; 
+    unsigned long sensorID = getUIlong("please enter an sensor ID");
+    sensorpdr = pickSensor(sensorID,"NumericSensor");
+    // checking ID
+    if(!sensorpdr){
+        cout<<"Invalid ID"<<endl;
+    }else{
+        cout<<"valid ID"<<endl;
+        double scaledData=node1.getSensorReading(sensorpdr);
+
+        if(scaledData!=-1){
+            cout<<"Sensor value is: "<<scaledData<<endl;
+
+        }else{
+            cout<<"Sensor value failed"<<endl;
+        }
+
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+    }
+}
+
+//*******************************************************************
+// getStateSensorMenu()
+//
+// This helper function generates a CLI menu for the GetStateSensorReadings function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then print the value of the effecter.
+//
+// parameters:
+//	  none
+// returns:
+//    void
+static void getStateSensorMenu(){
+    cout<<"\ec"<<endl;
+    GenericPdr* sensorpdr; 
+    unsigned long sensorID = getUIlong("please enter an sensor ID");
+    sensorpdr = pickSensor(sensorID,"StateSensor");
+    // checking ID
+    if(!sensorpdr){
+        cout<<"Invalid ID"<<endl;
+    }else{
+        cout<<"valid ID"<<endl;
+        
+        uint8 value = (uint8)node1.getStateSensorReadings(sensorpdr);
+        bool valuefound= false;                
+        // process the response
+        map<unsigned int,string> enums = pdrRepository.getStateSet(atoi(sensorpdr->getValue("stateSetID").c_str()));
+        for (std::map<unsigned int,string>::iterator it=enums.begin(); it!=enums.end(); it++){
+            if(it->first==value){
+                cout << "presentState: " << it->second << endl;
+                valuefound = true;
+            }
+        }
+        if(!valuefound) cout<<"Sensor state retrival failed"<<endl;
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+            
+    }
+}
+
+//*******************************************************************
+// setNumericEnableMenu()
+//
+// This helper function generates a CLI menu for the setNumericEffecterEnable function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then change the value of the effecter's enable state.
+//
+// parameters:
+//	  none
+// returns:
+//    void
+static void setNumericEnableMenu(){
+    cout<<"\ec"<<endl;
+    GenericPdr* effecterpdr; 
+    unsigned long effecterID = getUIlong("please enter an effecter ID");
+    effecterpdr = pickEffecter(effecterID,"NumericEffecter");
+    if(!effecterpdr){
+        cout<<"Invalid ID"<<endl;
+    }else{
+        cout<<"valid ID"<<endl;
+        
+        cout<<"Please enter enable state:"<<endl;
+        cout<<"1 - enabled"<<endl;
+        cout<<"2 - disabled"<<endl;
+        cout<<"3 - unavailable"<<endl;
+        uint8 enableState = getUIint("");
+        
+        if(node1.setNumericEffecterEnable(effecterpdr,enableState)){
+            cout<<"Effecter enable state change successful"<<endl;
+        }else{
+            cout<<"Effecter enable state change failed"<<endl;
+        }
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+    }
+}
+
+//*******************************************************************
+// setStateEnableMenu()
+//
+// This helper function generates a CLI menu for the setStateEffecterEnables function.
+// When called, this functon will get user input to find a pdr for an effecter and
+// then change the value of the effecter's enable state.
+//
+// parameters:
+//	  none
+// returns:
+//    void
+static void setStateEnableMenu(){
+    cout<<"\ec"<<endl;
+    GenericPdr* effecterpdr; 
+    unsigned long effecterID = getUIlong("please enter an effecter ID");
+    effecterpdr = pickEffecter(effecterID,"StateEffecter");
+    if(!effecterpdr){
+        cout<<"Invalid ID"<<endl;
+    }else{
+        cout<<"valid ID"<<endl;
+        
+        cout<<"Please enter enable state:"<<endl;
+        cout<<"1 - enabled"<<endl;
+        cout<<"2 - disabled"<<endl;
+        cout<<"3 - unavailable"<<endl;
+        uint8 enableState = getUIint("");
+        
+        if(node1.setStateEffecterEnables(effecterpdr,enableState)){
+            cout<<"Effecter enable state change successful"<<endl;
+        }else{
+            cout<<"Effecter enable state change failed"<<endl;
+        }
+        getUIch("B - go back to menu");
+        cout<<"\ec"<<endl;
+
     }
 }
 
@@ -315,6 +549,8 @@ int main(unsigned int argc, char * argv[]) {
     cout<<"Initializing local PDR repository"<<endl;
     pdrRepository.addPdrsFromNode(node1);
 
+    cout<<"\ec"<<endl;
+
     // CLI menu start
     while(uiQuit){
         printMenu1();
@@ -331,6 +567,24 @@ int main(unsigned int argc, char * argv[]) {
             break;
             case '3': // set State Effecter
                 setStateEffecterMenu();
+            break;
+            case '4': // get Numeric Effecter
+                getNumericEffecterMenu();
+            break;
+            case '5': // get State Effecter
+                getStateEffecterMenu();
+            break;
+            case '6': // get State Sensor Reading
+                getStateSensorMenu();
+            break;
+            case '7': // get Sensor Reading
+                getSensorMenu();
+            break;
+            case '8': // set Numeric Effecter Enable
+                setNumericEnableMenu();
+            break;
+            case '9': // set State Effecter Enable
+                setStateEnableMenu();
             break;
             case 'Q':
             case 'q':

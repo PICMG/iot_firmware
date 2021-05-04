@@ -25,5 +25,11 @@
 //
 #ifndef TIMER1_H
 #define TIMER1_H
+void timer1_init();
+
+// interface for delay timers with 1ms resolution.  These can be used
+// measuring programatic timing intervals.
+void delay_set(unsigned char delay_instance, unsigned int timeMS);
+unsigned char delay_isDone(unsigned char delay_instance);
 
 #endif

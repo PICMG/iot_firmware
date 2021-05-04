@@ -36,8 +36,11 @@
 
 // endpoint command codes
 #define CMD_RESERVED                       0x00
+#define CMD_SET_ENDPOINT_ID                0x01
+#define CMD_GET_ENDPOINT_ID                0x02
 #define CMD_GET_MCTP_VERSION_SUPPORT       0x04
 #define CMD_GET_MESSAGE_TYPE_SUPPORT       0x05
+#define CMD_DISCOVERY_NOTIFY               0x0d
 
 #define MCTP_BUFFER_SIZE 128
 
@@ -69,12 +72,14 @@ typedef struct{
 	unsigned int  fcs;
 	unsigned int  txfcs;
 	unsigned char mctp_packet_ready;
+	unsigned char discovered;
 	int uart_handle;
 } mctp_struct;
 
 // function definitions
 void  mctp_init(int, mctp_struct*);
 unsigned char mctp_sendAndWait(mctp_struct*, unsigned int, unsigned char*);
+unsigned char mctp_sendNoWait(mctp_struct*, unsigned int, unsigned char*);
 unsigned char mctp_isPacketAvailable(mctp_struct*);
 unsigned char* mctp_getPacket(mctp_struct*);
 void  mctp_updateRxFSM(mctp_struct*);

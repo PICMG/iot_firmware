@@ -34,25 +34,37 @@
 
 int main(void)
 {
+  unsigned char mctp_discovery_msg[] = {0,CMD_DISCOVERY_NOTIFY};
   mctp_struct mctp1;
+
   // enable global interrupts
   SREG |= (1<<SREG_I);
 
   // initialize the velocity profiler
 	vprofiler_setParameters(1000000L, TO_FP16(511), TO_FP16(1), 1);
   
-  // initialize the global tick timer
+  // initialize the global tick timer for 4000Khz rate timeout
   timer1_init();
 
-  // initilaize the uart 
+  // initilaize the uart
   uart_init("");
 
   // initialize mctp socket
   mctp_init(0, &mctp1);
   node_init(&mctp1);
           
+  // send an MCTP discovery notifiy command
+  delay_set(0,1000);
+  mctp_sendNoWait(&mctp1,1,mctp_discovery_msg);
   while (1) {
-     node_getResponse();
+    // if the discovery notify has timed out and no response has been received, 
+    // send another discovery notify message
+    if ((!mctp1.discovered)&&delay_isDone(0)) {
+      mctp_sendNoWait(&mctp1,2,mctp_discovery_msg);
+      delay_set(0,1000);
+    } else {
+      node_getResponse();
+    }
   }
   return 0;
 }
