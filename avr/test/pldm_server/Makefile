@@ -1,6 +1,6 @@
 EXECUTABLE := pldm_server
 LIBINCLUDES := ../../lib/include
-LIBPATH := ../../lib
+LIBPATH := ../lib
 INCLUDES := .
 OBJECTS := pldm_server.o node.o pdr_data.c $(LIBPATH)/json/libjson.a $(LIBPATH)/pldm/libpldm.a $(LIBPATH)/mctp/libmctp.a $(LIBPATH)/uart/libuartc.a $(LIBPATH)/fcs/libfcsc.a
 CXX_FLAGS := -std=c++11 -ggdb

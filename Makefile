@@ -1,19 +1,15 @@
 
-all : libraries userver pldm_test uart_c_test mctp_c_test pldm_client pldm_server pldm_cmd_test pdrmaker discovery script_test
+all : libraries userver pldm_server pdrmaker
 
 libraries:
-	cd ./lib/json && make clean
-	cd ./lib/fcs && make clean
-	cd ./lib/pldm && make clean
-	cd ./lib/mctp && make clean
-	cd ./lib/uart && make clean
-	cd ./lib/json && make build
-	cd ./lib/fcs && make build
-	cd ./lib/pldm && make build
-	cd ./lib/mctp && make build
-	cd ./lib/uart && make build
-	cd ./test/script_test && make clean
-	cd ./test/script_test && make build
+	cd ./avr/lib/fcs && make clean
+	cd ./avr/lib/pldm && make clean
+	cd ./avr/lib/mctp && make clean
+	cd ./avr/lib/uart && make clean
+	cd ./avr/lib/fcs && make build
+	cd ./avr/lib/pldm && make build
+	cd ./avr/lib/mctp && make build
+	cd ./avr/lib/uart && make build
 	
 userver : 
 	cd ./avr/test/userver && make build
@@ -21,47 +17,18 @@ userver :
 pdrmaker : 
 	cd ./src/pdrmaker && make clean && make build
 
-pldm_client : 
-	cd ./test/pldm_client && make build
-
-pldm_cmd_test : 
-	cd ./test/pldm_cmd_test && make build
-
 pldm_server : 
-	cd ./test/pldm_server && make build
-
-pldm_test : 
-	cd ./test/pldm && make clean
-	cd ./test/pldm && make build
-
-discovery:
-	cd ./test/discovery && make clean
-	cd ./test/discovery && make build
-
-uart_c_test : 
-	cd ./test/uart && make clean
-	cd ./test/uart && make build
-
-mctp_c_test : 
-	cd ./test/mctp && make clean
-	cd ./test/mctp && make build
+	cd ./avr/test/pldm_server && make build
 
 avr_uart_test :
 	cd ./avr/test/uart_test && make clean
 	cd ./avr/test/uart_test && make build
 
-script_test :
-	cd ./test/script_test && make clean
-	cd ./test/script_test && make build
-
 clean:
-	cd ./lib/fcs && make clean
-	cd ./lib/uart && make clean
-	cd ./lib/mctp && make clean
-	cd ./lib/json && make clean
-	cd ./lib/pldm && make clean
-	cd ./test/pldm && make clean
-	cd ./test/uart && make clean
-	cd ./test/mctp && make clean
-	cd ./avr/test/uart_test && make clean
-	cd ./test/script_test && make clean
+	cd ./avr/lib/fcs && make clean
+	cd ./avr/lib/uart && make clean
+	cd ./avr/lib/mctp && make clean
+	cd ./avr/lib/pldm && make clean
+	cd ./avr/test/uart && make clean
+	cd ./avr/test/mctp && make clean
+	cd ./avr/avr/test/uart_test && make clean

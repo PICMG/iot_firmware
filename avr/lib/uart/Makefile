@@ -1,6 +1,6 @@
 LIBFILE := libfcsc.a
-LIBINCLUDES := -I. -I../../lib/include -I/usr/lib/avr/include
-PROJLIBS := ../../lib
+LIBINCLUDES := -I. -I../include -I/usr/lib/avr/include
+PROJLIBS := ../lib
 INCLUDES := .
 OBJECTS := fcs.o mctp.o uart.o
 
