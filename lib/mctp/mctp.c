@@ -56,6 +56,7 @@
 void mctp_init(int handle, mctp_struct* vars){
 	vars->uart_handle = handle;
 	vars->mctp_packet_ready=0;
+	vars->discovered = 0;
 }
 
 //*******************************************************************
@@ -98,6 +99,24 @@ unsigned char mctp_sendAndWait(mctp_struct* vars, unsigned int length, unsigned 
 #endif 
 
 //*******************************************************************
+// mctp_sendNoWait()
+//
+// This function sends a MCTP packet without waiting for response.
+// parameters:
+//    length - the length of the message
+//    msg - the message being transmitted
+//	  vars - a data struct used for all mctp functions
+// returns:
+//    whether or not the packet was sent successfully
+unsigned char mctp_sendNoWait(mctp_struct* vars, unsigned int length, unsigned char* msg){
+	// send packet
+	mctp_transmitFrameStart(vars,length+4);
+	mctp_transmitFrameData(vars,msg,length);
+	mctp_transmitFrameEnd(vars);
+	return 1;
+}
+
+//*******************************************************************
 // mctp_isPacketAvailable()
 //
 // This is a helper function that checks whether there is
@@ -123,6 +142,30 @@ unsigned char  mctp_isPacketAvailable(mctp_struct* vars) {
 unsigned char* mctp_getPacket(mctp_struct* vars) {
 	vars->mctp_packet_ready = 0;
 	return vars->rxBuffer;
+}
+
+//*******************************************************************
+// mctp_processControlMessage()
+//
+// This is a helper function that processess any MCTP control messages
+// that are received.
+static void mctp_processControlMessage(mctp_struct* vars)
+{
+	switch (vars->rxBuffer[1]) {
+		case CMD_SET_ENDPOINT_ID:
+			break;
+		case CMD_GET_ENDPOINT_ID:
+			break;
+		case CMD_GET_MCTP_VERSION_SUPPORT:
+			break;
+		case CMD_GET_MESSAGE_TYPE_SUPPORT:
+			break;
+		case CMD_DISCOVERY_NOTIFY:
+			vars->discovered = 1;
+			break;
+		default:
+			break;
+	}
 }
 
 //*******************************************************************
@@ -255,10 +298,20 @@ void  mctp_updateRxFSM(mctp_struct* vars) {
 		mctp_serial_state = MCTPSER_ENDSYNC;
 		break;
 	case MCTPSER_ENDSYNC:
-    // checking final sync char. If the FCS matches, then the packet is
-    // declared ready. Otherwise, the packet is dropped.
+    	// checking final sync char. If the FCS matches, then the packet is
+    	// declared ready. Otherwise, the packet is dropped.
 		if (ch == SYNC_CHAR) {
-			if (vars->fcs==fcs_msg) vars->mctp_packet_ready = 1;
+			if (vars->fcs==fcs_msg) {
+				// process MCTP control message (or response) if received
+				if (vars->rxBuffer[0]==0) {
+					mctp_processControlMessage(vars);
+				} 
+				else {
+					// otherwise, notifiy that a new packet is ready for PLDM
+					// interface
+					vars->mctp_packet_ready = 1;
+				}
+			}
 		}
 		mctp_serial_state = MCTPSER_WAITING_FOR_SYNC;
 		break;
@@ -289,6 +342,7 @@ void  mctp_transmitFrameStart(mctp_struct* vars, unsigned char totallength) {
 	vars->txfcs = fcs_calcFcs(vars->txfcs, &totallength, 1);
 
 	// transmit the MCTP media-independent header
+	// header version = 1,,  destination/source ID = 0, SOM, EOM, TO
 	unsigned char hdr[] = { 0x01, 0x00, 0x00, 0xC8 };
 	uart_writeBuffer(vars->uart_handle,hdr,4);
 	vars->txfcs = fcs_calcFcs(vars->txfcs, &hdr[0], 4);
