@@ -738,9 +738,9 @@ END GROUP
  .stab          0x0000000000006fa8      0x384 crc8.o
                                         0x390 (size before relaxing)
 
-.stabstr        0x0000000000000000     0x309f
+.stabstr        0x0000000000000000     0x3093
  *(.stabstr)
- .stabstr       0x0000000000000000     0x309f main.o
+ .stabstr       0x0000000000000000     0x3093 main.o
 
 .stab.excl
  *(.stab.excl)

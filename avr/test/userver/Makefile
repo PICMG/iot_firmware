@@ -21,11 +21,10 @@
 #
 EXECUTABLE  := userver.elf
 HEXFILE     := userver.hex
-LIBINCLUDES := -L/usr/lib/avr/include -L../../../lib/include 
-LIBPATH     := ../../../lib /usr/lib/avr
-MAKERPATH   := ../../../src/pdrmaker
+LIBINCLUDES := -L/usr/lib/avr/include -L../../lib/include 
+LIBPATH     := ../../lib /usr/lib/avr
 AVRPROJLIBS := ../../lib
-INCLUDES    := -I. -I/usr/lib/avr/include -I../../../lib/include 
+INCLUDES    := -I. -I/usr/lib/avr -I../../lib/include 
 OBJECTS     := main.o simulavr_info.o node.o pdr_data.o vprofiler.o control_servo.o timer1.o
 LIBOBJECTS  := uart.o fcs.o mctp.o crc8.o
 CXX_FLAGS   := -Wall -mmcu=atmega328p -DF_CPU=16000000UL
@@ -35,12 +34,12 @@ export      OUTPUT_DIR
 
 # clean and build the project
 build: CXX_FLAGS += -g -O0 
-build: clean pdr_data.c $(OBJECTS) $(LIBOBJECTS)
+build: clean $(OBJECTS) $(LIBOBJECTS)
 	avr-g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) $(LIBOBJECTS) -Wl,-Map=solution.map,--cref
 	
 # clean, build and run the project on atmega 328p hardware
 run: CXX_FLAGS += -Os
-run: clean pdr_data.c $(OBJECTS) $(LIBOBJECTS)
+run: clean $(OBJECTS) $(LIBOBJECTS)
 	avr-g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) $(LIBOBJECTS) -Wl,-Map=solution.map,--cref
 	avr-objcopy -R .eeprom -R .fuse -R .lock -R .signature -O ihex $(EXECUTABLE) $(HEXFILE)
 	avrdude -p m328p -c Arduino -P /dev/ttyUSB0 -U flash:w:$(HEXFILE)
@@ -48,11 +47,6 @@ run: clean pdr_data.c $(OBJECTS) $(LIBOBJECTS)
 # build library object files and place them in this folder
 $(LIBOBJECTS):
 	$(MAKE) -w -C $(AVRPROJLIBS) $@
-
-# rebuild pldm_data file from the json object file
-pdr_data.c: 
-	cd $(MAKERPATH) && ./pdrmaker ../../samples/motion_control.json pdr_data.c
-	cp $(MAKERPATH)/pdr_data.c ./pdr_data.c
 
 # build non-library object files and place them in this folder
 %.o : %.c
@@ -64,5 +58,4 @@ clean:
 	-rm *.o
 	-rm *.elf
 	-rm *.hex
-	-rm pdr_data.c
 
