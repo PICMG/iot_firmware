@@ -39,8 +39,10 @@
 #include <stdlib.h>
 
 #ifdef __linux__
-#include <sys/time.h>
-#endif 
+	#include <sys/time.h>
+#else
+	#include "avr/io.h"
+#endif
 
 //*******************************************************************
 // mctp_init()
@@ -57,6 +59,7 @@ void mctp_init(int handle, mctp_struct* vars){
 	vars->uart_handle = handle;
 	vars->mctp_packet_ready=0;
 	vars->discovered = 0;
+	vars->last_msg_type = 0;
 }
 
 //*******************************************************************
@@ -71,10 +74,10 @@ void mctp_init(int handle, mctp_struct* vars){
 // returns:
 //    whether or not the packet was sent successfully
 #ifdef __linux__
-unsigned char mctp_sendAndWait(mctp_struct* vars, unsigned int length, unsigned char* msg){
+unsigned char mctp_sendAndWait(mctp_struct* vars, unsigned int length, unsigned char* msg, unsigned char mctp_message_type){
 	for(int i=0; i<8; i++){
 		// send packet
-		mctp_transmitFrameStart(vars,length+4);
+		mctp_transmitFrameStart(vars,length+5,mctp_message_type);
 		mctp_transmitFrameData(vars,msg,length);
 		mctp_transmitFrameEnd(vars);
 		// checking start time
@@ -108,9 +111,9 @@ unsigned char mctp_sendAndWait(mctp_struct* vars, unsigned int length, unsigned 
 //	  vars - a data struct used for all mctp functions
 // returns:
 //    whether or not the packet was sent successfully
-unsigned char mctp_sendNoWait(mctp_struct* vars, unsigned int length, unsigned char* msg){
+unsigned char mctp_sendNoWait(mctp_struct* vars, unsigned int length, unsigned char* msg, unsigned char mctp_message_type){
 	// send packet
-	mctp_transmitFrameStart(vars,length+4);
+	mctp_transmitFrameStart(vars,length+5,mctp_message_type);
 	mctp_transmitFrameData(vars,msg,length);
 	mctp_transmitFrameEnd(vars);
 	return 1;
@@ -151,6 +154,10 @@ unsigned char* mctp_getPacket(mctp_struct* vars) {
 // that are received.
 static void mctp_processControlMessage(mctp_struct* vars)
 {
+#ifdef __linux__
+	// send a discovery response
+	unsigned char mctp_discovery_msg[] = {0,CMD_DISCOVERY_NOTIFY};
+#endif
 	switch (vars->rxBuffer[1]) {
 		case CMD_SET_ENDPOINT_ID:
 			break;
@@ -161,6 +168,10 @@ static void mctp_processControlMessage(mctp_struct* vars)
 		case CMD_GET_MESSAGE_TYPE_SUPPORT:
 			break;
 		case CMD_DISCOVERY_NOTIFY:
+#ifdef __linux__
+			// send a discovery response
+			mctp_sendNoWait(vars,2,mctp_discovery_msg,0);
+#endif
 			vars->discovered = 1;
 			break;
 		default:
@@ -185,6 +196,7 @@ void  mctp_updateRxFSM(mctp_struct* vars) {
 
     // reading in char from serial port
 	unsigned char ch;
+
 	if (uart_readCh(vars->uart_handle,(char*)&ch)==0) return;
 
     //building packet FSM
@@ -209,9 +221,9 @@ void  mctp_updateRxFSM(mctp_struct* vars) {
 		break;
 	case MCTPSER_BYTECOUNT:
     // checking bytecount. This number should be the data 
-	// payload size plus 4 bytes
+	// payload size plus 5 bytes
 		if (ch > 0x4) {
-			byte_count = ch - 4;
+			byte_count = ch - 5;
 			mctp_serial_state = MCTPSER_VERSION;
 			vars->rxInsertionIdx = 0;
 			vars->fcs = fcs_calcFcs(vars->fcs, &ch, 1);
@@ -246,7 +258,15 @@ void  mctp_updateRxFSM(mctp_struct* vars) {
     // Checking flags. Refer to base specification for details. 
 	// These flags should be set to 0xC8
 		if (ch == 0xC8) {
+			mctp_serial_state = MCTPSER_CMD;
+			vars->fcs = fcs_calcFcs(vars->fcs, &ch, 1);
+		}
+		else mctp_serial_state = MCTPSER_WAITING_FOR_SYNC;
+		break;
+	case MCTPSER_CMD:
+		if ((ch & 0xFE)==0) {
 			mctp_serial_state = MCTPSER_BODY;
+			vars->last_msg_type = ch;
 			vars->fcs = fcs_calcFcs(vars->fcs, &ch, 1);
 		}
 		else mctp_serial_state = MCTPSER_WAITING_FOR_SYNC;
@@ -303,7 +323,7 @@ void  mctp_updateRxFSM(mctp_struct* vars) {
 		if (ch == SYNC_CHAR) {
 			if (vars->fcs==fcs_msg) {
 				// process MCTP control message (or response) if received
-				if (vars->rxBuffer[0]==0) {
+				if (vars->last_msg_type==0) {
 					mctp_processControlMessage(vars);
 				} 
 				else {
@@ -328,7 +348,7 @@ void  mctp_updateRxFSM(mctp_struct* vars) {
 //	  totallength - the length of the message being transmitted (body + mctp serial header)
 // returns:
 //    void
-void  mctp_transmitFrameStart(mctp_struct* vars, unsigned char totallength) {
+void  mctp_transmitFrameStart(mctp_struct* vars, unsigned char totallength, unsigned char mctp_message_type) {
 	vars->txfcs = INITFCS;
 	unsigned char ch = SYNC_CHAR;
 	uart_writeCh(vars->uart_handle,ch);  // mctp synchronization character;
@@ -346,6 +366,10 @@ void  mctp_transmitFrameStart(mctp_struct* vars, unsigned char totallength) {
 	unsigned char hdr[] = { 0x01, 0x00, 0x00, 0xC8 };
 	uart_writeBuffer(vars->uart_handle,hdr,4);
 	vars->txfcs = fcs_calcFcs(vars->txfcs, &hdr[0], 4);
+
+	// transmit the MCTP message type (0 for command message, 1 for PLDM)
+	uart_writeBuffer(vars->uart_handle,&mctp_message_type,1);
+	vars->txfcs = fcs_calcFcs(vars->txfcs, &mctp_message_type, 1);
 }
 
 //*******************************************************************
