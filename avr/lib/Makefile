@@ -1,23 +1,13 @@
 LIBFILE := libfcsc.a
-LIBINCLUDES := -I. -I../../lib/include -I/usr/lib/avr/include
-PROJLIBS := ../../lib
+LIBINCLUDES := -I. -I./include -I/usr/lib/avr/include
 INCLUDES := .
-OBJECTS := fcs.o mctp.o uart.o
+OBJECTS := fcs.o mctp.o uart.o crc8.o
 
 build : $(OBJECTS)
 	;
 
 run : $(OBJECTS)
 	;
-
-fcs.o : $(PROJLIBS)/fcs/fcs.c
-	avr-gcc -c $< -o $(OUTPUT_DIR)/$@ $(CXX_FLAGS) -I$(INCLUDES) $(LIBINCLUDES)
-     
-crc8.o : $(PROJLIBS)/pldm/crc8.c
-	avr-gcc -c $< -o $(OUTPUT_DIR)/$@ $(CXX_FLAGS) -I$(INCLUDES) $(LIBINCLUDES)
-
-mctp.o : $(PROJLIBS)/mctp/mctp.c
-	avr-gcc -c $< -o $(OUTPUT_DIR)/$@ $(CXX_FLAGS) -I$(INCLUDES) $(LIBINCLUDES)
 
 %.o : %.c
 	avr-gcc -c $< -o $(OUTPUT_DIR)/$@ -I$(INCLUDES) $(CXX_FLAGS) $(LIBINCLUDES)

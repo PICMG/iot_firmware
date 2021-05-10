@@ -40,7 +40,7 @@ int main(void)
       mctp_updateRxFSM(&mctp1);
     } else {
       // packet has arrived - process as a loopback
-      mctp_transmitFrameStart(&mctp1,10+4);
+      mctp_transmitFrameStart(&mctp1,10+5);
       mctp_transmitFrameData(&mctp1,mctp_getPacket(&mctp1),10);
       mctp_transmitFrameEnd(&mctp1);
     }

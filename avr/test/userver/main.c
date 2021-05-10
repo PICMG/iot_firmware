@@ -52,17 +52,19 @@ int main(void)
   // initialize mctp socket
   mctp_init(0, &mctp1);
   node_init(&mctp1);
-          
+
   // send an MCTP discovery notifiy command
   delay_set(0,1000);
-  mctp_sendNoWait(&mctp1,1,mctp_discovery_msg);
+  mctp_sendNoWait(&mctp1,1,mctp_discovery_msg,0);
   while (1) {
     // if the discovery notify has timed out and no response has been received, 
     // send another discovery notify message
-    if ((!mctp1.discovered)&&delay_isDone(0)) {
-      mctp_sendNoWait(&mctp1,2,mctp_discovery_msg);
-      delay_set(0,1000);
+    if ((!mctp1.discovered)&&(delay_isDone(0))) {
+        mctp_sendNoWait(&mctp1,2,mctp_discovery_msg,0);
+        delay_set(0,1000);
     } else {
+      // otherwise process messages
+      //if (mctp1.discovered) PORTB &= 0xDF;
       node_getResponse();
     }
   }
