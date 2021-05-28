@@ -92,11 +92,10 @@ ISR(USART_UDRE_vect) {
 // This function initializes the UART with the provided linux USB pin.
 //
 // parameters:
-//	  handle - file descriptor used by linux (unusd for AVR)
 //    name - the name of the linux device to connect to (e.g. "/dev/ttyUSB0")
 // returns:
 //    true if the connection was successful
-int uart_init(const char *device) {
+void uart_init() {
     // set the buad rate based on the cpu frequency
     #if BAUD > 38401
         UCSR0A = BIT2NUM(U2X0);
@@ -111,7 +110,6 @@ int uart_init(const char *device) {
     UCSR0C = BIT2NUM(UCSZ01) | BIT2NUM(UCSZ00);
 
     UCSR0B |= BIT2NUM(RXCIE0) | BIT2NUM(UDRIE0);
-    return 1;
 }
 
 //*******************************************************************
@@ -119,11 +117,9 @@ int uart_init(const char *device) {
 //
 // A helper function that returns if the UART is connected
 //
-// parameters:
-//	  handle - a data struct used for all uart functions
 // returns:
 //    true if connected
-unsigned char uart_isConnected(int handle) {
+unsigned char uart_isConnected() {
     return 1;
 }
 
@@ -132,11 +128,9 @@ unsigned char uart_isConnected(int handle) {
 //
 // This function flushes the buffer.
 //
-// parameters:
-//	  handle - a data struct used for all uart functions
 // returns:
 //    true if the buffer was successfuly flushed
-unsigned char uart_flush(int handle) {
+unsigned char uart_flush() {
     uart_txtail = uart_txhead;
     return 1;
 }
@@ -147,11 +141,10 @@ unsigned char uart_flush(int handle) {
 // This function reads a char from the buffer.
 //
 // parameters:
-//	  handle - a data struct used for all uart functions
 //    ch - a pointer to where the read-in char can be stored
 // returns:
 //    unsigned char - whether the read was successful
-unsigned char uart_readCh(int handle,char*ch) {
+unsigned char uart_readCh(char*ch) {
     // if there is a character in the buffer, set the value in ch
     // and return true
     if ((uart_rxhead - uart_rxtail) & (BUFFERSIZE - 1)) {
@@ -169,11 +162,10 @@ unsigned char uart_readCh(int handle,char*ch) {
 // This function writes a char out to the buffer.
 //
 // parameters:
-//	  handle - a data struct used for all uart functions
 //    ch - the char being sent out to the serial port
 // returns:
 //    true if the write was successful
-unsigned char uart_writeCh(int handle, char ch) {
+unsigned char uart_writeCh(char ch) {
     // if interrupts are enabled, wait for space to exist
     // in the buffer and write the result.
     if (SREG & BIT2NUM(SREG_I)) {
@@ -204,14 +196,13 @@ unsigned char uart_writeCh(int handle, char ch) {
 // This function writes a buffer of chars (char*, str, char[])
 //
 // parameters:
-//	  handle - a data struct used for all uart functions
 //    buffer - the chars being written out
 //    len - the length of the buffer
 // returns:
 //    true if the write was successful
-unsigned char uart_writeBuffer(int handle,const void* buf, unsigned int size) {
+unsigned char uart_writeBuffer(const void* buf, unsigned int size) {
     for (int i=0; i<size; i++) {
-        if (!uart_writeCh(handle,((unsigned char *)buf)[i])) {
+        if (!uart_writeCh(((unsigned char *)buf)[i])) {
             return 0;
         }
     }
@@ -224,11 +215,9 @@ unsigned char uart_writeBuffer(int handle,const void* buf, unsigned int size) {
 // This function returns true if the receive buffer is empty, otherwise,
 // it returns false.
 //
-// parameters:
-//    handle - the linux file descriptor (not used by AVR)
 // returns:
 //    true if the buffer is empty, otherwise false
-unsigned char uart_rx_isempty(int handle) {
+unsigned char uart_rx_isempty() {
     return ((uart_rxhead - uart_rxtail) & (BUFFERSIZE - 1));
 }
 
@@ -237,11 +226,9 @@ unsigned char uart_rx_isempty(int handle) {
 //
 // This function frees the memory taken by the serial binding
 //
-// parameters:
-//	  handle - a data struct used for all uart functions
 // returns:
 //    true if the close was successful
-unsigned char uart_close(int handle) {
+unsigned char uart_close() {
     return 1;
 }
 

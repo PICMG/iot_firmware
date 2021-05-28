@@ -35,6 +35,9 @@
 extern "C" {
 #endif
 
+#define SAMPLE_RATE 4000
+typedef signed long FIXEDPOINT_24_8;
+
 #define PDR_BYTE_TYPE const unsigned char
 #define PDR_DATA_ATTRIBUTES PROGMEM
 

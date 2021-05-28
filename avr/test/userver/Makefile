@@ -21,12 +21,10 @@
 #
 EXECUTABLE  := userver.elf
 HEXFILE     := userver.hex
-LIBINCLUDES := -L/usr/lib/avr/include -L../../lib/include 
-LIBPATH     := ../../lib /usr/lib/avr
-AVRPROJLIBS := ../../lib
-INCLUDES    := -I. -I/usr/lib/avr -I../../lib/include 
-OBJECTS     := main.o simulavr_info.o node.o pdr_data.o vprofiler.o control_servo.o timer1.o
-LIBOBJECTS  := uart.o fcs.o mctp.o crc8.o
+LIBINCLUDES := -L/usr/lib/avr/include 
+LIBPATH     := /usr/lib/avr
+INCLUDES    := -I.  
+OBJECTS     := main.o simulavr_info.o node.o pdr_data.o vprofiler.o control_servo.o timer1.o StateSensor.o NumericSensor.o EventGenerator.o mctp.o uart.o crc8.o fcs.o
 CXX_FLAGS   := -Wall -mmcu=atmega328p -DF_CPU=16000000UL
 OUTPUT_DIR  := $(CURDIR)
 export      CXX_FLAGS
@@ -34,19 +32,15 @@ export      OUTPUT_DIR
 
 # clean and build the project
 build: CXX_FLAGS += -g -O0 
-build: clean $(OBJECTS) $(LIBOBJECTS)
-	avr-g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) $(LIBOBJECTS) -Wl,-Map=solution.map,--cref
+build: clean $(OBJECTS)
+	avr-g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) -Wl,-Map=solution.map,--cref
 	
 # clean, build and run the project on atmega 328p hardware
 run: CXX_FLAGS += -Os
-run: clean $(OBJECTS) $(LIBOBJECTS)
-	avr-g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) $(LIBOBJECTS) -Wl,-Map=solution.map,--cref
+run: clean $(OBJECTS)
+	avr-g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) -Wl,-Map=solution.map,--cref
 	avr-objcopy -R .eeprom -R .fuse -R .lock -R .signature -O ihex $(EXECUTABLE) $(HEXFILE)
 	avrdude -p m328p -c Arduino -P /dev/ttyUSB0 -U flash:w:$(HEXFILE)
-
-# build library object files and place them in this folder
-$(LIBOBJECTS):
-	$(MAKE) -w -C $(AVRPROJLIBS) $@
 
 # build non-library object files and place them in this folder
 %.o : %.c
@@ -54,7 +48,6 @@ $(LIBOBJECTS):
 
 # clean this folder and the library folder of any object files that currently exist
 clean:
-	$(MAKE) -C $(AVRPROJLIBS) clean
 	-rm *.o
 	-rm *.elf
 	-rm *.hex

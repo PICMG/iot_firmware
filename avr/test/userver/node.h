@@ -33,8 +33,15 @@
 #pragma once
 #include "mctp.h"
 #include "pldm.h"
+#include "pdrdata.h"
+#include "EventGenerator.h"
 
-void node_init(mctp_struct *);
+void node_init();
 void node_putCommand(PldmRequestHeader* hdr, unsigned char* command, unsigned int size);
 unsigned char* node_getResponse(void);
+void node_sendNumericSensorEvent(EventGeneratorInstance* egi, unsigned int sensorId, 
+                                    unsigned char previousEventState, FIXEDPOINT_24_8 presentReading);
+void node_sendStateSensorEvent(EventGeneratorInstance* egi, unsigned int sensorId, 
+                                    unsigned char previousEventState);
+void node_sendSHeartbeatEvent();
 

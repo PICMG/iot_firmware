@@ -41,9 +41,16 @@
 #include "pldm.h"
 #include "pdrdata.h"
 #include "control_servo.h"
+#include "EventGenerator.h"
 
-static	mctp_struct *mctp;
 uint8   tid;
+
+#ifdef __linux__
+    // these macros are included just to stop the IDE from generating errors
+    #define pgm_read_byte(x) (x)
+    #define pgm_read_word(x) (x)    
+    #define pgm_read_dword(x) (x)    
+#endif
 
 #define UINT8_TYPE  0
 #define SINT8_TYPE  1
@@ -80,7 +87,7 @@ uint8   tid;
 
 static void transmitByte(unsigned char data) {
     // send the data to the MCTP buffer in little-endian fashion
-    mctp_transmitFrameData(mctp,&data,1);
+    mctp_transmitFrameData(&data,1);
 }
 
 static void transmitShort(unsigned int data) {
@@ -100,9 +107,8 @@ static void transmitLong(unsigned long data) {
 }
 
 
-void node_init(mctp_struct *mctp_ptr) {
+void node_init() {
 //    pdrCount = __pdr_number_of_records;
-    mctp=mctp_ptr;
     tid = 0;
 }
 
@@ -218,7 +224,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
     static unsigned long pdrRecord;
     unsigned int extractionPoint;
 
-    GetPdrCommand* request = (GetPdrCommand*)(mctp->rxBuffer + sizeof(*rxHeader));
+    GetPdrCommand* request = (GetPdrCommand*)(mctp_context.rxBuffer + sizeof(*rxHeader));
     unsigned char errorcode = 0;
     switch (pdrTxState) {
     case 0:
@@ -233,21 +239,21 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
             errorcode = RESPONSE_INVALID_RECORD_CHANGE_NUMBER;
         if (errorcode) {
             // send the error response
-            mctp_transmitFrameStart(mctp,sizeof(PldmResponseHeader)+sizeof(GetPdrResponse) + 5-1, 1);
+            mctp_transmitFrameStart(sizeof(PldmResponseHeader)+sizeof(GetPdrResponse) + 5-1, 1);
             transmitByte(rxHeader->flags1 | 0x80);
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
-            mctp_transmitFrameData(mctp,&errorcode,1);  // response->completionCode = errorcode;
+            mctp_transmitFrameData(&errorcode,1);  // response->completionCode = errorcode;
             transmitLong(0);                       // response->nextRecordHandle = 0;
             transmitLong(0);                       // response->NextRecordTransferHandle;
             transmitByte(0);                       // response->transferFlag = 0;
             transmitShort(0);                      // response->responseCount = 0;
-            mctp_transmitFrameEnd(mctp);
+            mctp_transmitFrameEnd();
             return;
         }
         if (request->requestCount >= pdrSize(request->recordHandle)) {
             // send the data (single part)
-            mctp_transmitFrameStart(mctp, sizeof(PldmResponseHeader) + sizeof(GetPdrResponse) + pdrSize(request->recordHandle)+5-1,1);
+            mctp_transmitFrameStart( sizeof(PldmResponseHeader) + sizeof(GetPdrResponse) + pdrSize(request->recordHandle)+5-1,1);
             transmitByte(rxHeader->flags1 | 0x80);
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
@@ -262,11 +268,11 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
             for (int i = 0;i < pdrSize(request->recordHandle); i++) {
                 transmitByte(pgm_read_byte(&(__pdr_data[extractionPoint++])));
             }
-            mctp_transmitFrameEnd(mctp);
+            mctp_transmitFrameEnd();
             return;
         }
         // start sending the data (multi-part)
-        mctp_transmitFrameStart(mctp, sizeof(PldmResponseHeader) + sizeof(GetPdrResponse) + request->requestCount+5-1,1);
+        mctp_transmitFrameStart( sizeof(PldmResponseHeader) + sizeof(GetPdrResponse) + request->requestCount+5-1,1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
@@ -284,7 +290,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
             transmitByte(byte);
             crc8 = calc_new_crc8(crc8, byte);
         }
-        mctp_transmitFrameEnd(mctp);
+        mctp_transmitFrameEnd();
         pdrTxState = 1;
         pdrRecord = request->recordHandle;
         pdrNextHandle = getPdrOffset(request->recordHandle) + request->requestCount;
@@ -301,21 +307,21 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
             errorcode = RESPONSE_INVALID_RECORD_CHANGE_NUMBER;
         if (errorcode) {
             // send the error response
-            mctp_transmitFrameStart(mctp,sizeof(PldmResponseHeader)+sizeof(GetPdrResponse) + 5-1,1);
+            mctp_transmitFrameStart(sizeof(PldmResponseHeader)+sizeof(GetPdrResponse) + 5-1,1);
             transmitByte(rxHeader->flags1 | 0x80);
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
-            mctp_transmitFrameData(mctp,&errorcode,1);  // response->completionCode = errorcode;
+            mctp_transmitFrameData(&errorcode,1);  // response->completionCode = errorcode;
             transmitLong(0);                       // response->nextRecordHandle = 0;
             transmitLong(0);                       // response->NextRecordTransferHandle;
             transmitByte(0);                       // response->transferFlag = 0;
             transmitShort(0);                      // response->responseCount = 0;
-            mctp_transmitFrameEnd(mctp);
+            mctp_transmitFrameEnd();
             return;
         }
         if (request->requestCount + request->dataTransferHandle >= getPdrOffset(request->recordHandle)+pdrSize(request->recordHandle)+1) {
             // transfer end part of the data
-            mctp_transmitFrameStart(mctp, sizeof(PldmResponseHeader) + sizeof(GetPdrResponse) + pdrSize(request->recordHandle) -
+            mctp_transmitFrameStart( sizeof(PldmResponseHeader) + sizeof(GetPdrResponse) + pdrSize(request->recordHandle) -
                 (request->dataTransferHandle-getPdrOffset(request->recordHandle)) + 5 - 1 + 1,1);
             transmitByte(rxHeader->flags1 | 0x80);
             transmitByte(rxHeader->flags2);
@@ -336,12 +342,12 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
                 crc8 = calc_new_crc8(crc8, byte);
             }
             transmitByte(crc8);
-            mctp_transmitFrameEnd(mctp);
+            mctp_transmitFrameEnd();
             pdrTxState = 0;
             return;
         }
         // send the middle data (multi-part)
-        mctp_transmitFrameStart(mctp, sizeof(PldmResponseHeader) + sizeof(GetPdrResponse) + request->requestCount + 5-1,1);
+        mctp_transmitFrameStart( sizeof(PldmResponseHeader) + sizeof(GetPdrResponse) + request->requestCount + 5-1,1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
@@ -358,7 +364,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
             transmitByte(byte);
             crc8 = calc_new_crc8(crc8, byte);
         }
-        mctp_transmitFrameEnd(mctp);
+        mctp_transmitFrameEnd();
         pdrTxState = 1;
         pdrNextHandle = request->dataTransferHandle + request->requestCount;
         return;
@@ -430,12 +436,12 @@ static void setStateEffecterStates(PldmRequestHeader* rxHeader) {
     }
 
     // send the response
-    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 5,1);
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response);   // completion code
-        mctp_transmitFrameEnd(mctp);
+        mctp_transmitFrameEnd();
 } 
 
 //*******************************************************************
@@ -480,12 +486,12 @@ static void setStateEffecterEnables(PldmRequestHeader* rxHeader) {
     }
 
     // send the response
-    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 5,1);
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response);   // completion code
-        mctp_transmitFrameEnd(mctp);
+        mctp_transmitFrameEnd();
 } 
 
 //*******************************************************************
@@ -531,13 +537,13 @@ static void getStateSensorReading(PldmRequestHeader* rxHeader) {
     }
 
     // send the response
-    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 5 + ((hasbody)?5:1),1);
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5 + ((hasbody)?5:1),1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response);         // completion code
-        if (hasbody) mctp_transmitFrameData(mctp,body,5);
-        mctp_transmitFrameEnd(mctp);
+        if (hasbody) mctp_transmitFrameData(body,5);
+        mctp_transmitFrameEnd();
 } 
 
 //*******************************************************************
@@ -575,13 +581,13 @@ static void getStateEffecterStates(PldmRequestHeader* rxHeader) {
     }
 
     // send the response
-    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 5 + 4,1);
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5 + 4,1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response);         // completion code
-        mctp_transmitFrameData(mctp,body,4);
-        mctp_transmitFrameEnd(mctp);
+        mctp_transmitFrameData(body,4);
+        mctp_transmitFrameEnd();
 } 
 
 //*******************************************************************
@@ -637,12 +643,12 @@ static void setNumericEffecterValue(PldmRequestHeader* rxHeader) {
     }
 
     // send the response
-    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 5,1);
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response);   // completion code
-        mctp_transmitFrameEnd(mctp);    
+        mctp_transmitFrameEnd();    
 }
 
 //*******************************************************************
@@ -676,17 +682,17 @@ static void getNumericEffecterValue(PldmRequestHeader* rxHeader) {
         break;
 #endif
     default:
-        mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 5,1);
+        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(RESPONSE_INVALID_EFFECTER_ID);   // completion code
-        mctp_transmitFrameEnd(mctp);
+        mctp_transmitFrameEnd();
         break;
     }
 
     // send the response
-    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 10 + 5,1);
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 10 + 5,1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
@@ -695,7 +701,7 @@ static void getNumericEffecterValue(PldmRequestHeader* rxHeader) {
         transmitByte(0); // enabled, pending
         transmitLong(return_data);
         transmitLong(return_data);
-        mctp_transmitFrameEnd(mctp);
+        mctp_transmitFrameEnd();
 }
 
 //*******************************************************************
@@ -740,14 +746,14 @@ static void getSensorReading(PldmRequestHeader* rxHeader) {
     }
 
     // send the response
-    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 10 + 5,1);
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 10 + 5,1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response_code);   // completion code
-        mctp_transmitFrameData(mctp,body,6);
+        mctp_transmitFrameData(body,6);
         transmitLong(reading);
-        mctp_transmitFrameEnd(mctp);
+        mctp_transmitFrameEnd();
 }
 
 //*******************************************************************
@@ -787,12 +793,12 @@ static void setNumericEffecterEnable(PldmRequestHeader* rxHeader) {
     }
 
     // send the response
-    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 5,1);
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response_code);   // completion code
-        mctp_transmitFrameEnd(mctp);
+        mctp_transmitFrameEnd();
 }
 
 //*******************************************************************
@@ -810,12 +816,12 @@ void setTid(PldmRequestHeader* rxHeader) {
     tid = *((uint8*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
     unsigned char response_code = RESPONSE_SUCCESS;
     // send the response
-    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 5,1);
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response_code);   // completion code
-        mctp_transmitFrameEnd(mctp);
+        mctp_transmitFrameEnd();
 }
 
 //*******************************************************************
@@ -832,13 +838,13 @@ void setTid(PldmRequestHeader* rxHeader) {
 void getTid(PldmRequestHeader* rxHeader) {
     unsigned char response_code = RESPONSE_SUCCESS;
     // send the response
-    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + 1 + 1 + 5, 1);
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 1 + 5, 1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response_code);   // completion code
         transmitByte(tid);
-        mctp_transmitFrameEnd(mctp);
+        mctp_transmitFrameEnd();
 }
 
 //*******************************************************************
@@ -857,7 +863,7 @@ static void parseCommand()
 {
     // cast the relevant portions of the header so that
     // they are easier to use later.
-    PldmRequestHeader* rxHeader = (PldmRequestHeader*)mctp_getPacket(mctp);
+    PldmRequestHeader* rxHeader = (PldmRequestHeader*)mctp_getPacket();
 
     // switch based on the command type byte in the header
     switch (rxHeader->command) {
@@ -887,7 +893,7 @@ static void parseCommand()
         break;
     case CMD_GET_PDR_REPOSITORY_INFO:
     {
-        mctp_transmitFrameStart(mctp,sizeof(GetPdrRepositoryInfoResponse) + sizeof(PldmRequestHeader) + 5,1);
+        mctp_transmitFrameStart(sizeof(GetPdrRepositoryInfoResponse) + sizeof(PldmRequestHeader) + 5,1);
         transmitByte(rxHeader->flags1 | 0x80);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
@@ -899,7 +905,7 @@ static void parseCommand()
         transmitLong(__pdr_total_size);   // repository size
         transmitLong(__pdr_max_record_size);  // record size
         transmitByte(0);                  // no timeout
-        mctp_transmitFrameEnd(mctp);
+        mctp_transmitFrameEnd();
         break;
     }
     case CMD_GET_PDR:
@@ -927,18 +933,131 @@ static void parseCommand()
 // returns:
 //    void
 void node_putCommand(PldmRequestHeader* hdr, unsigned char* command, unsigned int size) {
-    mctp_transmitFrameStart(mctp,sizeof(PldmRequestHeader) + size +5,1);
-    mctp_transmitFrameData(mctp,(unsigned char *)hdr,sizeof(PldmRequestHeader));
-    mctp_transmitFrameData(mctp,command,size);
-    mctp_transmitFrameEnd(mctp);
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + size +5,1);
+    mctp_transmitFrameData((unsigned char *)hdr,sizeof(PldmRequestHeader));
+    mctp_transmitFrameData(command,size);
+    mctp_transmitFrameEnd();
 }
 
 unsigned char* node_getResponse(void) {
-    if (!mctp_isPacketAvailable(mctp)) {
-        mctp_updateRxFSM(mctp);
+    if (!mctp_isPacketAvailable()) {
+        mctp_updateRxFSM();
         return 0;
     } else {
         parseCommand();               // process the command
-        return mctp_getPacket(mctp);  // clear the packet ready flag
+        return mctp_getPacket();  // clear the packet ready flag
     }
+}
+
+//===================================================================
+// sendNumericSensorEvent()
+//
+// send a numeric sensor event based on the parameters passed to the
+// function.  This helper function is intended to be called by child
+// instances from within the high-priority loop.
+//
+// parameters:
+//    egi - event generator instance related to this event.
+//    sensorId - the ID of the senosr that caused the event
+//    presentReading - the current reading of the sensor  
+void node_sendNumericSensorEvent(
+        EventGeneratorInstance* egi, 
+        unsigned int sensorId, 
+        unsigned char previousEventState, 
+        FIXEDPOINT_24_8 presentReading
+) 
+{  
+    // flush any messages in progress from the transmit queue
+    uart_flush();
+
+    // begin the event frame
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 13 + 5,1);
+    // transmit the header
+    transmitByte( 0x80 );    // pldm datagram request message type, instance ID 0
+    transmitByte( 0x00);     // header version = 00, pldm type = 0 (pldm messaging/discovery)
+    transmitByte( CMD_PLATFORM_EVENT_MESSAGE ); 
+
+    // transmit the platform event message common data
+    transmitByte(0x01);         // format version
+    transmitByte(0x01);         // terminus ID
+    transmitByte(0x00);         // event class 0 = sensor
+
+    // transmit the body
+    transmitShort(sensorId);
+    transmitByte(2);            // cause = numeric sensor state change
+    transmitByte(egi->eventState);
+    transmitByte(previousEventState);
+    transmitByte(5);            // reading is a signed 32-bit integer
+    transmitLong(presentReading);
+    mctp_transmitFrameEnd();
+}
+
+//===================================================================
+// sendStateSensorEvent()
+//
+// send a state sensor event based on the parameters passed to the
+// function.  This helper function is intended to be called by child
+// instances from within the high-priority loop.
+//
+// parameters:
+//    egi - event generator instance related to this event.
+//    sensorId - the ID of the senosr that caused the event
+void node_sendStateSensorEvent(EventGeneratorInstance* egi, unsigned int sensorId, 
+                                    unsigned char previousEventState) {
+    // flush any messages in progress from the transmit queue
+    uart_flush();
+
+    // begin the event frame
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 8 + 5,1);
+    // transmit the header
+    transmitByte( 0x80 );    // pldm datagram request message type, instance ID 0
+    transmitByte( 0x00);     // header version = 00, pldm type = 0 (pldm messaging/discovery)
+    transmitByte( CMD_PLATFORM_EVENT_MESSAGE ); 
+
+    // transmit the platform event message common data
+    transmitByte(0x01);         // format version
+    transmitByte(0x01);         // terminus ID
+    transmitByte(0x00);         // event class 0 = sensor
+
+    // transmit the body
+    transmitShort(sensorId);
+    transmitByte(1);            // cause = state sensor state change
+    transmitByte(egi->eventState);
+    transmitByte(previousEventState);
+    
+    mctp_transmitFrameEnd();
+}
+
+//===================================================================
+// sendHeartbeatEvent()
+//
+// send a heartbeat event based on the parameters passed to the
+// function.  This helper function is intended to be called by child
+// instances from within the high-priority loop.
+//
+// parameters:
+void node_sendHeartbeatEvent() {
+    static unsigned char sequenceNumber = 0;
+
+    // flush any messages in progress from the transmit queue
+    uart_flush();
+
+    // begin the event frame
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 5 + 5,1);
+    
+    // transmit the header
+    transmitByte( 0x80 );    // pldm datagram request message type, instance ID 0
+    transmitByte( 0x00);     // header version = 00, pldm type = 0 (pldm messaging/discovery)
+    transmitByte( CMD_PLATFORM_EVENT_MESSAGE ); 
+
+    // transmit the platform event message common data
+    transmitByte(0x01);         // format version
+    transmitByte(0x01);         // terminus ID
+    transmitByte(0x00);         // event class 6 = heatbeat
+
+    // transmit the body
+    transmitByte(0x01);          // format version
+    transmitByte(sequenceNumber++); // sequence number
+    
+    mctp_transmitFrameEnd();
 }

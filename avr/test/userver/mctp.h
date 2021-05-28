@@ -75,17 +75,18 @@ typedef struct{
 	unsigned char mctp_packet_ready;
 	unsigned char discovered;
 	unsigned char last_msg_type;
-	int uart_handle;
 } mctp_struct;
 
+extern mctp_struct mctp_context;
+
 // function definitions
-void  mctp_init(int, mctp_struct*);
-unsigned char mctp_sendAndWait(mctp_struct*, unsigned int, unsigned char*, unsigned char mctp_message_type);
-unsigned char mctp_sendNoWait(mctp_struct*, unsigned int, unsigned char*, unsigned char mctp_message_type);
-unsigned char mctp_isPacketAvailable(mctp_struct*);
-unsigned char* mctp_getPacket(mctp_struct*);
-void  mctp_updateRxFSM(mctp_struct*);
-void  mctp_transmitFrameStart(mctp_struct*, unsigned char totallength, unsigned char mctp_message_type);
-void  mctp_transmitFrameData(mctp_struct*, unsigned char*, unsigned int);
-void  mctp_transmitFrameEnd(mctp_struct*);
-void  mctp_close(mctp_struct*);
+void  mctp_init();
+unsigned char mctp_sendAndWait(unsigned int, unsigned char*, unsigned char mctp_message_type);
+unsigned char mctp_sendNoWait(unsigned int, unsigned char*, unsigned char mctp_message_type);
+unsigned char mctp_isPacketAvailable();
+unsigned char* mctp_getPacket();
+void  mctp_updateRxFSM();
+void  mctp_transmitFrameStart(unsigned char totallength, unsigned char mctp_message_type);
+void  mctp_transmitFrameData(unsigned char*, unsigned int);
+void  mctp_transmitFrameEnd();
+void  mctp_close();

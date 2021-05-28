@@ -28,12 +28,12 @@
 #define UART_H_INCLUDED
 
 // function definitions
-int uart_init(const char *);
-unsigned char uart_flush(int);
-unsigned char uart_readCh(int,char*);
-unsigned char uart_writeCh(int, char);
-unsigned char uart_writeBuffer(int,const void* buf, unsigned int size);
-unsigned char uart_rx_isempty(int);
-unsigned char uart_close(int);
+void uart_init();
+unsigned char uart_flush();
+unsigned char uart_readCh();
+unsigned char uart_writeCh(char);
+unsigned char uart_writeBuffer(const void* buf, unsigned int size);
+unsigned char uart_rx_isempty();
+unsigned char uart_close();
 
 #endif // UART_H_INCLUDED
