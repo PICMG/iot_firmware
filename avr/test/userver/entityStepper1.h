@@ -27,4 +27,7 @@
 #pragma once
 
  void entityStepper1_init();
+ void entityStepper1_readChannels();
+ void entityStepper1_writeChannels();
+ 
  

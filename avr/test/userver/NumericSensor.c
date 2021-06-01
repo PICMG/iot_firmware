@@ -36,12 +36,10 @@
 
 //====================================================
 // Threshold enable bit defintions from PLDM Spec
-#define THRESHOLD_ENABLE_FATAL_LOW      0x20
-#define THRESHOLD_ENABLE_CRITICAL_LOW   0x10
-#define THRESHOLD_ENABLE_WARNING_LOW    0x08
-#define THRESHOLD_ENABLE_FATAL_HIGH     0x04
-#define THRESHOLD_ENABLE_CRITICAL_HIGH  0x02
-#define THRESHOLD_ENABLE_WARNING_HIGH   0x01
+#define THRESHOLD_FATALLOW_SUPPORTED_BIT     0x40
+#define THRESHOLD_FATALHIGH_SUPPORTED_BIT    0x20
+#define THRESHOLD_CRITICALLOW_SUPPORTED_BIT  0x10
+#define THRESHOLD_CRITICALHIGH_SUPPORTED_BIT 0x08
 
 //====================================================
 // State values
@@ -112,16 +110,16 @@ static unsigned char numericsensor_getPresentStateWithHysteresis(NumericSensorIn
     FIXEDPOINT_24_8 valh = inst->value+inst->hysteresisValue;
     FIXEDPOINT_24_8 vall = inst->value-inst->hysteresisValue;
 
-    if ((inst->thresholdEnables&THRESHOLD_ENABLE_FATAL_HIGH)&&(valh>=inst->thresholdFatalHigh)) return STATE_UPPERFATAL;
-    if ((inst->thresholdEnables&THRESHOLD_ENABLE_FATAL_LOW)&&(vall<=inst->thresholdFatalLow)) return STATE_LOWERFATAL;
+    if ((inst->thresholdEnables&THRESHOLD_FATALHIGH_SUPPORTED_BIT)&&(valh>=inst->thresholdFatalHigh)) return STATE_UPPERFATAL;
+    if ((inst->thresholdEnables&THRESHOLD_FATALLOW_SUPPORTED_BIT)&&(vall<=inst->thresholdFatalLow)) return STATE_LOWERFATAL;
     if (inst->previousState==STATE_UPPERFATAL) return STATE_UPPERFATAL;
     if (inst->previousState==STATE_LOWERFATAL) return STATE_LOWERFATAL;
-    if ((inst->thresholdEnables&THRESHOLD_ENABLE_CRITICAL_HIGH)&&(valh>=inst->thresholdCriticalHigh)) return STATE_UPPERCRITICAL;
-    if ((inst->thresholdEnables&THRESHOLD_ENABLE_WARNING_LOW)&&(valh<=inst->thresholdWarnLow)) return STATE_LOWERWARNING;
+    if ((inst->thresholdEnables&THRESHOLD_CRITICALHIGH_SUPPORTED_BIT)&&(valh>=inst->thresholdCriticalHigh)) return STATE_UPPERCRITICAL;
+    if ((inst->thresholdEnables&THRESHOLD_CRITICALLOW_SUPPORTED_BIT)&&(vall<=inst->thresholdCriticalLow)) return STATE_LOWERCRITICAL;
     if (inst->previousState==STATE_UPPERCRITICAL) return STATE_UPPERCRITICAL;
     if (inst->previousState==STATE_LOWERCRITICAL) return STATE_LOWERCRITICAL;
-    if ((inst->thresholdEnables&THRESHOLD_ENABLE_WARNING_HIGH)&&(valh>=inst->thresholdWarnHigh)) return STATE_UPPERWARNING;
-    if ((inst->thresholdEnables&THRESHOLD_ENABLE_CRITICAL_LOW)&&(vall<=inst->thresholdCriticalLow)) return STATE_LOWERCRITICAL;
+    if (valh>=inst->thresholdWarnHigh) return STATE_UPPERWARNING;
+    if (valh<=inst->thresholdWarnLow) return STATE_LOWERWARNING;
     if (inst->previousState==STATE_UPPERWARNING) return STATE_UPPERWARNING;
     if (inst->previousState==STATE_LOWERWARNING) return STATE_LOWERWARNING;
     return STATE_NORMAL;
@@ -279,12 +277,12 @@ unsigned char numericsensor_getPresentState(NumericSensorInstance *inst)
     FIXEDPOINT_24_8 val = inst->value;
     SREG = sreg;
 
-    if ((inst->thresholdEnables&THRESHOLD_ENABLE_FATAL_HIGH)&&(val>=inst->thresholdFatalHigh)) return STATE_UPPERFATAL;
-    if ((inst->thresholdEnables&THRESHOLD_ENABLE_CRITICAL_HIGH)&&(val>=inst->thresholdCriticalHigh)) return STATE_UPPERCRITICAL;
-    if ((inst->thresholdEnables&THRESHOLD_ENABLE_WARNING_HIGH)&&(val>=inst->thresholdWarnHigh)) return STATE_UPPERWARNING;
-    if ((inst->thresholdEnables&THRESHOLD_ENABLE_FATAL_LOW)&&(val<=inst->thresholdFatalLow)) return STATE_LOWERFATAL;
-    if ((inst->thresholdEnables&THRESHOLD_ENABLE_CRITICAL_LOW)&&(val<=inst->thresholdCriticalLow)) return STATE_LOWERCRITICAL;
-    if ((inst->thresholdEnables&THRESHOLD_ENABLE_WARNING_LOW)&&(val<=inst->thresholdWarnLow)) return STATE_LOWERWARNING;
+    if ((inst->thresholdEnables&THRESHOLD_FATALHIGH_SUPPORTED_BIT)&&(val>=inst->thresholdFatalHigh)) return STATE_UPPERFATAL;
+    if ((inst->thresholdEnables&THRESHOLD_CRITICALHIGH_SUPPORTED_BIT)&&(val>=inst->thresholdCriticalHigh)) return STATE_UPPERCRITICAL;
+    if (val>=inst->thresholdWarnHigh) return STATE_UPPERWARNING;
+    if ((inst->thresholdEnables&THRESHOLD_FATALLOW_SUPPORTED_BIT)&&(val<=inst->thresholdFatalLow)) return STATE_LOWERFATAL;
+    if ((inst->thresholdEnables&THRESHOLD_CRITICALLOW_SUPPORTED_BIT)&&(val<=inst->thresholdCriticalLow)) return STATE_LOWERCRITICAL;
+    if (val<=inst->thresholdWarnLow) return STATE_LOWERWARNING;
     return STATE_NORMAL;
 }
 
@@ -428,49 +426,49 @@ unsigned char   numericsensor_setThresholds(NumericSensorInstance *inst,FIXEDPOI
     // check to make sure that the new values are valid.  Higher thresholds with increasing
     // severity should have increasing values.  Low thresholds with increasing severity should
     // have decreasing values.
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_FATAL_HIGH|THRESHOLD_ENABLE_CRITICAL_HIGH)) {
+    if (inst->thresholdEnables&(THRESHOLD_FATALHIGH_SUPPORTED_BIT|THRESHOLD_CRITICALHIGH_SUPPORTED_BIT)) {
         if (fh<=crh) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_FATAL_HIGH|THRESHOLD_ENABLE_WARNING_HIGH)) {
+    if (inst->thresholdEnables&THRESHOLD_FATALHIGH_SUPPORTED_BIT) {
         if (fh<=wh) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_FATAL_HIGH|THRESHOLD_ENABLE_WARNING_LOW)) {
+    if (inst->thresholdEnables&THRESHOLD_FATALHIGH_SUPPORTED_BIT) {
         if (fh<=wl) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_FATAL_HIGH|THRESHOLD_ENABLE_CRITICAL_LOW)) {
+    if (inst->thresholdEnables&(THRESHOLD_FATALHIGH_SUPPORTED_BIT|THRESHOLD_CRITICALLOW_SUPPORTED_BIT)) {
         if (fh<=crl) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_FATAL_HIGH|THRESHOLD_ENABLE_FATAL_LOW)) {
+    if (inst->thresholdEnables&(THRESHOLD_FATALHIGH_SUPPORTED_BIT|THRESHOLD_FATALLOW_SUPPORTED_BIT)) {
         if (fh<=fl) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_CRITICAL_HIGH|THRESHOLD_ENABLE_WARNING_HIGH)) {
+    if (inst->thresholdEnables&THRESHOLD_CRITICALHIGH_SUPPORTED_BIT) {
         if (crh<=wh) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_CRITICAL_HIGH|THRESHOLD_ENABLE_WARNING_LOW)) {
+    if (inst->thresholdEnables&THRESHOLD_CRITICALHIGH_SUPPORTED_BIT) {
         if (crh<=wl) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_CRITICAL_HIGH|THRESHOLD_ENABLE_CRITICAL_LOW)) {
+    if (inst->thresholdEnables&(THRESHOLD_CRITICALHIGH_SUPPORTED_BIT|THRESHOLD_CRITICALLOW_SUPPORTED_BIT)) {
         if (crh<=crl) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_CRITICAL_HIGH|THRESHOLD_ENABLE_FATAL_LOW)) {
+    if (inst->thresholdEnables&(THRESHOLD_CRITICALHIGH_SUPPORTED_BIT|THRESHOLD_FATALLOW_SUPPORTED_BIT)) {
         if (crh<=fl) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_WARNING_HIGH|THRESHOLD_ENABLE_WARNING_LOW)) {
+    if (1) {
         if (wh<=wl) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_WARNING_HIGH|THRESHOLD_ENABLE_CRITICAL_LOW)) {
+    if (inst->thresholdEnables&THRESHOLD_CRITICALLOW_SUPPORTED_BIT) {
         if (wh<=crl) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_WARNING_HIGH|THRESHOLD_ENABLE_FATAL_LOW)) {
+    if (inst->thresholdEnables&THRESHOLD_FATALLOW_SUPPORTED_BIT) {
         if (wh<=fl) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_WARNING_LOW|THRESHOLD_ENABLE_CRITICAL_LOW)) {
+    if (inst->thresholdEnables&THRESHOLD_CRITICALLOW_SUPPORTED_BIT) {
         if (wl<=crl) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_WARNING_LOW|THRESHOLD_ENABLE_FATAL_LOW)) {
+    if (inst->thresholdEnables&THRESHOLD_FATALLOW_SUPPORTED_BIT) {
         if (wl<=fl) return 0;
     }
-    if (inst->thresholdEnables&(THRESHOLD_ENABLE_CRITICAL_LOW|THRESHOLD_ENABLE_FATAL_LOW)) {
+    if (inst->thresholdEnables&(THRESHOLD_CRITICALLOW_SUPPORTED_BIT|THRESHOLD_FATALLOW_SUPPORTED_BIT)) {
         if (crl<=fl) return 0;
     }
     // range checking complete - change the values, disabling interrupts to prevent

@@ -31,16 +31,11 @@
 #include "node.h"
 #include "vprofiler.h"
 #include "timer1.h"
+#include "channels.h"
 #include "entityStepper1.h"
 
 // temporary stubs
-void digital_in1_init() {}
-void digital_in2_init() {}
-void interlock_in_init() {}
-void interlock_out_init() {}
 void step_dir_out1_init() {}
-void trigger_in_init() {}
-void trigger_out_init() {}
 
 int main(void)
 {
@@ -56,115 +51,14 @@ int main(void)
   timer1_init();
 
   // initilaize the uart
-  uart_init("");
+  uart_init();
 
   // initialize mctp socket
   mctp_init();
   node_init();
 
   // initialize all channels based on configuration paramters
-  #ifdef CHANNEL_AIN12V
-    ain12v_init();
-  #endif
-  #ifdef CHANNEL_AIN24V
-    ain24v_init();
-  #endif
-  #ifdef CHANNEL_AIN5V
-    ain5v_init();
-  #endif
-  #ifdef CHANNEL_COUNT_IN1
-    count_in1_init();
-  #endif
-  #ifdef CHANNEL_COUNT_IN2
-    count_in2_init();
-  #endif
-  #ifdef CHANNEL_COUNT_IN3
-    count_in3_init();
-  #endif
-  #ifdef CHANNEL_COUNT_IN4
-    count_in4_init();
-  #endif
-  #ifdef CHANNEL_COUNT_IN5
-    count_in5_init();
-  #endif
-  #ifdef CHANNEL_CURRENT_LOOP_IN
-    current_loop_in_init();
-  #endif
-  #ifdef CHANNEL_DIGITAL_IN1
-    digital_in1_init();
-  #endif
-  #ifdef CHANNEL_DIGITAL_IN2
-    digital_in2_init();
-  #endif
-  #ifdef CHANNEL_DIGITAL_IN3
-    digital_int3_init();
-  #endif
-  #ifdef CHANNEL_DIGITAL_IN4
-    digital_in4_init();
-  #endif
-  #ifdef CHANNEL_DIGITAL_IN5
-    digital_in5_init();
-  #endif
-  #ifdef CHANNEL_DIGITAL_OUT1
-    digital_out1_init();
-  #endif
-  #ifdef CHANNEL_DIGITAL_OUT2
-    digital_out2_init();
-  #endif
-  #ifdef CHANNEL_DIGITAL_OUT3
-    digital_out3_init();
-  #endif
-  #ifdef CHANNEL_DIGITAL_OUT4
-    digital_out4_init();
-  #endif
-  #ifdef CHANNEL_INTERLOCK_IN
-    interlock_in_init();
-  #endif
-  #ifdef CHANNEL_INTERLOCK_OUT
-    interlock_out_init();
-  #endif
-  #ifdef CHANNEL_PWM_OUT1
-    pwm_out1_init();
-  #endif
-  #ifdef CHANNEL_QUADRATURE_IN1
-    quadrature_in1_init();
-  #endif
-  #ifdef CHANNEL_RATE_IN1
-    rate_in1_init();
-  #endif
-  #ifdef CHANNEL_RATE_IN2
-    rate_in2_init();
-  #endif
-  #ifdef CHANNEL_RATE_IN3
-    rate_in3_init();
-  #endif
-  #ifdef CHANNEL_RATE_IN4
-    rate_in4_init();
-  #endif
-  #ifdef CHANNEL_RATE_IN5
-    rate_in5_init();
-  #endif
-  #ifdef CHANNEL_RATE_OUT1
-    rate_out1_init();
-  #endif
-  #ifdef CHANNEL_RATE_OUT2
-    rate_out2_init();
-  #endif
-  #ifdef CHANNEL_RATE_OUT3
-    rate_out3_init();
-  #endif
-  #ifdef CHANNEL_RATE_OUT4
-    rate_out4_init();
-  #endif
-  #ifdef CHANNEL_STEP_DIR_OUT1
-    step_dir_out1_init();
-  #endif
-  #ifdef CHANNEL_TRIGGER_IN
-    trigger_in_init();
-  #endif
-  #ifdef CHANNEL_TRIGGER_OUT
-    trigger_out_init();
-  #endif
+  channels_init();
 
   #ifdef ENTITY_STEPPER1
     entityStepper1_init();

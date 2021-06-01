@@ -33,7 +33,11 @@
     #include "NumericSensor.h"
     #include "StateEffecter.h"
     #include "NumericEffecter.h"
+    #include "channels.h"
     #include "node.h"
+
+    #define CONCATENATE(x,y) x ## y
+    #define CALL_CHANNEL_FUNCTION(channel, function) CONCATENATE(channel, function)
 
     //===============================================================
     // Sensor-Specific Code
@@ -96,7 +100,7 @@
     #endif 
 
     //===============================================================
-    // Effecter-Specific Code
+    // Global variables related to effecters
     //===============================================================
     static StateEffecterInstance globalInterlockEffecterInst; 
     static StateEffecterInstance triggerEffecterInst;
@@ -157,14 +161,14 @@
 
         #ifdef ENTITY_STEPPER1_POSITION
             numericsensor_init(&positionSensorInst);
-            positionSensorInst.thresholdEnables = ENTITY_STEPPER1_POSITION_THRESHOLDENABLES; 
+            positionSensorInst.thresholdEnables = ENTITY_STEPPER1_POSITION_ENABLEDTHRESHOLDS; 
             numericsensor_setThresholds(&positionSensorInst,
-                ENTITY_STEPPER1_POSITION_DEFAULT_THRESHOLDUPPERFATAL,
-                ENTITY_STEPPER1_POSITION_DEFAULT_THRESHOLDUPPERCRITICAL,
-                ENTITY_STEPPER1_POSITION_DEFAULT_THRESHOLDUPPERWARNING,
-                ENTITY_STEPPER1_POSITION_DEFAULT_THRESHOLDLOWERWARNING,
-                ENTITY_STEPPER1_POSITION_DEFAULT_THRESHOLDLOWERCRITICAL,
-                ENTITY_STEPPER1_POSITION_DEFAULT_THRESHOLDLOWERFATAL);
+                ENTITY_STEPPER1_POSITION_UPPERTHRESHOLDFATAL,
+                ENTITY_STEPPER1_POSITION_UPPERTHRESHOLDCRITICAL,
+                ENTITY_STEPPER1_POSITION_UPPERTHRESHOLDWARNING,
+                ENTITY_STEPPER1_POSITION_LOWERTHRESHOLDWARNING,
+                ENTITY_STEPPER1_POSITION_LOWERTHRESHOLDCRITICAL,
+                ENTITY_STEPPER1_POSITION_LOWERTHRESHOLDFATAL);
             positionSensorInst.eventGen.sendEvent = positionSensor_sendEvent;
         #endif 
 
@@ -200,5 +204,35 @@
         #endif 
     }
 
+    //===============================================================
+    // entityStepper1_readChannels()
+    //
+    // this function causes each channel used by the logical entity to 
+    // read its current value and store it in it's channel data.
+    void entityStepper1_readChannels() {
+        // read the globalInterlockSensor's channel
+        CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_GLOBALINTERLOCKSENSOR_BOUNDCHANNEL,_sample());
+        
+        // read the triggerSensor' channel
+        CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_TRIGGERSENSOR_BOUNDCHANNEL,_sample());
+        
+        // read the motionStateSensor's channel
+        // do nothing - this channel is virtual
+
+        #ifdef ENTITY_STEPPER1_POSITIVELIMIT_BOUNDCHANNEL
+            // read the positive limit sensor's channel
+            CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_POSITIVELIMIT_BOUNDCHANNEL,_sample());
+        #endif
+
+        #ifdef ENTITY_STEPPER1_NEGATIVELIMIT_BOUNDCHANNEL
+            // read the negative limit sensor's channel
+            CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_NEGATIVELIMIT_BOUNDCHANNEL,_sample());
+        #endif
+
+        #ifdef ENTITY_STEPPER1_POSITION_BOUNDCHANNEL
+            // read the position sensor's channel
+            CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_POSITION_BOUNDCHANNEL,_sample);
+        #endif 
+    }
 
 #endif // ENTITY_STEPPER1
