@@ -240,7 +240,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
         if (errorcode) {
             // send the error response
             mctp_transmitFrameStart(sizeof(PldmResponseHeader)+sizeof(GetPdrResponse) + 5-1, 1);
-            transmitByte(rxHeader->flags1 | 0x80);
+            transmitByte(rxHeader->flags1 & 0x7f);
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
             mctp_transmitFrameData(&errorcode,1);  // response->completionCode = errorcode;
@@ -254,7 +254,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
         if (request->requestCount >= pdrSize(request->recordHandle)) {
             // send the data (single part)
             mctp_transmitFrameStart( sizeof(PldmResponseHeader) + sizeof(GetPdrResponse) + pdrSize(request->recordHandle)+5-1,1);
-            transmitByte(rxHeader->flags1 | 0x80);
+            transmitByte(rxHeader->flags1 & 0x7f);
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
             transmitByte(RESPONSE_SUCCESS);        // response->completionCode = RESPONSE_SUCCESS;
@@ -273,7 +273,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
         }
         // start sending the data (multi-part)
         mctp_transmitFrameStart( sizeof(PldmResponseHeader) + sizeof(GetPdrResponse) + request->requestCount+5-1,1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(RESPONSE_SUCCESS);        // response->completionCode = RESPONSE_SUCCESS;
@@ -308,7 +308,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
         if (errorcode) {
             // send the error response
             mctp_transmitFrameStart(sizeof(PldmResponseHeader)+sizeof(GetPdrResponse) + 5-1,1);
-            transmitByte(rxHeader->flags1 | 0x80);
+            transmitByte(rxHeader->flags1 & 0x7f);
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
             mctp_transmitFrameData(&errorcode,1);  // response->completionCode = errorcode;
@@ -323,7 +323,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
             // transfer end part of the data
             mctp_transmitFrameStart( sizeof(PldmResponseHeader) + sizeof(GetPdrResponse) + pdrSize(request->recordHandle) -
                 (request->dataTransferHandle-getPdrOffset(request->recordHandle)) + 5 - 1 + 1,1);
-            transmitByte(rxHeader->flags1 | 0x80);
+            transmitByte(rxHeader->flags1 & 0x7f);
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
             transmitByte(RESPONSE_SUCCESS);        // response->completionCode = RESPONSE_SUCCESS;
@@ -348,7 +348,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
         }
         // send the middle data (multi-part)
         mctp_transmitFrameStart( sizeof(PldmResponseHeader) + sizeof(GetPdrResponse) + request->requestCount + 5-1,1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(RESPONSE_SUCCESS);        // response->completionCode = RESPONSE_SUCCESS;
@@ -437,7 +437,7 @@ static void setStateEffecterStates(PldmRequestHeader* rxHeader) {
 
     // send the response
     mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response);   // completion code
@@ -487,7 +487,7 @@ static void setStateEffecterEnables(PldmRequestHeader* rxHeader) {
 
     // send the response
     mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response);   // completion code
@@ -540,7 +540,7 @@ node_sendHeartbeatEvent();
 
     // send the response
     mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5 + ((hasbody)?5:1),1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response);         // completion code
@@ -584,7 +584,7 @@ static void getStateEffecterStates(PldmRequestHeader* rxHeader) {
 
     // send the response
     mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5 + 4,1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response);         // completion code
@@ -646,7 +646,7 @@ static void setNumericEffecterValue(PldmRequestHeader* rxHeader) {
 
     // send the response
     mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response);   // completion code
@@ -685,7 +685,7 @@ static void getNumericEffecterValue(PldmRequestHeader* rxHeader) {
 #endif
     default:
         mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(RESPONSE_INVALID_EFFECTER_ID);   // completion code
@@ -695,7 +695,7 @@ static void getNumericEffecterValue(PldmRequestHeader* rxHeader) {
 
     // send the response
     mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 10 + 5,1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(RESPONSE_SUCCESS);   // completion code
@@ -749,7 +749,7 @@ static void getSensorReading(PldmRequestHeader* rxHeader) {
 
     // send the response
     mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 10 + 5,1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response_code);   // completion code
@@ -796,7 +796,7 @@ static void setNumericEffecterEnable(PldmRequestHeader* rxHeader) {
 
     // send the response
     mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response_code);   // completion code
@@ -819,7 +819,7 @@ void setTid(PldmRequestHeader* rxHeader) {
     unsigned char response_code = RESPONSE_SUCCESS;
     // send the response
     mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response_code);   // completion code
@@ -841,7 +841,7 @@ void getTid(PldmRequestHeader* rxHeader) {
     unsigned char response_code = RESPONSE_SUCCESS;
     // send the response
     mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 1 + 5, 1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response_code);   // completion code
@@ -896,7 +896,7 @@ static void parseCommand()
     case CMD_GET_PDR_REPOSITORY_INFO:
     {
         mctp_transmitFrameStart(sizeof(GetPdrRepositoryInfoResponse) + sizeof(PldmRequestHeader) + 5,1);
-        transmitByte(rxHeader->flags1 | 0x80);
+        transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(RESPONSE_SUCCESS);   // completion code
@@ -1066,7 +1066,7 @@ void node_sendHeartbeatEvent() {
     // transmit the platform event message common data
     transmitByte(0x01);         // format version
     transmitByte(0x01);         // terminus ID
-    transmitByte(0x00);         // event class 6 = heatbeat
+    transmitByte(0x06);         // event class 6 = heatbeat
 
     // transmit the body
     transmitByte(0x01);          // format version
