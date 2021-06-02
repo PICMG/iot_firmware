@@ -42,12 +42,12 @@
 // This macro generates digital input channel functions for the 
 // named interface channel on the specified port and bit.
 #define DEFINE_DIGITAL_IN_CHANNEL_FUNCTS(channelname, port, bit) \
-    unsigned char CONCATENATE(channelname,_rawdata); \
+    static unsigned char CONCATENATE(channelname,_rawdata); \
     void CONCATENATE(channelname, _init()) { \
         /* set the bit direction to input */ \
         CONCATENATE(DDR, port) &= (~(1<<bit)); \
-        /* turn off the pull-up resistor */ \
-        CONCATENATE(PORT, port) &= (~(1<<bit)); \
+        /* turn on the pull-up resistor */ \
+        CONCATENATE(PORT, port) |= (1<<bit); \
     } \
     void CONCATENATE(channelname, _sample()) { \
       CONCATENATE(channelname,_rawdata) = ((CONCATENATE(PIN, port))>>bit)&1; \
@@ -191,6 +191,11 @@
 //
 // initialize all the channels based on configuration switches
 //
+// parameters: none
+// returns: nothing
+// changes:
+//   The state of all channel hardware will be initialized and set
+// to the "disabled" state.
 void channels_init() 
 {
       // initialize all channels based on configuration paramters

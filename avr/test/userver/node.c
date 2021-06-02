@@ -61,21 +61,21 @@ uint8   tid;
 
 #define SERVO_CONTROL_MODE    1
 
-#define KFFA_EFFECTER_ID      1
-#define APROFILE_EFFECTER_ID  2
-#define VPROFILE_EFFECTER_ID  3
+#define KFFA_EFFECTER_ID      10
+#define APROFILE_EFFECTER_ID  6
+#define VPROFILE_EFFECTER_ID  5
 #define PFINAL_EFFECTER_ID    4
-#define INTERLOCK_EFFECTER_ID 5
-#define TRIGGER_EFFECTER_ID   6
-#define START_EFFECTER_ID     7
+#define INTERLOCK_EFFECTER_ID 1
+#define TRIGGER_EFFECTER_ID   2
+#define START_EFFECTER_ID     3
 
-#define TRIGGER_SENSOR_ID     7
-#define INTERLOCK_SENSOR_ID   6
-#define MOTOR_STATE_SENSOR_ID 5
-#define POSITION_SENSOR_ID    3
-#define PERR_SENSOR_ID        1
+#define TRIGGER_SENSOR_ID     2
+#define INTERLOCK_SENSOR_ID   1
+#define MOTOR_STATE_SENSOR_ID 3
+#define POSITION_SENSOR_ID    10
+#define PERR_SENSOR_ID        5
 #define VELOCITY_SENSOR_ID    4
-#define VERR_SENSOR_ID        2
+#define VERR_SENSOR_ID        11
 #define POS_LIMIT_SENSOR_ID   8
 #define NEG_LIMIT_SENSOR_ID   9
 
@@ -231,7 +231,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
         // transfer has not begun yet
         if (request->transferOperationFlag != 0x1)
             errorcode = RESPONSE_INVALID_TRANSFER_OPERATION_FLAG;
-        else if (request->recordHandle > __pdr_number_of_records)
+        else if (request->recordHandle > PDR_NUMBER_OF_RECORDS)
             errorcode = RESPONSE_INVALID_RECORD_HANDLE;
         else if (request->dataTransferHandle != 0x0000)
             errorcode = RESPONSE_INVALID_DATA_TRANSFER_HANDLE;
@@ -258,7 +258,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
             transmitByte(RESPONSE_SUCCESS);        // response->completionCode = RESPONSE_SUCCESS;
-            transmitLong((getNextRecord(request->recordHandle) <= __pdr_number_of_records) ?
+            transmitLong((getNextRecord(request->recordHandle) <= PDR_NUMBER_OF_RECORDS) ?
                 getNextRecord(request->recordHandle) : 0);
             transmitLong(0);                      //response->nextDataTransferHandle = 0;
             transmitByte(0x05);                   // response->transferFlag = 0x05;   // start and end
@@ -277,7 +277,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(RESPONSE_SUCCESS);        // response->completionCode = RESPONSE_SUCCESS;
-        transmitLong((getNextRecord(request->recordHandle) <= __pdr_number_of_records) ?
+        transmitLong((getNextRecord(request->recordHandle) <= PDR_NUMBER_OF_RECORDS) ?
                 getNextRecord(request->recordHandle) : 0);
         transmitLong(getPdrOffset(request->recordHandle) + request->requestCount);
         transmitByte(0x00);                // response->transferFlag = 0x0;   // start
@@ -327,7 +327,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
             transmitByte(RESPONSE_SUCCESS);        // response->completionCode = RESPONSE_SUCCESS;
-            transmitLong((getNextRecord(request->recordHandle) <= __pdr_number_of_records) ?
+            transmitLong((getNextRecord(request->recordHandle) <= PDR_NUMBER_OF_RECORDS) ?
                 getNextRecord(request->recordHandle) : 0);
             transmitLong(0);                      // next data transfer handle
             transmitByte(0x04);                   // response->transferFlag = 0x04;   end
@@ -352,7 +352,7 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(RESPONSE_SUCCESS);        // response->completionCode = RESPONSE_SUCCESS;
-        transmitLong((getNextRecord(request->recordHandle) <= __pdr_number_of_records) ?
+        transmitLong((getNextRecord(request->recordHandle) <= PDR_NUMBER_OF_RECORDS) ?
             getNextRecord(request->recordHandle) : 0);
         transmitLong(request->dataTransferHandle + request->requestCount); // next data transfer handle
         transmitByte(0x01);                   // response->transferFlag = 0x01;   middle
@@ -399,7 +399,7 @@ static void setStateEffecterStates(PldmRequestHeader* rxHeader) {
         case START_EFFECTER_ID:
             if (action) {
                 if ((req_state==1)||(req_state==2)) {
-                    // 1 = stop, 2 = run
+                    // 1 = start, 2 = stop
                     if (!control_setState(req_state)) {
                         response = RESPONSE_INVALID_STATE_VALUE;
                     } else {
@@ -901,9 +901,9 @@ static void parseCommand()
         transmitByte(0);                  // repository state = available
         for (int i=0;i<13;i++) transmitByte(0); // update time
         for (int i=0;i<13;i++) transmitByte(0); // oem update time
-        transmitLong(__pdr_number_of_records);            // pdr record count
-        transmitLong(__pdr_total_size);   // repository size
-        transmitLong(__pdr_max_record_size);  // record size
+        transmitLong(PDR_NUMBER_OF_RECORDS);            // pdr record count
+        transmitLong(PDR_TOTAL_SIZE);   // repository size
+        transmitLong(PDR_MAX_RECORD_SIZE);  // record size
         transmitByte(0);                  // no timeout
         mctp_transmitFrameEnd();
         break;
@@ -939,6 +939,17 @@ void node_putCommand(PldmRequestHeader* hdr, unsigned char* command, unsigned in
     mctp_transmitFrameEnd();
 }
 
+//*******************************************************************
+// node_getResponse()
+//
+// Update the PLDM Rx finite state machine and return a pointer to 
+// the most recent message response if there is one.  If there
+// is no packet available, it returns 0.  If there is an MCTP 
+// control message, the message is consumed.
+//
+// parameters: none
+// returns: a pointer to the most recent message response.
+//    void
 unsigned char* node_getResponse(void) {
     if (!mctp_isPacketAvailable()) {
         mctp_updateRxFSM();

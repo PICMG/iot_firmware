@@ -45,10 +45,10 @@ typedef signed long FIXEDPOINT_24_8;
 #define FRU_DATA_ATTRIBUTES PROGMEM
 #define LINTABLE_DATA_ATTRIBUTES PROGMEM
 
-extern PDR_BYTE_TYPE __pdr_data[] PDR_DATA_ATTRIBUTES;
-extern unsigned int __pdr_total_size;
-extern unsigned int __pdr_number_of_records;
-extern unsigned int __pdr_max_record_size;
+//extern PDR_BYTE_TYPE __pdr_data[] PDR_DATA_ATTRIBUTES;
+//extern unsigned int __pdr_total_size;
+//extern unsigned int __pdr_number_of_records;
+//extern unsigned int __pdr_max_record_size;
 
 #ifdef __cplusplus
 }
@@ -62,8 +62,8 @@ extern unsigned int __pdr_max_record_size;
 //====================
 // PDR-Related Macros
 extern PDR_BYTE_TYPE __pdr_data[] PDR_DATA_ATTRIBUTES;
-#define PDR_TOTAL_SIZE 881
-#define PDR_NUMBER_OF_RECORDS 19
+#define PDR_TOTAL_SIZE 953
+#define PDR_NUMBER_OF_RECORDS 20
 #define PDR_MAX_RECORD_SIZE 174
 
 //====================
