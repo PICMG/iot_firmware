@@ -43,5 +43,5 @@ void node_sendNumericSensorEvent(EventGeneratorInstance* egi, unsigned int senso
                                     unsigned char previousEventState, FIXEDPOINT_24_8 presentReading);
 void node_sendStateSensorEvent(EventGeneratorInstance* egi, unsigned int sensorId, 
                                     unsigned char previousEventState);
-void node_sendSHeartbeatEvent();
+void node_sendHeartbeatEvent();
 

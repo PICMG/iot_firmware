@@ -519,6 +519,8 @@ static void getStateSensorReading(PldmRequestHeader* rxHeader) {
         break;
     case POS_LIMIT_SENSOR_ID:
         // TODO, get the value of the position limit switch
+// debug code - send an event
+node_sendHeartbeatEvent();
         break;
     case NEG_LIMIT_SENSOR_ID:
         // TODO, get the value of the position limit switch
