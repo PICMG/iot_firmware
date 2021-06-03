@@ -33,6 +33,8 @@ typedef struct {
     unsigned char operationalState;  // the operational state of the sensor
     unsigned char stateWhenHigh;     // the state when the output is high
     unsigned char stateWhenLow;      // the state when the output is low
+    unsigned char defaultState;      // the default state when enabled
+    unsigned char allowedStatesMask; // a bitfield that defines the allowed states
 } StateEffecterInstance;
 
 void          stateeffecter_init(StateEffecterInstance *inst);

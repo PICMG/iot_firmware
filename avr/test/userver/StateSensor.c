@@ -150,16 +150,19 @@ unsigned char statesensor_isTriggered(StateSensorInstance *inst)
 //
 // parameters:
 //    inst - a pointer to the instance data for the sensor.
-// returns: true on success, otherwise, false
-unsigned char statesensor_setOperationalState(StateSensorInstance *inst, unsigned char state)
+// returns: success response code, or error response code
+unsigned char statesensor_setOperationalState(StateSensorInstance *inst, unsigned char state, unsigned char eventMessageEnable)
 {
-    if (state>1) return 0;
+    if (state>1) return RESPONSE_ERROR;
   
     unsigned char sreg = SREG;
     __builtin_avr_cli();
     inst->operationalState = state;
     SREG = sreg;
-    return 1;
+
+    if (eventMessageEnable == 1) eventgenerator_setEnableAsyncEvents(&inst->eventGen,0);  // disable
+    else if (eventMessageEnable == 4) eventgenerator_setEnableAsyncEvents(&inst->eventGen,1); // enable
+    return RESPONSE_SUCCESS;
 }
 
 //===================================================================
@@ -205,15 +208,12 @@ unsigned char statesensor_getOperationalState(StateSensorInstance *inst)
 // returns: the present state of the sensor
 unsigned char statesensor_getPresentState(StateSensorInstance *inst)
 {
-    if (!eventgenerator_isEnabled(&(inst->eventGen))) {
+    if (inst->operationalState==DISABLED) {
         // sensor not enabled - return unknown
         return 0;
     }
 
-    if (inst->value == 0) {
-        return inst->stateWhenLow;
-    }
-    return inst->stateWhenHigh;
+    return inst->value;
 }
 
 //===================================================================

@@ -29,5 +29,19 @@
  void entityStepper1_init();
  void entityStepper1_readChannels();
  void entityStepper1_writeChannels();
- 
- 
+
+ unsigned char entityStepper1_setStateEffecterStates(PldmRequestHeader* rxHeader);
+ unsigned char entityStepper1_setStateEffecterEnables(PldmRequestHeader* rxHeader);
+ unsigned char entityStepper1_getStateEffecterStates(PldmRequestHeader* rxHeader, unsigned char *responseBody, unsigned char *size);
+
+ unsigned char entityStepper1_getStateSensorReading(PldmRequestHeader* rxHeader, unsigned char *responseBody, unsigned char *size);
+ unsigned char entityStepper1_setStateSensorEnables(PldmRequestHeader* rxHeader);
+
+ unsigned char entityStepper1_getSensorReading(PldmRequestHeader* rxHeader, unsigned char *responseBody, unsigned char *size);
+ unsigned char entityStepper1_setNumericSensorEnable(PldmRequestHeader* rxHeader);
+
+ unsigned char entityStepper1_setNumericEffecterValue(PldmRequestHeader* rxHeader);
+ unsigned char entityStepper1_getNumericEffecterValue(PldmRequestHeader* rxHeader, unsigned char *responseBody, unsigned char *size);
+ unsigned char entityStepper1_setNumericEffecterEnable(PldmRequestHeader* rxHeader);
+
+ void entityStepper1_updateControl();

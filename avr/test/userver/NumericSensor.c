@@ -30,9 +30,9 @@
 
 //====================================================
 // sensor state machine states
-#define DISABLED  1  // this value was chosen to match the PLDM OperationalState value
+#define DISABLED  2  // this value was chosen to match the PLDM OperationalState value
 #define ENABLED   0  // this value was chosen to match the PLDM OperationalState value
-#define TRIGGERED 2
+#define TRIGGERED 3
 
 //====================================================
 // Threshold enable bit defintions from PLDM Spec
@@ -87,6 +87,23 @@ void numericsensor_init(NumericSensorInstance *inst)
 void numericsensor_setValue(NumericSensorInstance *inst, FIXEDPOINT_24_8 val)
 {
     inst->value = val;
+}
+
+//===================================================================
+// numericsensor_getValue()
+//
+// get the value read from the channel. 
+//
+// parameters:
+//    inst - a pointer to the instance data for the sensor.
+// returns: nothing
+FIXEDPOINT_24_8 numericsensor_getValue(NumericSensorInstance *inst)
+{
+    unsigned char sreg = SREG;
+    __builtin_avr_cli();
+    FIXEDPOINT_24_8 result = inst->value;
+    SREG = sreg;
+    return result;
 }
 
 //===================================================================
@@ -210,16 +227,20 @@ unsigned char numericsensor_isTriggered(NumericSensorInstance *inst)
 //  
 // parameters:
 //    inst - a pointer to the instance data for the sensor.
-// returns: true on success, otherwise, false
-unsigned char numericsensor_setOperationalState(NumericSensorInstance *inst, unsigned char state)
+// returns: the appropriate PLDM response code is returned
+unsigned char numericsensor_setOperationalState(NumericSensorInstance *inst, unsigned char state, unsigned char eventMessageEnable)
 {
-    if (state>1) return 0;
+    if (state>1) return RESPONSE_ERROR;
  
     unsigned char sreg = SREG;
     __builtin_avr_cli();
     inst->operationalState = state;
     SREG = sreg;
-    return 1;
+
+    if (eventMessageEnable == 1) eventgenerator_setEnableAsyncEvents(&inst->eventGen,0);  // disable
+    else if (eventMessageEnable == 4) eventgenerator_setEnableAsyncEvents(&inst->eventGen,1); // enable
+
+    return RESPONSE_SUCCESS;
 }
 
 //===================================================================

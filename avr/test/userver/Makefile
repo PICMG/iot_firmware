@@ -24,7 +24,7 @@ HEXFILE     := userver.hex
 LIBINCLUDES := -L/usr/lib/avr/include 
 LIBPATH     := /usr/lib/avr
 INCLUDES    := -I.  
-OBJECTS     := main.o simulavr_info.o node.o pdr_data.o vprofiler.o control_servo.o timer1.o channels.o entityStepper1.o NumericEffecter.o StateEffecter.o StateSensor.o NumericSensor.o EventGenerator.o mctp.o uart.o crc8.o fcs.o
+OBJECTS     := main.o simulavr_info.o node.o pdr_data.o vprofiler.o timer1.o channels.o entityStepper1.o NumericEffecter.o StateEffecter.o StateSensor.o NumericSensor.o EventGenerator.o mctp.o uart.o crc8.o fcs.o
 CXX_FLAGS   := -Wall -mmcu=atmega328p -DF_CPU=16000000UL
 OUTPUT_DIR  := $(CURDIR)
 export      CXX_FLAGS

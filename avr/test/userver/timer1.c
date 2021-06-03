@@ -31,7 +31,9 @@
 #include <avr/interrupt.h>
 #include "timer1.h"
 #include "vprofiler.h"
-#include "control_servo.h"
+#include "pdrdata.h"
+#include "pldm.h"
+#include "entityStepper1.h"
 
 static int duty = 00;
 
@@ -62,7 +64,17 @@ ISR(TIMER1_OVF_vect) {
 
     // the duty cycle is set to the velocity profiler output for now
     OCR1A = duty;
-    control_update();
+    
+    #ifdef ENTITY_STEPPER1
+        entityStepper1_updateControl();
+    #endif
+    #ifdef ENTITY_SERVO1
+        entityServo1_updateControl();
+    #endif
+    #ifdef ENTITY_PID1
+        entityPID1_updateControl();
+    #endif
+
     duty = (unsigned int)(current_velocity>>14)+2048L;
 
     // update delay counters every fourth clock

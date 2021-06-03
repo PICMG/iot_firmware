@@ -30,9 +30,9 @@
 
 //====================================================
 // effecter state machine states
-#define DISABLED  1  // this value was chosen to match the PLDM OperationalState value
-#define ENABLED   0  // this value was chosen to match the PLDM OperationalState value
-#define TRIGGERED 2
+#define DISABLED  2  // this value was chosen to match the PLDM OperationalState value
+#define ENABLED   1  // this value was chosen to match the PLDM OperationalState value
+#define TRIGGERED 3
 
 //====================================================
 // Threshold enable bit defintions from PLDM Spec
@@ -80,11 +80,22 @@ void numericeffecter_init(NumericEffecterInstance *inst)
 //
 // parameters:
 //    inst - a pointer to the instance data for the effecter.
-// returns: nothing
-void numericeffecter_setValue(NumericEffecterInstance *inst, FIXEDPOINT_24_8 val)
+// returns:
+//    the PLDM return code for this operation.
+unsigned char numericeffecter_setValue(NumericEffecterInstance *inst, FIXEDPOINT_24_8 val)
 {
-    if (inst->operationalState == DISABLED) return;
+    // if the effecter is disabled, it cannot be set
+    if (inst->operationalState == DISABLED) return RESPONSE_ERROR;
+
+    // check to make sure the value is in range
+    if (val>inst->maxSettable) return RESPONSE_ERROR_INVALID_DATA;
+    if (val<inst->minSettable) return RESPONSE_ERROR_INVALID_DATA;
+
+    unsigned char reg = SREG;
+    __builtin_avr_cli();
     inst->value = val;
+    SREG = reg;
+    return RESPONSE_SUCCESS;
 }
 
 //===================================================================
@@ -123,7 +134,8 @@ unsigned char numericeffecter_setOperationalState(NumericEffecterInstance *inst,
  
     unsigned char sreg = SREG;
     __builtin_avr_cli();
-    inst->operationalState = state;
+    if (state == DISABLED) inst->operationalState = state;
+    else inst->operationalState = ENABLED;
     SREG = sreg;
     return 1;
 }

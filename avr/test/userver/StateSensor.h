@@ -46,7 +46,7 @@ unsigned char statesensor_setEnables(StateSensorInstance *inst, unsigned char en
 unsigned char statesensor_isEnabled(StateSensorInstance *inst);
 void          statesensor_sensorRearm(StateSensorInstance *inst);
 unsigned char statesensor_isTriggered(StateSensorInstance *inst);
-unsigned char statesensor_setOperationalState(StateSensorInstance *inst, unsigned char state);
+unsigned char statesensor_setOperationalState(StateSensorInstance *inst, unsigned char state, unsigned char eventMessageEnable);
 unsigned char statesensor_setPresentState(StateSensorInstance *inst, unsigned char state);
 unsigned char statesensor_getOperationalState(StateSensorInstance *inst);
 unsigned char statesensor_getPresentState(StateSensorInstance *inst);

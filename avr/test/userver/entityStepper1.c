@@ -35,6 +35,9 @@
     #include "NumericEffecter.h"
     #include "channels.h"
     #include "node.h"
+    #include "vprofiler.h"
+
+    #define SINT32_TYPE 5
 
     #define CONCATENATE(x,y) x ## y
     #define CALL_CHANNEL_FUNCTION(channel, function) CONCATENATE(channel, function)
@@ -134,7 +137,7 @@
         globalInterlockSensorInst.stateWhenHigh = ENTITY_STEPPER1_GLOBALINTERLOCKSENSOR_STATEWHENHIGH;
         globalInterlockSensorInst.stateWhenLow = ENTITY_STEPPER1_GLOBALINTERLOCKSENSOR_STATEWHENLOW;
         globalInterlockSensorInst.eventGen.sendEvent = globalInterlockSensor_sendEvent;
-        
+ 
         // initialize the triggerSensor
         statesensor_init(&triggerSensorInst);
         triggerSensorInst.stateWhenHigh = ENTITY_STEPPER1_TRIGGERSENSOR_STATEWHENHIGH;
@@ -159,6 +162,47 @@
             negativeLimitSensorInst.eventGen.sendEvent = negativeLimitSensor_sendEvent;
         #endif
 
+        // initialize the global interlock effecter
+        stateeffecter_init(&globalInterlockEffecterInst); 
+        globalInterlockEffecterInst.stateWhenHigh = ENTITY_STEPPER1_GLOBALINTERLOCKEFFECTER_STATEWHENHIGH;
+        globalInterlockEffecterInst.stateWhenLow = ENTITY_STEPPER1_GLOBALINTERLOCKEFFECTER_STATEWHENLOW;
+        globalInterlockEffecterInst.allowedStatesMask = 
+            (1<<(ENTITY_STEPPER1_GLOBALINTERLOCKEFFECTER_STATEWHENHIGH-1))|
+            (1<<(ENTITY_STEPPER1_GLOBALINTERLOCKEFFECTER_STATEWHENLOW-1));
+        globalInterlockEffecterInst.defaultState = globalInterlockEffecterInst.stateWhenHigh;
+
+        // initialize the trigger effecter
+        stateeffecter_init(&triggerEffecterInst);
+        triggerEffecterInst.stateWhenHigh = ENTITY_STEPPER1_TRIGGEREFFECTER_STATEWHENHIGH;
+        triggerEffecterInst.stateWhenLow = ENTITY_STEPPER1_TRIGGEREFFECTER_STATEWHENLOW;
+        triggerEffecterInst.allowedStatesMask = 
+            (1<<(ENTITY_STEPPER1_TRIGGEREFFECTER_STATEWHENHIGH-1))|
+            (1<<(ENTITY_STEPPER1_TRIGGEREFFECTER_STATEWHENLOW-1));
+        triggerEffecterInst.defaultState = triggerEffecterInst.stateWhenHigh;
+
+        // initialize the command effecter
+        stateeffecter_init(&commandEffecterInst);
+        commandEffecterInst.allowedStatesMask = 7; 
+        commandEffecterInst.defaultState = 2;   // default state = stop
+
+        // initialize the brake effecter
+        #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+            stateeffecter_init(&outputEnableEffecterInst);
+            outputEnableEffecterInst.allowedStatesMask = 3;
+            outputEnableEffecterInst.stateWhenHigh = 2;
+            outputEnableEffecterInst.stateWhenLow = 1;
+            outputEnableEffecterInst.defaultState = 1;
+        #endif 
+
+        // initialize the output enable effecter
+        #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+            stateeffecter_init(&brakeEffecterInst);
+            brake.stateWhenHigh = 2;
+            brake.stateWhenLow = 1;
+            brakeEffecterInst.allowedStatesMask = 3; 
+            brakeEffecterInst.defaultState = 1;
+        #endif 
+
         #ifdef ENTITY_STEPPER1_POSITION
             numericsensor_init(&positionSensorInst);
             positionSensorInst.thresholdEnables = ENTITY_STEPPER1_POSITION_ENABLEDTHRESHOLDS; 
@@ -172,36 +216,25 @@
             positionSensorInst.eventGen.sendEvent = positionSensor_sendEvent;
         #endif 
 
-        // initialize the global interlock effecter
-        stateeffecter_init(&globalInterlockEffecterInst); 
-
-        // initialize the trigger effecter
-        stateeffecter_init(&triggerEffecterInst);
-
         // initialize the output effecter
         numericeffecter_init(&outputEffecterInst);
-
-        // initialize the command effecter
-        stateeffecter_init(&commandEffecterInst);
+        outputEffecterInst.maxSettable = 0x7FFFFFFF;
+        outputEffecterInst.minSettable = -0x7FFFFFFF;
 
         // initialize the pfinal effecter
         numericeffecter_init(&pfinalEffecterInst);
+        pfinalEffecterInst.maxSettable = 0x7FFFFFFF;
+        pfinalEffecterInst.minSettable = -0x7FFFFFFF;
 
         // initialize the vprofile effecter
         numericeffecter_init(&vprofileEffecterInst);
+        vprofileEffecterInst.maxSettable = 0x7FFFFFFF;
+        vprofileEffecterInst.minSettable = -0x7FFFFFFF;
 
         // initialize the aprofile effecter
         numericeffecter_init(&aprofileEffecterInst);
-
-        // initialize the brake effecter
-        #ifdef ENTITY_STEPPER1_OUTPUTENABLE
-            stateeffecter_init(&outputEnableEffecterInst);
-        #endif 
-
-        // initialize the output enable effecter
-        #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
-            stateeffecter_init(&brakeEffecterInst);
-        #endif 
+        aprofileEffecterInst.maxSettable = 0x7FFFFFFF;
+        aprofileEffecterInst.minSettable = -0x7FFFFFFF;
     }
 
     //===============================================================
@@ -234,5 +267,750 @@
             CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_POSITION_BOUNDCHANNEL,_sample);
         #endif 
     }
+
+
+    //*******************************************************************
+    // setStateEfffecterStates()
+    //
+    // set the value of a numeric state effecter if it exists.
+    //
+    // parameters:
+    //    rxHeader - a pointer to the request header
+    // returns:
+    //    void
+    // changes:
+    //    the contents of the transmit buffer
+    unsigned char entityStepper1_setStateEffecterStates(PldmRequestHeader* rxHeader) {
+        // extract the information from the body
+        unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+        unsigned char effecter_count = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2);
+
+        // if the user is trying to set more than one state, return with an error
+        if (effecter_count != 1) return RESPONSE_INVALID_STATE_VALUE; 
+
+
+        unsigned char action = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2 + 1);
+        unsigned char req_state = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2 + 1 + 1);
+        unsigned char response = RESPONSE_SUCCESS;
+        switch (effecter_id) {
+        #ifdef ENTITY_STEPPER1_COMMAND_EFFECTERID
+        case ENTITY_STEPPER1_COMMAND_EFFECTERID:
+            // only try to update the state if action is requestSet
+            if (action) {
+                if (!stateeffecter_setPresentState(&commandEffecterInst,req_state)) { 
+                    response = RESPONSE_UNSUPPORTED_EFFECTERSTATE;
+                }
+            }
+            break;
+        #endif
+        #ifdef ENTITY_STEPPER1_TRIGGEREFFECTER_EFFECTERID
+            case ENTITY_STEPPER1_TRIGGEREFFECTER_EFFECTERID:
+                // only try to update the state if action is requestSet
+                if (action) {
+                    if (!stateeffecter_setPresentState(&triggerEffecterInst,req_state)) { 
+                        response = RESPONSE_UNSUPPORTED_EFFECTERSTATE;
+                    }
+                }
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_GLOBALINTERLOCKEFFECTER_EFFECTERID
+            case ENTITY_STEPPER1_GLOBALINTERLOCKEFFECTER_EFFECTERID:
+                // only try to update the state if action is requestSet
+                if (action) {
+                    if (!stateeffecter_setPresentState(&globalInterlockEffecterInst,req_state)) { 
+                        response = RESPONSE_UNSUPPORTED_EFFECTERSTATE;
+                    }
+                }
+                break;
+        #endif
+        default:
+            response = RESPONSE_INVALID_EFFECTER_ID; 
+            break;
+        }
+        return response;
+    } 
+
+    //*******************************************************************
+    // entityStepper1_setStateEfffecterEnables()
+    //
+    // set the value of a state effecter enable if it exists.
+    //
+    // parameters:
+    //    rxHeader - a pointer to the request header
+    // returns:
+    //    void
+    // changes:
+    //    the contents of the transmit buffer
+    unsigned char entityStepper1_setStateEffecterEnables(PldmRequestHeader* rxHeader) {
+        // extract the information from the body
+        unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+        unsigned char effecter_count = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2);
+        unsigned char effecter_op_state     = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+3);
+        unsigned char effecter_event_enable = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+4);
+        unsigned char response = RESPONSE_SUCCESS; 
+        
+        if (effecter_count != 1) return RESPONSE_INVALID_STATE_VALUE;
+        if (effecter_op_state>2) return RESPONSE_INVALID_STATE_VALUE; 
+        if ((effecter_event_enable==0)||(effecter_event_enable==1)) return RESPONSE_EVENT_GENERATION_NOT_SUPPORTED; 
+        
+        switch (effecter_id) {
+        #ifdef ENTITY_STEPPER1_COMMAND_EFFECTERID
+            case ENTITY_STEPPER1_COMMAND_EFFECTERID:
+                if (!stateeffecter_setOperationalState(&commandEffecterInst, effecter_op_state)) { 
+                    response = RESPONSE_UNSUPPORTED_EFFECTERSTATE;
+                }
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_TRIGGEREFFECTER_EFFECTERID
+            case ENTITY_STEPPER1_TRIGGEREFFECTER_EFFECTERID:
+                if (!stateeffecter_setOperationalState(&commandEffecterInst, effecter_op_state)) { 
+                    response = RESPONSE_UNSUPPORTED_EFFECTERSTATE;
+                }
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_GLOBALINTERLOCKEFFECTER_EFFECTERID
+            case ENTITY_STEPPER1_GLOBALINTERLOCKEFFECTER_EFFECTERID:
+                if (!stateeffecter_setOperationalState(&globalInterlockEffecterInst, effecter_op_state)) { 
+                    response = RESPONSE_UNSUPPORTED_EFFECTERSTATE;
+                }
+                break;
+        #endif
+        default:
+            response = RESPONSE_INVALID_EFFECTER_ID; 
+            break;
+        }
+        return response;
+    } 
+
+    //*******************************************************************
+    // entityStepper1_getStateSensorReading()
+    //
+    // get the value of a state sensor state if it exists.
+    //
+    // parameters:
+    //    rxHeader - a pointer to the request header
+    // returns:
+    //    void
+    // changes:
+    //    the contents of the transmit buffer
+    unsigned char entityStepper1_getStateSensorReading(PldmRequestHeader* rxHeader, unsigned char *responseBody, unsigned char *size) {
+        // extract the information from the body
+        unsigned int  sensor_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+
+        // set a few default values
+        unsigned char response = RESPONSE_SUCCESS; 
+        responseBody[0] = 1;    // the number of sensor states
+        *size = 4;              // the size of the body (not including the response code)
+
+        switch (sensor_id) {
+        #ifdef ENTITY_STEPPER1_MOTIONSTATE_SENSORID
+            case ENTITY_STEPPER1_MOTIONSTATE_SENSORID:
+                responseBody[1] = statesensor_getOperationalState(&motionStateSensorInst);   
+                responseBody[2] = statesensor_getPresentState(&motionStateSensorInst);
+                responseBody[3] = statesensor_getPresentState(&motionStateSensorInst);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_POSITIVELIMIT_SENSORID
+            case ENTITY_STEPPER1_POSITIVELIMIT_SENSORID:
+                responseBody[1] = statesensor_getOperationalState(&positiveLimitSensorInst);   
+                responseBody[2] = statesensor_getPresentState(&positiveLimitSensorInst);
+                responseBody[3] = statesensor_getPresentState(&positiveLimitSensorInst);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_NEGATIVELIMIT_SENSORID
+            case ENTITY_STEPPER1_NEGATIVELIMIT_SENSORID:
+                responseBody[1] = statesensor_getOperationalState(&negativeLimitSensorInst);   
+                responseBody[2] = statesensor_getPresentState(&negativeLimitSensorInst);
+                responseBody[3] = statesensor_getPresentState(&negativeLimitSensorInst);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_TRIGGERSENSOR_SENSORID
+            case ENTITY_STEPPER1_TRIGGERSENSOR_SENSORID:
+                responseBody[1] = statesensor_getOperationalState(&triggerSensorInst);   
+                responseBody[2] = statesensor_getPresentState(&triggerSensorInst);
+                responseBody[3] = statesensor_getPresentState(&triggerSensorInst);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_GLOBALINTERLOCKSENSOR_SENSORID
+            case ENTITY_STEPPER1_GLOBALINTERLOCKSENSOR_SENSORID:
+                responseBody[1] = statesensor_getOperationalState(&globalInterlockSensorInst);   
+                responseBody[2] = statesensor_getPresentState(&globalInterlockSensorInst);
+                responseBody[3] = statesensor_getPresentState(&globalInterlockSensorInst);
+                break;
+        #endif
+        default:
+            response = RESPONSE_INVALID_EFFECTER_ID; 
+            *size = 0;
+            break;
+        }
+        return response;
+    } 
+
+    //*******************************************************************
+    // entityStepper1_setStateEfffecterEnables()
+    //
+    // set the value of a state effecter enable if it exists.
+    //
+    // parameters:
+    //    rxHeader - a pointer to the request header
+    // returns:
+    //    void
+    // changes:
+    //    the contents of the transmit buffer
+    unsigned char entityStepper1_setStateSensorEnables(PldmRequestHeader* rxHeader) {
+        // extract the information from the body
+        unsigned int  sensor_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+        unsigned char sensor_count = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2);
+        unsigned char sensor_op_state     = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+3);
+        unsigned char sensor_event_enable = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+4);
+        unsigned char response = RESPONSE_SUCCESS; 
+        
+        if (sensor_count != 1) return RESPONSE_INVALID_STATE_VALUE;
+        if (sensor_op_state>1) return RESPONSE_INVALID_STATE_VALUE; 
+        if ((sensor_event_enable!=0)&&(sensor_event_enable!=1)&&(sensor_event_enable!=4)) return RESPONSE_EVENT_GENERATION_NOT_SUPPORTED; 
+        
+        switch (sensor_id) {
+        #ifdef ENTITY_STEPPER1_MOTIONSTATE_SENSORID
+            case ENTITY_STEPPER1_MOTIONSTATE_SENSORID:
+                response = statesensor_setOperationalState(&motionStateSensorInst,sensor_op_state, sensor_event_enable);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_POSITIVELIMIT_SENSORID
+            case ENTITY_STEPPER1_POSITIVELIMIT_SENSORID:
+                response = statesensor_setOperationalState(&positiveLimitSensorInst,sensor_op_state, sensor_event_enable);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_NEGATIVELIMIT_SENSORID
+            case ENTITY_STEPPER1_NEGATIVELIMIT_SENSORID:
+                response = statesensor_setOperationalState(&negativeLimitSensorInst,sensor_op_state, sensor_event_enable);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_TRIGGERSENSOR_SENSORID
+            case ENTITY_STEPPER1_TRIGGERSENSOR_SENSORID:
+                response = statesensor_setOperationalState(&triggerSensorInst,sensor_op_state, sensor_event_enable);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_GLOBALINTERLOCKSENSOR_SENSORID
+            case ENTITY_STEPPER1_GLOBALINTERLOCKSENSOR_SENSORID:
+                response = statesensor_setOperationalState(&globalInterlockSensorInst,sensor_op_state, sensor_event_enable);
+                break;
+        #endif
+        default:
+            response = RESPONSE_INVALID_EFFECTER_ID; 
+            break;
+        }
+        return response;
+    } 
+
+    //*******************************************************************
+    // entityStepper1_getStateEfffecterStates()
+    //
+    // get the value of a numeric state effecter state if it exists.
+    //
+    // parameters:
+    //    rxHeader - a pointer to the request header
+    // returns:
+    //    void
+    // changes:
+    //    the contents of the transmit buffer
+    unsigned char entityStepper1_getStateEffecterStates(PldmRequestHeader* rxHeader, unsigned char *responseBody, unsigned char *size) {
+        // extract the information from the body
+        unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+
+        // set a few default values;
+        unsigned char response = RESPONSE_SUCCESS;
+        *size = 4;              // size of the body (not including the response code)
+        responseBody[0] = 1;    
+
+        switch (effecter_id) {
+        #ifdef ENTITY_STEPPER1_COMMAND_EFFECTERID
+            case ENTITY_STEPPER1_COMMAND_EFFECTERID:
+                responseBody[1] = stateeffecter_getOperationalState(&commandEffecterInst);   
+                responseBody[2] = stateeffecter_getPresentState(&commandEffecterInst);
+                responseBody[3] = stateeffecter_getPresentState(&commandEffecterInst);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_TRIGGEREFFECTER_EFFECTERID
+            case ENTITY_STEPPER1_TRIGGEREFFECTER_EFFECTERID:
+                responseBody[1] = stateeffecter_getOperationalState(&triggerEffecterInst);   
+                responseBody[2] = stateeffecter_getPresentState(&triggerEffecterInst);
+                responseBody[3] = stateeffecter_getPresentState(&triggerEffecterInst);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_GLOBALINTERLOCKEFFECTER_EFFECTERID
+            case ENTITY_STEPPER1_GLOBALINTERLOCKEFFECTER_EFFECTERID:
+                responseBody[1] = stateeffecter_getOperationalState(&globalInterlockEffecterInst);   
+                responseBody[2] = stateeffecter_getPresentState(&globalInterlockEffecterInst);
+                responseBody[3] = stateeffecter_getPresentState(&globalInterlockEffecterInst);
+                break;
+        #endif
+        default:
+            response = RESPONSE_INVALID_EFFECTER_ID;
+            *size = 0; 
+            break;
+        }
+        return response;
+    } 
+
+    //*******************************************************************
+    // entityStepper1_setNumericEfffecterValue()
+    //
+    // set the value of a numeric state effecter if it exists.
+    //
+    // parameters:
+    //    rxHeader - a pointer to the request header
+    // returns:
+    //    void
+    // changes:
+    //    the contents of the transmit buffer
+    unsigned char entityStepper1_setNumericEffecterValue(PldmRequestHeader* rxHeader) {
+        // extract the information from the body
+        unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+        unsigned char effecter_numtype = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2);
+
+        // set default valus
+        unsigned char response = RESPONSE_SUCCESS; 
+
+        if (effecter_numtype != SINT32_TYPE) return RESPONSE_ERROR_INVALID_DATA;
+        FIXEDPOINT_24_8 newvalue = *((long*)(((char*)rxHeader) + sizeof(PldmRequestHeader)+2+1));
+
+        switch (effecter_id) {
+        #ifdef ENTITY_STEPPER1_APROFILE_EFFECTERID
+            case ENTITY_STEPPER1_APROFILE_EFFECTERID:
+                response = numericeffecter_setValue(&aprofileEffecterInst,newvalue);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_VPROFILE_EFFECTERID
+            case ENTITY_STEPPER1_VPROFILE_EFFECTERID:
+                response = numericeffecter_setValue(&vprofileEffecterInst,newvalue); 
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_PFINAL_EFFECTERID
+            case ENTITY_STEPPER1_PFINAL_EFFECTERID:
+                response = numericeffecter_setValue(&pfinalEffecterInst,newvalue); 
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_ACCELERATIONGAIN_EFFECTERID
+            case ENTITY_STEPPER1_ACCELERATIONGAIN_EFFECTERID:
+                response = numericeffecter_setValue(&accelerationGainEffecterInst,newvalue); 
+                break;
+        #endif
+        default:
+            response = RESPONSE_INVALID_EFFECTER_ID;
+            break;
+        }
+        return response;
+    }
+
+    //*******************************************************************
+    // entityStepper1_getNumericEfffecterValue()
+    //
+    // set the value of a numeric state effecter if it exists.
+    //
+    // parameters:
+    //    rxHeader - a pointer to the request header
+    // returns:
+    //    void
+    // changes:
+    //    the contents of the transmit buffer
+    unsigned char entityStepper1_getNumericEffecterValue(PldmRequestHeader* rxHeader, unsigned char *responseBody, unsigned char *size) {
+        // extract the information from the body
+        unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+
+        // set some default values;
+        unsigned char response = RESPONSE_SUCCESS;
+        responseBody[0] = SINT32_TYPE;
+        *size = 10;
+    
+        switch (effecter_id) {
+        #ifdef ENTITY_STEPPER1_APROFILE_EFFECTERID
+            case ENTITY_STEPPER1_APROFILE_EFFECTERID:
+                responseBody[1] = numericeffecter_getOperationalState(&aprofileEffecterInst);
+                *((FIXEDPOINT_24_8 *)&(responseBody[2])) = numericeffecter_getValue(&aprofileEffecterInst);
+                *((FIXEDPOINT_24_8 *)&(responseBody[6])) = numericeffecter_getValue(&aprofileEffecterInst);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_VPROFILE_EFFECTERID
+            case ENTITY_STEPPER1_VPROFILE_EFFECTERID:
+                responseBody[1] = numericeffecter_getOperationalState(&vprofileEffecterInst);
+                *((FIXEDPOINT_24_8*)&(responseBody[2])) = numericeffecter_getValue(&vprofileEffecterInst);
+                *((FIXEDPOINT_24_8*)&(responseBody[6])) = numericeffecter_getValue(&vprofileEffecterInst);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_PFINAL_EFFECTERID
+            case ENTITY_STEPPER1_PFINAL_EFFECTERID:
+                responseBody[1] = numericeffecter_getOperationalState(&pfinalEffecterInst);
+                *((FIXEDPOINT_24_8*)&(responseBody[2])) = numericeffecter_getValue(&pfinalEffecterInst);
+                *((FIXEDPOINT_24_8*)&(responseBody[6])) = numericeffecter_getValue(&pfinalEffecterInst);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_ACCELERATIONGAIN_EFFECTERID
+            case ENTITY_STEPPER1_ACCELERATIONGAIN_EFFECTERID:
+                responseBody[1] = numericeffecter_getOperationalState(&acclerationGainEffecterInst)
+                *((FIXEDPOINT_24_8*)&(responseBody[2])) = numericeffecter_getValue(&accelerationGainEffecterInst);
+                *((FIXEDPOINT_24_8*)&(responseBody[6])) = numericeffecter_getValue(&accelerationGainEffecterInst);
+                break;
+        #endif
+        default:
+            response = RESPONSE_INVALID_EFFECTER_ID;
+            *size = 0;
+            break;
+        }
+        return response;
+    }
+
+    //*******************************************************************
+    // entityStepper1_getSensorReading()
+    //
+    // return the value of a numeric sensor.
+    //
+    // parameters:
+    //    rxHeader - a pointer to the request header
+    // returns:
+    //    void
+    // changes:
+    //    the contents of the transmit buffer
+    unsigned char entityStepper1_getSensorReading(PldmRequestHeader* rxHeader, unsigned char *responseBody, unsigned char *size) {
+        // extract the information from the body
+        unsigned int  sensor_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+        unsigned char rearm = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)+2));
+
+        // set some default values
+        unsigned char response = RESPONSE_SUCCESS;
+        *size = 10;
+        responseBody[0] = SINT32_TYPE;
+
+        switch (sensor_id) {
+        #ifdef ENTITY_STEPPER1_POSITION_SENSORID
+            case ENTITY_STEPPER1_POSITION_SENSORID:
+                responseBody[1] = numericsensor_getOperationalState(&positionSensorInst);
+                if (eventgenerator_isEnabled(&(positionSensorInst.eventGen))) responseBody[2] = 2;
+                else responseBody[2] = 1;
+                responseBody[3] = numericsensor_getPresentState(&positionSensorInst);
+                responseBody[4] = numericsensor_getSensorPreviousState(&positionSensorInst);
+                responseBody[5] = numericsensor_getEventState(&positionSensorInst);
+                *((FIXEDPOINT_24_8*)&(responseBody[6])) = numericsensor_getValue(&positionSensorInst);
+                
+                // rearm the sensor if requested
+                if (rearm) numericsensor_sensorRearm(&positionSensorInst);
+                break;
+        #endif
+        default:
+            response = RESPONSE_INVALID_SENSOR_ID;   // completion code
+            *size = 0;
+            break;
+        }
+        return response;
+    }
+
+    //*******************************************************************
+    // entityStepper1_setNumericEffecterEnable()
+    //
+    // set the enable for a numeric effecter.
+    //
+    // parameters:
+    //    rxHeader - a pointer to the request header
+    // returns:
+    //    void
+    // changes:
+    //    the contents of the transmit buffer
+    unsigned char entityStepper1_setNumericEffecterEnable(PldmRequestHeader* rxHeader) {
+        // extract the information from the body
+        unsigned int  effecter_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+        unsigned int enable_state = *((char*)(((char*)rxHeader)+sizeof(PldmRequestHeader)+2));
+        
+        if (enable_state>1) return RESPONSE_INVALID_STATE_VALUE; 
+
+        // set some default values
+        unsigned char response = RESPONSE_SUCCESS;
+
+        switch (effecter_id) {
+        #ifdef ENTITY_STEPPER1_APROFILE_EFFECTERID
+            case ENTITY_STEPPER1_APROFILE_EFFECTERID:
+                numericeffecter_setOperationalState(&aprofileEffecterInst,enable_state);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_VPROFILE_EFFECTERID
+            case ENTITY_STEPPER1_VPROFILE_EFFECTERID:
+                numericeffecter_setOperationalState(&vprofileEffecterInst,enable_state);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_PFINAL_EFFECTERID
+            case ENTITY_STEPPER1_PFINAL_EFFECTERID:
+                numericeffecter_setOperationalState(&pfinalEffecterInst,enable_state);
+                break;
+        #endif
+        #ifdef ENTITY_STEPPER1_ACCELERATIONGAIN_EFFECTERID
+            case ENTITY_STEPPER1_ACCELERATIONGAIN_EFFECTERID:
+                numericeffecter_setOperationalState(&accelerationGainEffecterInst,enable_state);
+                break;
+        #endif
+        default:
+            response = RESPONSE_INVALID_EFFECTER_ID;   // completion code
+            break;
+        }
+        return response;
+    }
+
+    //*******************************************************************
+    // entityStepper1_setNumericEfffecterEnables()
+    //
+    // set the value of a state effecter enable if it exists.
+    //
+    // parameters:
+    //    rxHeader - a pointer to the request header
+    // returns:
+    //    void
+    // changes:
+    //    the contents of the transmit buffer
+    unsigned char entityStepper1_setNumericSensorEnable(PldmRequestHeader* rxHeader) {
+        // extract the information from the body
+        unsigned int  sensor_id  = *((int*)(((char*)rxHeader)+sizeof(PldmRequestHeader)));
+        unsigned char sensor_op_state     = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+2);
+        unsigned char sensor_event_enable = *(((char*)rxHeader)+sizeof(PldmRequestHeader)+3);
+        unsigned char response = RESPONSE_SUCCESS; 
+        
+        if (sensor_op_state>1) return RESPONSE_INVALID_STATE_VALUE; 
+        if ((sensor_event_enable!=0)&&(sensor_event_enable!=1)&&(sensor_event_enable!=4)) return RESPONSE_EVENT_GENERATION_NOT_SUPPORTED; 
+        
+        switch (sensor_id) {
+        #ifdef ENTITY_STEPPER1_POSITION_SENSORID
+            case ENTITY_STEPPER1_POSITION_SENSORID:
+                response = numericsensor_setOperationalState(&positionSensorInst,sensor_op_state, sensor_event_enable);
+                break;
+        #endif
+        default:
+            response = RESPONSE_INVALID_EFFECTER_ID; 
+            break;
+        }
+        return response;
+    } 
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+// THIS IS WORK IN PROGRESS AND NEEDS TO BE CLEANED UP
+/////////////////////////////////////////////////////////////////////////////
+#define STATE_IDLE       1
+#define STATE_COND       2
+#define STATE_ERROR      3
+#define STATE_RUNNINGV   4
+#define STATE_RUNNING    5
+#define STATE_WAITING    6
+#define STATE_DONE       7
+
+#define SERVO_CMD_NONE   0
+#define SERVO_CMD_RUN    1
+#define SERVO_CMD_STOP   2
+#define SERVO_CMD_DONE   3
+#define SERVO_CMD_ERR    4
+#define SERVO_CMD_COND   5
+
+#define SERVO_MODE_NOWAIT  0
+#define SERVO_MODE_WAIT    1
+
+#define SERVO_FLAGS_ERROR      0x80
+#define SERVO_FLAGS_TRIGGER    0x40
+
+unsigned char servo_cmd   = SERVO_CMD_NONE;
+unsigned char servo_mode  = SERVO_MODE_NOWAIT;
+unsigned char servo_flags = 0x00;
+
+// buffered values for the requested position, velocity and acceleration
+long current_position       = 0;
+long requested_position     = 1000000L;
+FP16 requested_velocity     = TO_FP16(511);
+FP16 requested_acceleration = TO_FP16(1);
+FP16 requested_kffa;
+static char mode_scurve    = 1;
+static unsigned char state = STATE_IDLE;
+
+//****************************************************************
+// this is the high-priority update loop for the servo motor
+// control function - it runs in priority mode and should not
+// rely on interrupt-updates to change variable states as interrupts
+// are disabled when this function runs.
+//
+void entityStepper1_updateControl() {
+    // check to see if there was a requested state change
+    unsigned char reqState = commandEffecterInst.state;
+    if (reqState == 1) {  // run requested
+        if (state == STATE_IDLE) {
+            // run command is only valid from the idle state
+            servo_cmd = SERVO_CMD_RUN;
+        }
+    } else if (reqState == 2) {  // stop requested 
+        servo_cmd = SERVO_CMD_STOP; 
+    }
+    commandEffecterInst.state = 0;  // unknown state
+    
+    switch (state) {
+    case STATE_IDLE:
+        if (servo_flags & SERVO_FLAGS_ERROR) {
+            // perform actions for entry to error state
+            // error condition has priority over any other state
+            // transistion
+
+            // TODO: turn on the brake if required
+            // TODO: disable the current loop if required
+
+            state = STATE_ERROR;
+        }
+        else if ((servo_cmd == SERVO_CMD_RUN)&&(servo_mode != SERVO_MODE_NOWAIT)) {
+            // set the motion parameters to the most recently requested
+            long requested_deltax = pfinalEffecterInst.value - current_position;
+            vprofiler_setParameters(requested_deltax, requested_velocity, requested_acceleration, mode_scurve);
+            
+            // transition to the waiting state
+            state = STATE_WAITING;
+        } 
+        else if ((servo_cmd == SERVO_CMD_RUN) && (servo_mode == SERVO_MODE_NOWAIT)) {
+            // set the motion parameters to the most recently requested and
+            // start the velocity profiler
+            // TODO: disengage the brake if required
+            // TODO: enable the current loop if required
+            long requested_deltax = pfinalEffecterInst.value - current_position;
+            vprofiler_setParameters(requested_deltax, requested_velocity, requested_acceleration, mode_scurve);
+            
+            // send a trigger pulse to the oscope and start the profiler
+            PORTB|=0x01;
+            vprofiler_start();
+            PORTB&=0xFE;            vprofiler_start();
+
+            // transition to the running state
+            state = STATE_RUNNING;
+        }
+        break;
+    case STATE_RUNNING:
+        // update the velocity profiler position - running is the only mode
+        // in which this happens
+        vprofiler_update();
+        if (servo_flags & SERVO_FLAGS_ERROR) {
+            // perform actions for entry to error state
+            // error condition has priority over any other state
+            // transistion
+
+            // TODO: turn on the brake if required
+            // TODO: disable the current loop if required
+
+            state = STATE_ERROR;
+        }
+        else if (servo_flags & SERVO_FLAGS_TRIGGER ) {
+            // perform actions for entry to warn state
+            // warning conition has priority over all but error
+            // transition
+
+            // TODO: turn on the brake if required
+            // TODO: disable the current loop if required
+
+            state = STATE_COND;
+        }
+        else if (servo_cmd == SERVO_CMD_STOP) {
+            // set the motion parameters to idle settings (follow/coast/brake)
+
+            // TODO: turn on the brake if required
+            // TODO: disable the current loop if required
+
+            // transition to the idle state
+            state = STATE_IDLE;
+        } 
+        else if (vprofiler_isDone()) {
+            // set the motion parameters to the done settings (follow/coast/brake)
+
+            // TODO: turn on the brake if required
+            // TODO: disable the current loop if required
+
+            // transition to the done state
+            state = STATE_DONE;
+        }
+        break;
+    case STATE_WAITING:
+        if (servo_flags & SERVO_FLAGS_ERROR) {
+            // perform actions for entry to error state
+            // error condition has priority over any other state
+            // transistion
+            // TODO: engage the brake if required
+            // TODO: disable the current loop if required
+            state = STATE_ERROR;
+        }
+        else if (!(servo_flags & SERVO_FLAGS_TRIGGER )) {
+            // when waiting, transition to running mode on negative
+            // edge of global trigger 
+            // TODO: disengage the brake if required
+            // TODO: enable the current loop if required
+            vprofiler_start();
+            state = STATE_RUNNING;
+        }
+        else if (servo_cmd == SERVO_CMD_STOP) {
+            // set the motion parameters to idle settings (follow/coast/brake)
+            // TODO: engage the brake if required
+            // TODO: disable the current loop if required
+            
+            // transition to the idle state
+            state = STATE_IDLE;
+        } 
+        break;
+    case STATE_DONE:
+        if (servo_flags & SERVO_FLAGS_ERROR) {
+            // perform actions for entry to error state
+            // error condition has priority over any other state
+            // transistion
+            // TODO: engage the brake if required
+            // TODO: disable the current loop if required
+            state = STATE_ERROR;
+        }
+        else if (servo_flags & SERVO_FLAGS_TRIGGER ) {
+            // perform actions for entry to warnding state
+            // warning conition has priority over all but error
+            // transition
+            // TODO: engage the brake if required
+            // TODO: disable the current loop if required
+            state = STATE_COND;
+        }
+        else if (servo_cmd == SERVO_CMD_STOP) {
+            // set the motion parameters to idle settings (follow/coast/brake)
+            // TODO: engage the brake if required
+            // TODO: disable the current loop if required
+            
+            // transition to the idle state
+            state = STATE_IDLE;
+        } 
+    case STATE_ERROR:
+        if (servo_cmd == SERVO_CMD_STOP) {
+            // set the motion parameters to idle settings (follow/coast/brake)
+            // TODO: disengage the brake if required
+            // TODO: enable the current loop if required
+            
+            // transition to the idle state
+            state = STATE_IDLE;
+        } 
+        break;
+    case STATE_COND:
+        if (servo_flags & SERVO_FLAGS_ERROR) {
+            // perform actions for entry to error state
+            // error condition has priority over any other state
+            // transistion
+            // TODO: engage the brake if required
+            // TODO: disable the current loop if required
+            state = STATE_ERROR;
+        }
+        else if (servo_cmd == SERVO_CMD_STOP) {
+            // set the motion parameters to idle settings (follow/coast/brake)
+            // TODO: disengage the brake if required
+            // TODO: enable the current loop if required
+            
+            // transition to the idle state
+            state = STATE_IDLE;
+        } 
+        break;
+    default:
+        // perform actions for entry to error state
+        // error condition has priority over any other state
+        // transistion
+        state = STATE_IDLE;
+    }
+    servo_cmd = SERVO_CMD_NONE; 
+    motionStateSensorInst.value = state;      
+}
 
 #endif // ENTITY_STEPPER1

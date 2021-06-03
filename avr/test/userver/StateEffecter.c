@@ -30,8 +30,8 @@
 
 //====================================================
 // effecter state machine states
-#define DISABLED  1  // this value was chosen to match the PLDM OperationalState value
-#define ENABLED   0  // this value was chosen to match the PLDM OperationalState value
+#define DISABLED  2  // this value was chosen to match the PLDM OperationalState value
+#define ENABLED   1  // this value was chosen to match the PLDM OperationalState value
 
 //===================================================================
 // stateeffecter_init()
@@ -75,14 +75,22 @@ unsigned char stateeffecter_getOutput(StateEffecterInstance *inst)
 //
 // parameters:
 //    inst - a pointer to the instance data for the effecter.
+//    state - the state to set
 // returns: true on success, otherwise, false
 unsigned char stateeffecter_setOperationalState(StateEffecterInstance *inst, unsigned char state)
 {
-    if (state>1) return 0;
+    // make sure the state is within range
+    if (state>DISABLED) return 0;
   
     unsigned char sreg = SREG;
     __builtin_avr_cli();
-    inst->operationalState = state;
+    // if enabling, set the default state
+    if ((state!=DISABLED) && (inst->operationalState==DISABLED)) {
+        inst->state = inst->defaultState;
+    }
+    // set the operational mode
+    if (state!=2) inst->operationalState = ENABLED;
+    else inst->operationalState = DISABLED;
     SREG = sreg;
     return 1;
 }
@@ -95,12 +103,14 @@ unsigned char stateeffecter_setOperationalState(StateEffecterInstance *inst, uns
 //
 // parameters:
 //    inst - a pointer to the instance data for the effecter.
-// returns: the present state of the effecter
+// returns: 1 on success, 0 on failure
 unsigned char stateeffecter_setPresentState(StateEffecterInstance *inst, unsigned char state)
 {
-    if ((state!=inst->stateWhenLow) && (state!=inst->stateWhenLow)) return 0;
-    inst->state = state;
-    return 1;
+    if (inst->allowedStatesMask & (1<<(state-1))) {
+        inst->state = state;
+        return 1;
+    }
+    return 0;
 }
 
 //===================================================================

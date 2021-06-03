@@ -29,12 +29,16 @@
 #include "node.h"
 
 typedef struct {
-    FIXEDPOINT_24_8 value;           // the current value read from the channel
+    FIXEDPOINT_24_8 value;           // the current value set for the effecter
+                                     // this will be linearized and sent to
+                                     // the channel
     unsigned char operationalState;  // the operational state of the sensor
+    FIXEDPOINT_24_8 maxSettable;     // the maximum settable value
+    FIXEDPOINT_24_8 minSettable;     // the minimum settable value
 } NumericEffecterInstance;
 
 void            numericeffecter_init(NumericEffecterInstance *inst);
-void            numericeffecter_setValue(NumericEffecterInstance *inst, FIXEDPOINT_24_8 val);
+unsigned char   numericeffecter_setValue(NumericEffecterInstance *inst, FIXEDPOINT_24_8 val);
 FIXEDPOINT_24_8 numericeffecter_getValue(NumericEffecterInstance *inst);
 unsigned char   numericeffecter_setOperationalState(NumericEffecterInstance *inst, unsigned char state);
 unsigned char   numericeffecter_getOperationalState(NumericEffecterInstance *inst);
