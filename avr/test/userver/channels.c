@@ -33,6 +33,7 @@
 #include "pdrdata.h"
 #include "avr/io.h"
 #include "channels.h"
+#include "stepdir_out.h"
 
 //===================================================================
 // This macro conatenates two tokens into one
@@ -198,7 +199,7 @@
 // to the "disabled" state.
 void channels_init() 
 {
-      // initialize all channels based on configuration paramters
+  // initialize all channels based on configuration paramters
   #ifdef CHANNEL_AIN12V
     ain12v_init();
   #endif

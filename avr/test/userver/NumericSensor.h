@@ -49,9 +49,14 @@ typedef struct {
 void            numericsensor_init(NumericSensorInstance *inst);
 void            numericsensor_setValue(NumericSensorInstance *inst, FIXEDPOINT_24_8 val);
 FIXEDPOINT_24_8 numericsensor_getValue(NumericSensorInstance *inst);
+unsigned char   numericsensor_isEnabled(NumericSensorInstance *inst);
 void            numericsensor_updateSensorState(NumericSensorInstance *inst);
 void            numericsensor_sensorRearm(NumericSensorInstance *inst);
 unsigned char   numericsensor_isTriggered(NumericSensorInstance *inst);
+unsigned char   numericsensor_isFatal(NumericSensorInstance *inst);
+unsigned char   numericsensor_isCritical(NumericSensorInstance *inst);
+unsigned char   numericsensor_isWarning(NumericSensorInstance *inst);
+unsigned char   numericsensor_isNormal(NumericSensorInstance *inst);
 unsigned char   numericsensor_setOperationalState(NumericSensorInstance *inst, unsigned char state, unsigned char eventMessageEnable);
 unsigned char   numericsensor_setPresentState(NumericSensorInstance *inst, unsigned char state);
 unsigned char   numericsensor_getOperationalState(NumericSensorInstance *inst);

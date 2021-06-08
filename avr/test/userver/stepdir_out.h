@@ -1,7 +1,7 @@
 
-//    timer1.h
+//    stepdir_out.h
 //
-//    This header file declares functions related to the timer1 
+//    This header file declares functions related to the stepdir_out 
 //    hardware as part of the PICMG reference code for IoT.
 //    
 //    More information on the PICMG IoT data model can be found within
@@ -23,13 +23,8 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
-#ifndef TIMER1_H
-#define TIMER1_H
-void timer1_init();
-
-// interface for delay timers with 1ms resolution.  These can be used
-// measuring programatic timing intervals.
-void delay_set(unsigned char delay_instance, unsigned int timeMS);
-unsigned char delay_isDone(unsigned char delay_instance);
-
-#endif
+#pragma once
+void step_dir_out1_init();
+void step_dir_out1_setOutput(long output); 
+void step_dir_out1_enable(); 
+void step_dir_out1_disable();

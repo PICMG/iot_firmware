@@ -141,6 +141,18 @@ unsigned char statesensor_isTriggered(StateSensorInstance *inst)
 }
 
 //===================================================================
+// statesensor_isEnabled()
+//
+// returns true if the sensor is enabled
+//  
+// parameters:
+//    inst - a pointer to the instance data for the sensor.
+unsigned char statesensor_isEnabled(StateSensorInstance *inst)
+{
+    return inst->operationalState != DISABLED;
+}
+
+//===================================================================
 // statesensor_setOperationalState()
 //
 // set the operational state of the sensor and return true.  Return 

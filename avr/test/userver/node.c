@@ -40,7 +40,6 @@
 #include "mctp.h"
 #include "pldm.h"
 #include "pdrdata.h"
-#include "control_servo.h"
 #include "entityStepper1.h"
 #include "EventGenerator.h"
 

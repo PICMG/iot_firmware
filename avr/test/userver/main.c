@@ -30,12 +30,11 @@
 #include "mctp.h"
 #include "node.h"
 #include "vprofiler.h"
-#include "timer1.h"
+#include "systemtimer.h"
 #include "channels.h"
+#include "stepdir_out.h"
 #include "entityStepper1.h"
 
-// temporary stubs
-void step_dir_out1_init() {}
 
 int main(void)
 {
@@ -48,7 +47,7 @@ int main(void)
 	vprofiler_setParameters(1000000L, TO_FP16(511), TO_FP16(1), 1);
   
   // initialize the global tick timer for 4000Khz rate timeout
-  timer1_init();
+  systemtimer_init();
 
   // initilaize the uart
   uart_init();
@@ -58,7 +57,8 @@ int main(void)
   node_init();
 
   // initialize all channels based on configuration paramters
-  channels_init();
+  //channels_init();
+  step_dir_out1_init();
 
   #ifdef ENTITY_STEPPER1
     entityStepper1_init();
@@ -84,7 +84,6 @@ int main(void)
         delay_set(0,1000);
     } else {
       // otherwise process messages
-      //if (mctp1.discovered) PORTB &= 0xDF;
       node_getResponse();
     }
   }

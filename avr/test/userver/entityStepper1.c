@@ -36,6 +36,7 @@
     #include "channels.h"
     #include "node.h"
     #include "vprofiler.h"
+    #include "stepdir_out.h"
 
     #define SINT32_TYPE 5
 
@@ -799,21 +800,26 @@
 #define STATE_WAITING    6
 #define STATE_DONE       7
 
-#define SERVO_CMD_NONE   0
-#define SERVO_CMD_RUN    1
-#define SERVO_CMD_STOP   2
-#define SERVO_CMD_DONE   3
-#define SERVO_CMD_ERR    4
-#define SERVO_CMD_COND   5
+#define MOTOR_CMD_NONE   0
+#define MOTOR_CMD_RUN    1
+#define MOTOR_CMD_STOP   2
+#define MOTOR_CMD_DONE   3
+#define MOTOR_CMD_ERR    4
+#define MOTOR_CMD_COND   5
 
-#define SERVO_MODE_NOWAIT  0
-#define SERVO_MODE_WAIT    1
+#define MOTOR_MODE_NOWAIT  0
+#define MOTOR_MODE_WAIT    1
 
-#define SERVO_FLAGS_ERROR      0x80
-#define SERVO_FLAGS_TRIGGER    0x40
+#define MOTOR_FLAGS_ERROR      0x80
+#define MOTOR_FLAGS_INTERLOCK  0x40
+#define MOTOR_FLAGS_WARNING    0x20
+#define MOTOR_FLAGS_TRIGGER    0x10
+#define MOTOR_FLAGS_POSLIMIT   0x80
+#define MOTOR_FLAGS_NEGLIMIT   0x40
+#define MOTOR_FLAGS_REVERSE    0x20
 
-unsigned char servo_cmd   = SERVO_CMD_NONE;
-unsigned char servo_mode  = SERVO_MODE_NOWAIT;
+unsigned char servo_cmd   = MOTOR_CMD_NONE;
+unsigned char servo_mode  = MOTOR_MODE_NOWAIT;
 unsigned char servo_flags = 0x00;
 
 // buffered values for the requested position, velocity and acceleration
@@ -825,6 +831,7 @@ FP16 requested_kffa;
 static char mode_scurve    = 1;
 static unsigned char state = STATE_IDLE;
 
+static FP16 vel = TO_FP16(0);
 //****************************************************************
 // this is the high-priority update loop for the servo motor
 // control function - it runs in priority mode and should not
@@ -832,51 +839,114 @@ static unsigned char state = STATE_IDLE;
 // are disabled when this function runs.
 //
 void entityStepper1_updateControl() {
+    step_dir_out1_setOutput(current_velocity);
+    
     // check to see if there was a requested state change
     unsigned char reqState = commandEffecterInst.state;
     if (reqState == 1) {  // run requested
         if (state == STATE_IDLE) {
             // run command is only valid from the idle state
-            servo_cmd = SERVO_CMD_RUN;
+            servo_cmd = MOTOR_CMD_RUN;
         }
     } else if (reqState == 2) {  // stop requested 
-        servo_cmd = SERVO_CMD_STOP; 
+        servo_cmd = MOTOR_CMD_STOP; 
     }
     commandEffecterInst.state = 0;  // unknown state
     
+    //=======================================================
+    // update flags based on current state of sensors
+    // start by clearling all flags but the motion direction
+    // this is set at the start of motion.
+    servo_flags &= (~(MOTOR_FLAGS_REVERSE));
+    if ((statesensor_isEnabled(&globalInterlockSensorInst))&&
+        (globalInterlockSensorInst.value == globalInterlockSensorInst.stateWhenHigh)) servo_flags |= MOTOR_FLAGS_INTERLOCK;
+    if ((statesensor_isEnabled(&triggerSensorInst))&&
+        (triggerSensorInst.value == triggerSensorInst.stateWhenHigh)) servo_flags |= MOTOR_FLAGS_TRIGGER;
+    #ifdef ENTITY_STEPPER1_POSITIVELIMIT
+        if ((statesensor_isEnabled(&positiveLimitSensorInst) == 1)&&
+            (positiveLimitSensorInst.value == positiveLimitSensorInst.stateWhenHigh)) 
+            servo_flags |= MOTOR_FLAGS_POSLIMIT;
+    #endif
+    #ifdef ENTITY_STEPPER1_NEGATIVELIMIT
+        if (statesensor_isEnabled(&negativeLimitSensorInst)&&
+            (negativeLimitSensorInst.value == negativeLimitSensorInst.stateWhenHigh)) 
+            servo_flags |= MOTOR_FLAGS_NEGLIMIT;
+    #endif
+    #ifdef ENTITY_STEPPER1_POSITION
+        if (
+                (numericsensor_isEnabled(&positionSensorInst)) &&
+                (
+                    (numericsensor_isCritical(&positionSensorInst)) ||
+                    (numericsensor_isFatal(&positionSensorInst))
+                )
+            ) { 
+            servo_flags |= MOTOR_FLAGS_ERROR;
+        }
+    #endif
+    #ifdef ENTITY_STEPPER1_POSITION
+        if (
+                (numericsensor_isEnabled(&positionSensorInst)) &&
+                    (numericsensor_isWarning(&positionSensorInst))
+                ) {
+            servo_flags |= MOTOR_FLAGS_WARNING;
+        }
+    #endif
+
+    //=============================================================
+    // update the state machine
     switch (state) {
     case STATE_IDLE:
-        if (servo_flags & SERVO_FLAGS_ERROR) {
+        if (servo_flags & MOTOR_FLAGS_ERROR) {
             // perform actions for entry to error state
             // error condition has priority over any other state
             // transistion
 
-            // TODO: turn on the brake if required
-            // TODO: disable the current loop if required
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
 
             state = STATE_ERROR;
         }
-        else if ((servo_cmd == SERVO_CMD_RUN)&&(servo_mode != SERVO_MODE_NOWAIT)) {
+        else if ((servo_cmd == MOTOR_CMD_RUN)&&(servo_mode != MOTOR_MODE_NOWAIT)) {
             // set the motion parameters to the most recently requested
             long requested_deltax = pfinalEffecterInst.value - current_position;
+            servo_flags = 0;
+            if (requested_deltax<0) servo_flags |= MOTOR_FLAGS_REVERSE;
             vprofiler_setParameters(requested_deltax, requested_velocity, requested_acceleration, mode_scurve);
             
             // transition to the waiting state
             state = STATE_WAITING;
         } 
-        else if ((servo_cmd == SERVO_CMD_RUN) && (servo_mode == SERVO_MODE_NOWAIT)) {
+        else if ((servo_cmd == MOTOR_CMD_RUN) && (servo_mode == MOTOR_MODE_NOWAIT)) {
             // set the motion parameters to the most recently requested and
             // start the velocity profiler
-            // TODO: disengage the brake if required
-            // TODO: enable the current loop if required
+
+            // disable the brake if it is set
+            #ifdef ENTITY_STEPPER1_BRAKE
+                stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenLow);
+            #endif
+
+            // enable the motor if it is disabled
+            #ifdef ENTITY_STEPPER1_ENABLE
+                stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenHigh);
+            #endif
+
             long requested_deltax = pfinalEffecterInst.value - current_position;
             vprofiler_setParameters(requested_deltax, requested_velocity, requested_acceleration, mode_scurve);
             
-            // send a trigger pulse to the oscope and start the profiler
-            PORTB|=0x01;
+            // start the velocity profiler
             vprofiler_start();
-            PORTB&=0xFE;            vprofiler_start();
-
+            
             // transition to the running state
             state = STATE_RUNNING;
         }
@@ -885,31 +955,68 @@ void entityStepper1_updateControl() {
         // update the velocity profiler position - running is the only mode
         // in which this happens
         vprofiler_update();
-        if (servo_flags & SERVO_FLAGS_ERROR) {
+        if (servo_flags & MOTOR_FLAGS_ERROR) {
             // perform actions for entry to error state
             // error condition has priority over any other state
             // transistion
 
-            // TODO: turn on the brake if required
-            // TODO: disable the current loop if required
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
 
             state = STATE_ERROR;
         }
-        else if (servo_flags & SERVO_FLAGS_TRIGGER ) {
-            // perform actions for entry to warn state
+        else if ((servo_flags & MOTOR_FLAGS_TRIGGER ) || 
+            ((servo_flags & MOTOR_FLAGS_NEGLIMIT) && (servo_flags & MOTOR_FLAGS_REVERSE)) ||
+            ((servo_flags & MOTOR_FLAGS_POSLIMIT) && ((servo_flags & MOTOR_FLAGS_REVERSE)==0))
+            )
+        {
+            // perform actions for entry to condition stop state
             // warning conition has priority over all but error
             // transition
 
-            // TODO: turn on the brake if required
-            // TODO: disable the current loop if required
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINCONDITIONSTOP_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINCONDITIONSTOP_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
 
             state = STATE_COND;
         }
-        else if (servo_cmd == SERVO_CMD_STOP) {
+        else if (servo_cmd == MOTOR_CMD_STOP) {
             // set the motion parameters to idle settings (follow/coast/brake)
 
-            // TODO: turn on the brake if required
-            // TODO: disable the current loop if required
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
 
             // transition to the idle state
             state = STATE_IDLE;
@@ -917,99 +1024,214 @@ void entityStepper1_updateControl() {
         else if (vprofiler_isDone()) {
             // set the motion parameters to the done settings (follow/coast/brake)
 
-            // TODO: turn on the brake if required
-            // TODO: disable the current loop if required
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINDONE_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINDONE_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
 
             // transition to the done state
             state = STATE_DONE;
         }
         break;
     case STATE_WAITING:
-        if (servo_flags & SERVO_FLAGS_ERROR) {
+        if (servo_flags & MOTOR_FLAGS_ERROR) {
             // perform actions for entry to error state
             // error condition has priority over any other state
             // transistion
-            // TODO: engage the brake if required
-            // TODO: disable the current loop if required
+
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
+
             state = STATE_ERROR;
         }
-        else if (!(servo_flags & SERVO_FLAGS_TRIGGER )) {
+        else if (!(servo_flags & MOTOR_FLAGS_TRIGGER )) {
             // when waiting, transition to running mode on negative
             // edge of global trigger 
-            // TODO: disengage the brake if required
-            // TODO: enable the current loop if required
+
+            // disable the brake if it is set
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenLow);
+            #endif
+
+            // enable the motor if it is disabled
+            #ifdef ENTITY_STEPPER1_ENABLE
+                stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenHigh);
+            #endif
             vprofiler_start();
             state = STATE_RUNNING;
         }
-        else if (servo_cmd == SERVO_CMD_STOP) {
+        else if (servo_cmd == MOTOR_CMD_STOP) {
             // set the motion parameters to idle settings (follow/coast/brake)
-            // TODO: engage the brake if required
-            // TODO: disable the current loop if required
+
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
             
             // transition to the idle state
             state = STATE_IDLE;
         } 
         break;
     case STATE_DONE:
-        if (servo_flags & SERVO_FLAGS_ERROR) {
+        if (servo_flags & MOTOR_FLAGS_ERROR) {
             // perform actions for entry to error state
             // error condition has priority over any other state
             // transistion
-            // TODO: engage the brake if required
-            // TODO: disable the current loop if required
+
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
+
             state = STATE_ERROR;
         }
-        else if (servo_flags & SERVO_FLAGS_TRIGGER ) {
+        else if (servo_flags & MOTOR_FLAGS_TRIGGER ) {
             // perform actions for entry to warnding state
             // warning conition has priority over all but error
             // transition
-            // TODO: engage the brake if required
-            // TODO: disable the current loop if required
+
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINCONDITIONSTOP_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINCONDITIONSTOP_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
             state = STATE_COND;
         }
-        else if (servo_cmd == SERVO_CMD_STOP) {
+        else if (servo_cmd == MOTOR_CMD_STOP) {
             // set the motion parameters to idle settings (follow/coast/brake)
-            // TODO: engage the brake if required
-            // TODO: disable the current loop if required
+
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
             
             // transition to the idle state
             state = STATE_IDLE;
         } 
     case STATE_ERROR:
-        if (servo_cmd == SERVO_CMD_STOP) {
+        if (servo_cmd == MOTOR_CMD_STOP) {
             // set the motion parameters to idle settings (follow/coast/brake)
-            // TODO: disengage the brake if required
-            // TODO: enable the current loop if required
+
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
             
             // transition to the idle state
             state = STATE_IDLE;
         } 
         break;
     case STATE_COND:
-        if (servo_flags & SERVO_FLAGS_ERROR) {
+        if (servo_flags & MOTOR_FLAGS_ERROR) {
             // perform actions for entry to error state
             // error condition has priority over any other state
             // transistion
-            // TODO: engage the brake if required
-            // TODO: disable the current loop if required
+
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
             state = STATE_ERROR;
         }
-        else if (servo_cmd == SERVO_CMD_STOP) {
+        else if (servo_cmd == MOTOR_CMD_STOP) {
             // set the motion parameters to idle settings (follow/coast/brake)
-            // TODO: disengage the brake if required
-            // TODO: enable the current loop if required
+
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
             
             // transition to the idle state
             state = STATE_IDLE;
         } 
         break;
     default:
-        // perform actions for entry to error state
-        // error condition has priority over any other state
-        // transistion
-        state = STATE_IDLE;
+        // this case should never be reached - transition to ERROR_STOP
+        state = STATE_ERROR;
     }
-    servo_cmd = SERVO_CMD_NONE; 
+    servo_cmd = MOTOR_CMD_NONE; 
     motionStateSensorInst.value = state;      
 }
 

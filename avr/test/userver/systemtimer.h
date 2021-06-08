@@ -1,9 +1,8 @@
-//*******************************************************************
-//    vprofiler.h
+
+//    systemtimer.h
 //
-//    This header file declares functions related to the velocity 
-//    profiler function and is part of the PICMG reference code for
-//    IoT.
+//    This header file declares functions related to the systemtimer 
+//    hardware as part of the PICMG reference code for IoT.
 //    
 //    More information on the PICMG IoT data model can be found within
 //    the PICMG family of IoT specifications.  For more information,
@@ -24,19 +23,10 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
-#ifndef VPROFILER_H_INCLUDED
-#define VPROFILER_H_INCLUDED
+#pragma once
+void systemtimer_init();
 
-#define FP16 long
-#define TO_FP16(x) ((long)(x*65536))
-#define FP16_TO_FLOAT(x) (((float)(x))/((float)65536.0f))
-#define FLOAT_TO_FP16(x) ((long)((x)*65536.0f))
-
-void vprofiler_setParameters(long deltax, FP16 velocity, FP16 acceleration, char scurve);
-void vprofiler_start();
-void vprofiler_update();
-void vprofiler_stop();
-unsigned char vprofiler_isDone();
-
-extern long current_velocity;
-#endif // VPROFILER_H_INCLUDED
+// interface for delay timers with 1ms resolution.  These can be used
+// measuring programatic timing intervals.
+void delay_set(unsigned char delay_instance, unsigned int timeMS);
+unsigned char delay_isDone(unsigned char delay_instance);

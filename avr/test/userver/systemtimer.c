@@ -1,7 +1,7 @@
 
-//    timer1.c
+//    systemtimer.c
 //
-//    This file defines functions related to the timer1 
+//    This file defines functions related to the systemtimer 
 //    hardware as part of the PICMG reference code for IoT.
 //    
 //    More information on the PICMG IoT data model can be found within
@@ -29,13 +29,15 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "timer1.h"
+#include "systemtimer.h"
 #include "vprofiler.h"
 #include "pdrdata.h"
 #include "pldm.h"
 #include "entityStepper1.h"
 
-static int duty = 00;
+#ifndef F_CPU
+    #define F_CPU 16000000
+#endif
 
 #define DELAY_INSTANCES 4
 static unsigned int delay_count[DELAY_INSTANCES];
@@ -44,12 +46,11 @@ static unsigned int delay_newlimit[DELAY_INSTANCES];
 static unsigned char delay_limit_changed[DELAY_INSTANCES];
 
 /********************************************************************
-* __vector_11
+* TIMER2_COMPA_VECT
 *
-* interrupt handler for timer 1 reset.  This timer is programmed for
+* interrupt handler for timer 2 compare match.  This timer is programmed for
 * a 4kHz update rate.  All other system ticks are synchronized from 
 * this one.
-* When the PWM output is used, it is also driven from this timer.
 *
 * parameters:
 *    nothing
@@ -60,11 +61,7 @@ static unsigned char delay_limit_changed[DELAY_INSTANCES];
 *    updates any delay counters
 */
 static unsigned char tick = 0;
-ISR(TIMER1_OVF_vect) {
-
-    // the duty cycle is set to the velocity profiler output for now
-    OCR1A = duty;
-    
+ISR(TIMER2_COMPA_vect) {
     #ifdef ENTITY_STEPPER1
         entityStepper1_updateControl();
     #endif
@@ -74,8 +71,6 @@ ISR(TIMER1_OVF_vect) {
     #ifdef ENTITY_PID1
         entityPID1_updateControl();
     #endif
-
-    duty = (unsigned int)(current_velocity>>14)+2048L;
 
     // update delay counters every fourth clock
     if (tick == 0) {
@@ -91,11 +86,10 @@ ISR(TIMER1_OVF_vect) {
             }
     }
     tick = (tick+1)&0x03;
-
 }
 
 /********************************************************************
-* timer1_init()
+* systemtimer_init()
 *
 * initialize the timer for pwm mode with a frame rate of 4kHz
 *
@@ -110,8 +104,10 @@ ISR(TIMER1_OVF_vect) {
 *
 * NOTE: This function assumes that the cpu clock is running at 16MHz
 */
-void timer1_init()
+void systemtimer_init()
 {
+    DDRD |= 0x04;
+
     /* clear all the delay counters */
     for (unsigned char i = 0; i<DELAY_INSTANCES; i++) {
         delay_count[i] = 0;
@@ -120,23 +116,28 @@ void timer1_init()
         delay_limit_changed[i] = 0;
     }
 
-    /* set to fast pwm mode, OCR1A = top, clock divisor = 1*/
-    TCCR1A = 0x82;
-    TCCR1B = 0x19;
+    // TCCR2A
+    // Normal Port operation, OC2A disconnected
+    // Normal Port operation, OC2B disconnected
+    // WGM = 010 = CTC  - WGM21:0 = 10'b
+    TCCR2A = 0x02;
 
-    /* set the top value to 3999 (divisor for 4khz) */
-    /* duty cycle set to 50% */
-    OCR1A = 2000;
-    ICR1 = 3999;
+    // TCCR2B
+    // No force compare for OCA/OCB
+    // WGM22 = 0
+    // CS2[2:0] = 011'b (divide by 32)
+    TCCR2B = 0x03;
 
-    /* enable global interrupts if they are not already enabled */
+    // Set the divisor for 4Khz
+    // 16Mhz/32(prescaler) = 500khz(prescaled clock rate)
+    // 500Khz / 125 = 4KHz 
+    OCR2A = (F_CPU/32) / 4000;
+
+    // enable global interrupts if they are not already enabled 
     __builtin_avr_sei();
 
-    /* enable interrupts on tov */
-    TIMSK1 = 0x01;
-
-    /* enable the output of the timer */
-    DDRB |= 0x03;
+    // enable interrupts on compare match A
+    TIMSK2 = 0x02;
 }
 
 /********************************************************************

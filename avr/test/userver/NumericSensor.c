@@ -244,6 +244,62 @@ unsigned char numericsensor_setOperationalState(NumericSensorInstance *inst, uns
 }
 
 //===================================================================
+// numericsensor_isEnabled()
+//
+// return true if the sensor is enabled.
+//  
+// parameters:
+//    inst - a pointer to the instance data for the sensor.
+// returns: true if the sensor is enabled.
+unsigned char numericsensor_isEnabled(NumericSensorInstance *inst)
+{
+    return (inst->operationalState != DISABLED);
+}
+
+//===================================================================
+// numericsensor_isFatal()
+//
+// return true if the sensor is over the fatal limits.
+//  
+unsigned char   numericsensor_isFatal(NumericSensorInstance *inst)
+{
+    return ((inst->eventState == STATE_LOWERFATAL)||
+        (inst->eventState == STATE_UPPERFATAL));
+}
+
+//===================================================================
+// numericsensor_isCritical()
+//
+// return true if the sensor is over the critical limits.
+//  
+unsigned char   numericsensor_isCritical(NumericSensorInstance *inst)
+{
+    return ((inst->eventState == STATE_LOWERCRITICAL)||
+        (inst->eventState == STATE_UPPERCRITICAL));
+}
+
+//===================================================================
+// numericsensor_isWarning()
+//
+// return true if the sensor is over the Warning limits.
+//  
+unsigned char   numericsensor_isWarning(NumericSensorInstance *inst)
+{
+    return ((inst->eventState == STATE_LOWERWARNING)||
+        (inst->eventState == STATE_UPPERWARNING));
+}
+
+//===================================================================
+// numericsensor_isNormal()
+//
+// return true if the sensor is with normal limits.
+//  
+unsigned char   numericsensor_isNormal(NumericSensorInstance *inst)
+{
+    return (inst->eventState == STATE_NORMAL);
+}
+
+//===================================================================
 // numericsensor_setPresentState()
 //
 // set the present state of the sensor and return true. Return false 
