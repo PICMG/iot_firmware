@@ -42,5 +42,6 @@ unsigned char   numericeffecter_setValue(NumericEffecterInstance *inst, FIXEDPOI
 FIXEDPOINT_24_8 numericeffecter_getValue(NumericEffecterInstance *inst);
 unsigned char   numericeffecter_setOperationalState(NumericEffecterInstance *inst, unsigned char state);
 unsigned char   numericeffecter_getOperationalState(NumericEffecterInstance *inst);
+unsigned char   numericeffecter_isEnabled(NumericEffecterInstance *inst);
 
 #endif // NUMERICEFFECTER_H_INCLUDED

@@ -61,10 +61,10 @@ static long dwell = 10;            // the dwell time after the profile
 * parameters:
 *   deltax - a signed integer, that specifies the number of encoder
 *      steps that the motor should move.
-*   velocity - a 15.16 signed floating point number for the target
+*   velocity - a 15.16 signed fixed point number for the target
 *      steady-state velocity of the profile. Although this number is
 *      signed, assume it is positive only.
-*   acceleration - a 15.16 signed floating point number that specifies
+*   acceleration - a 15.16 signed fixed point number that specifies
 *      the average acceleration during the transient phase of the
 *      motion.  Acceleration must be more than 1/32000 times the velocity
 *      to avoid numeric overflow.
@@ -87,7 +87,11 @@ static FP16 calc_dx(float v0, float a, float j, float dt) {
 }
 
 /********************************************************************
-* try3()
+* vprofiler_start()
+*
+* calculate the trajectory parameters for the most recently requested
+* move.  This routine calculates parameters for position-velocity moves.
+* For velocity only moves, use vprofiler_startv().
 *
 */
 void vprofiler_start()
@@ -100,7 +104,7 @@ void vprofiler_start()
 	float xt2 = 0.5f * FP16_TO_FLOAT(active_acceleration) * t2 * t2;
 	float t3 = t2 + ((float)active_position-2.0f*xt2) / FP16_TO_FLOAT(active_velocity);
 	float jerk = 0.0f;
-	float vplateau = FP16_TO_FLOAT(active_velocity);
+	float vprofile = FP16_TO_FLOAT(active_velocity);
 
 	if (active_scurve) jerk = FP16_TO_FLOAT(active_acceleration) * 4.0f / t2;
 	if (fabs(xt2) >= fabs((float)active_position) / 2.0f) {
@@ -111,7 +115,7 @@ void vprofiler_start()
 		xt2 = 0.5f * FP16_TO_FLOAT(active_acceleration) * t2 * t2;
 		// calculate the plateau velocity
 		if (active_scurve) jerk = FP16_TO_FLOAT(active_acceleration)*4.0f / t2;
-		vplateau = FP16_TO_FLOAT(active_acceleration) * t2;
+		vprofile = FP16_TO_FLOAT(active_acceleration) * t2;
 	}
 	// float dxt3 = (float)active_position - 2.0 * xt2;
 
@@ -126,14 +130,14 @@ void vprofiler_start()
 	float deltat;
 	deltat = (float)gt1 - (t2 / 2.0f);
 	gdx1 = (active_scurve) ?
-		calc_dx(vplateau/2.0, +2.0f * FP16_TO_FLOAT(active_acceleration), -jerk, deltat) :
-		calc_dx(vplateau / 2.0, +FP16_TO_FLOAT(active_acceleration), 0.0f, deltat);
+		calc_dx(vprofile/2.0, +2.0f * FP16_TO_FLOAT(active_acceleration), -jerk, deltat) :
+		calc_dx(vprofile / 2.0, +FP16_TO_FLOAT(active_acceleration), 0.0f, deltat);
 	gdx1 -= (active_scurve) ?
-		calc_dx(vplateau / 2.0, 2.0f * FP16_TO_FLOAT(active_acceleration), jerk, (deltat - 1.0f)) :
-		calc_dx(vplateau / 2.0, FP16_TO_FLOAT(active_acceleration), 0.0f, (deltat - 1.0f));
+		calc_dx(vprofile / 2.0, 2.0f * FP16_TO_FLOAT(active_acceleration), jerk, (deltat - 1.0f)) :
+		calc_dx(vprofile / 2.0, FP16_TO_FLOAT(active_acceleration), 0.0f, (deltat - 1.0f));
 	gv1 = (active_scurve) ?
-		calc_v(vplateau / 2.0, + 2.0f * FP16_TO_FLOAT(active_acceleration),-jerk,deltat) :
-		calc_v(vplateau / 2.0, + FP16_TO_FLOAT(active_acceleration), 0.0f, deltat);
+		calc_v(vprofile / 2.0, + 2.0f * FP16_TO_FLOAT(active_acceleration),-jerk,deltat) :
+		calc_v(vprofile / 2.0, + FP16_TO_FLOAT(active_acceleration), 0.0f, deltat);
 	ga1 = FLOAT_TO_FP16((active_scurve) ?
 		2.0f * FP16_TO_FLOAT(active_acceleration) - jerk * deltat :
 		FP16_TO_FLOAT(active_acceleration));
@@ -141,48 +145,48 @@ void vprofiler_start()
 	gj1_6 = gj1 / 6;
 
 	deltat = (float)gt2 - t2;
-	gdx2 = calc_dx(vplateau, 0, 0, deltat);
+	gdx2 = calc_dx(vprofile, 0, 0, deltat);
 	gdx2 -= (active_scurve) ?
-		calc_dx(vplateau, 0, -jerk, (deltat - 1.0f)) :
-		calc_dx(vplateau, FP16_TO_FLOAT(active_acceleration), 0.0f, (deltat - 1.0f));
-	gv2 = FLOAT_TO_FP16(vplateau);
+		calc_dx(vprofile, 0, -jerk, (deltat - 1.0f)) :
+		calc_dx(vprofile, FP16_TO_FLOAT(active_acceleration), 0.0f, (deltat - 1.0f));
+	gv2 = FLOAT_TO_FP16(vprofile);
 	ga2 = 0;
 	gj2 = 0;
 	gj2_6 = gj2 / 6;
 
 	deltat = (float)gt3 - t3;
 	gdx3 = (active_scurve) ?
-		calc_dx(vplateau, 0, -jerk, deltat) :
-		calc_dx(vplateau, FP16_TO_FLOAT(-active_acceleration), 0.0f, deltat);
+		calc_dx(vprofile, 0, -jerk, deltat) :
+		calc_dx(vprofile, FP16_TO_FLOAT(-active_acceleration), 0.0f, deltat);
 	if (gt2 == gt3) {
 		// truncated waveform
 		gdx3 -= (active_scurve) ?
-			calc_dx(vplateau, 0, -jerk, (deltat - 1.0f)) :
-			calc_dx(vplateau, FP16_TO_FLOAT(active_acceleration), 0.0f, (deltat - 1.0f));
+			calc_dx(vprofile, 0, -jerk, (deltat - 1.0f)) :
+			calc_dx(vprofile, FP16_TO_FLOAT(active_acceleration), 0.0f, (deltat - 1.0f));
 	}
 	else {
 		// full waveform
 		gdx3 -= (active_scurve) ?
-			calc_dx(vplateau, 0, 0, (deltat - 1.0)) :
-			calc_dx(vplateau, 0, 0.0f, (deltat - 1.0));
+			calc_dx(vprofile, 0, 0, (deltat - 1.0)) :
+			calc_dx(vprofile, 0, 0.0f, (deltat - 1.0));
 	}
 	gv3 = (active_scurve) ?
-		calc_v(vplateau, 0, -jerk, deltat) :
-		calc_v(vplateau, FP16_TO_FLOAT(-active_acceleration), 0.0f, deltat);
+		calc_v(vprofile, 0, -jerk, deltat) :
+		calc_v(vprofile, FP16_TO_FLOAT(-active_acceleration), 0.0f, deltat);
 	ga3 = FLOAT_TO_FP16((active_scurve) ?- jerk * deltat : FP16_TO_FLOAT(-active_acceleration));
 	gj3 = FLOAT_TO_FP16((active_scurve) ? -jerk : 0.0f);
 	gj3_6 = gj3 / 6;
 
 	deltat = (float)gt4 - (t3 + t2 / 2.0f);
 	gdx4 = (active_scurve) ?
-		calc_dx(vplateau / 2.0f, 2.0f * FP16_TO_FLOAT(-active_acceleration), +jerk, deltat) :
-		calc_dx(vplateau / 2.0f, FP16_TO_FLOAT(-active_acceleration), 0.0f, deltat);
+		calc_dx(vprofile / 2.0f, 2.0f * FP16_TO_FLOAT(-active_acceleration), +jerk, deltat) :
+		calc_dx(vprofile / 2.0f, FP16_TO_FLOAT(-active_acceleration), 0.0f, deltat);
 	gdx4 -= (active_scurve) ?
-		calc_dx(vplateau / 2.0f, 2.0f * FP16_TO_FLOAT(-active_acceleration), -jerk, (deltat-1.0f)) :
-		calc_dx(vplateau / 2.0f, FP16_TO_FLOAT(-active_acceleration), 0.0f, (deltat-1.0f));
+		calc_dx(vprofile / 2.0f, 2.0f * FP16_TO_FLOAT(-active_acceleration), -jerk, (deltat-1.0f)) :
+		calc_dx(vprofile / 2.0f, FP16_TO_FLOAT(-active_acceleration), 0.0f, (deltat-1.0f));
 	gv4 = (active_scurve) ?
-		calc_v(vplateau/2.0f, 2.0f * FP16_TO_FLOAT(-active_acceleration), +jerk, deltat) :
-		calc_v(vplateau/2.0f, FP16_TO_FLOAT(-active_acceleration), 0.0f, deltat);
+		calc_v(vprofile/2.0f, 2.0f * FP16_TO_FLOAT(-active_acceleration), +jerk, deltat) :
+		calc_v(vprofile/2.0f, FP16_TO_FLOAT(-active_acceleration), 0.0f, deltat);
 	ga4 = FLOAT_TO_FP16((active_scurve) ?
 		2.0f * FP16_TO_FLOAT(-active_acceleration) + jerk * deltat :
 		FP16_TO_FLOAT(-active_acceleration));
@@ -196,6 +200,62 @@ void vprofiler_start()
 
 	current_position = 0;
 	current_velocity = 0;
+	current_jerk = FLOAT_TO_FP16(jerk);
+	current_jerk6 = current_jerk / 6;
+	current_acceleration = (active_scurve) ? 0 : active_acceleration;
+	current_t = gt1;
+	phase = 0;
+}
+
+/********************************************************************
+* vprofiler_startv()
+*
+* calculate the trajectory parameters for the most recently requested
+* controlled velocity motion.  This routine calculates parameters for 
+* controlled velocity motion, for position-velocity moves, use 
+* vprofiler_start().
+*/
+void vprofiler_startv()
+{
+	float t2 = FP16_TO_FLOAT(active_velocity-current_velocity) / FP16_TO_FLOAT(active_acceleration);
+	if (t2<0) {
+		active_acceleration = -active_acceleration;
+		t2 = -t2;
+	}
+
+	// calculate the jerk for scurve moves
+	float jerk = 0.0f;
+	float vplateau = FP16_TO_FLOAT(active_velocity);	
+	if (active_scurve) jerk = FP16_TO_FLOAT(active_acceleration) * 4.0f / t2;
+
+	// calculate the time points for each transition.
+	gt1 = (long)(t2 / 2.0 + 1.0);  	// half way through the acceleration transient
+	gt2 = (long)(t2 + 1.0);			// the beginning of the constant velocity phase
+
+	// gv1 is the velocity at the sample period immediately at (or after) the first
+	// transition point.  ga1 is the acceleration immediately at (or after) the first
+	// transition point.
+	float deltat;
+	deltat = (float)gt1 - (t2 / 2.0f);
+	gv1 = (active_scurve) ?
+		calc_v(((FP16_TO_FLOAT(current_velocity)) + vplateau) / 2.0, + 2.0f * FP16_TO_FLOAT(active_acceleration),-jerk,deltat) :
+		calc_v(((FP16_TO_FLOAT(current_velocity)) + vplateau) / 2.0, + FP16_TO_FLOAT(active_acceleration), 0.0f, deltat);
+	ga1 = FLOAT_TO_FP16((active_scurve) ?
+		2.0f * FP16_TO_FLOAT(active_acceleration) - jerk * deltat :
+		FP16_TO_FLOAT(active_acceleration));
+	gj1 = FLOAT_TO_FP16((active_scurve) ?-jerk : 0.0f);
+	gj1_6 = gj1 / 6;
+
+	// gv2 is the velocity at the sample period immediately at (or after) the second
+	// transition point.  ga1 is the acceleration immediately at (or after) the second
+	// transition point.
+	deltat = (float)gt2 - t2;
+	gv2 = FLOAT_TO_FP16(vplateau);
+	ga2 = 0;
+	gj2 = 0;
+	gj2_6 = gj2 / 6;
+
+	// current_velocity = current_velocity;  - Begin slew at the current velocity
 	current_jerk = FLOAT_TO_FP16(jerk);
 	current_jerk6 = current_jerk / 6;
 	current_acceleration = (active_scurve) ? 0 : active_acceleration;
@@ -289,6 +349,56 @@ void vprofiler_update() {
 		current_velocity += current_acceleration + current_jerk / 2;
 		current_acceleration += current_jerk;
 		current_t--;
+	}
+}
+
+/********************************************************************
+* vprofiler_updatev
+*
+* this function should be called once per sample period for velocity
+* only moves.  It updates the motion trajectory based on trajectory 
+* paramters that were previously set.
+*/
+void vprofiler_updatev() {
+    if (estop) {
+        current_velocity = 0;
+        current_acceleration = 0;
+        current_jerk = 0;
+        current_jerk6 = 0;
+        phase = 5;
+        estop = 0;
+        current_t = dwell;
+    }
+	if (current_t == 1) {
+		// current_t is a countdown timer until the end of the 
+		// current motion phase.  When it reaches 1, it is time
+		// to load the parameters for the next motion phase
+		switch (phase) {
+			case 0:
+				// second half of acceleration transient
+				current_velocity = gv1;
+				current_acceleration = ga1;
+				current_jerk = gj1;
+				current_jerk6 = gj1_6;
+				current_t = gt2 - gt1;
+				phase = (gt2 == gt3) ? 2 : 1;
+				break;
+			default:
+				// start of velocity plateau
+				current_velocity = gv2;
+				current_acceleration = ga2;
+				current_jerk = gj2;
+				current_jerk6 = gj2_6;
+				current_t = 10000;   // set current_t above 1
+				phase = 2;
+				break;
+		}
+	}
+	else {
+		current_position = current_velocity + current_acceleration / 2 + current_jerk6;
+		current_velocity += current_acceleration + current_jerk / 2;
+		current_acceleration += current_jerk;
+		if (phase!=2) current_t--;
 	}
 }
 

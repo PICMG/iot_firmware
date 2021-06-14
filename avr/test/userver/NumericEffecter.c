@@ -130,7 +130,7 @@ FIXEDPOINT_24_8 numericeffecter_getValue(NumericEffecterInstance *inst)
 // returns: true on success, otherwise, false
 unsigned char numericeffecter_setOperationalState(NumericEffecterInstance *inst, unsigned char state)
 {
-    if (state>1) return 0;
+    if (state>2) return 0;
  
     unsigned char sreg = SREG;
     __builtin_avr_cli();
@@ -155,5 +155,18 @@ unsigned char numericeffecter_setOperationalState(NumericEffecterInstance *inst,
 unsigned char numericeffecter_getOperationalState(NumericEffecterInstance *inst)
 {
     return inst->operationalState;
+}
+
+//===================================================================
+// numericeffecter_isEnabled()
+//
+// return true if the operational state is "enabled".
+//
+// parameters:
+//    inst - a pointer to the instance data for the effecter.
+// returns: the operational state of the effecter
+unsigned char numericeffecter_isEnabled(NumericEffecterInstance *inst)
+{
+    return (inst->operationalState!=DISABLED);
 }
 

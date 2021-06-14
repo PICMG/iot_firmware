@@ -37,6 +37,8 @@
     #define F_CPU 16000000
 #endif
 
+#define VELOCITYDEBUG
+#ifndef VELOCITYDEBUG
 /********************************************************************
 * stepdir_out_init()
 *
@@ -169,5 +171,56 @@ void step_dir_out1_setOutput(long requested_pulses)
         timer_divisor = (F_CPU/SAMPLE_RATE) / pulses;
     }
 }    
+#else
+static unsigned char direction;
+static unsigned int timer_divisor;
+static long residual = 0;
+void step_dir_out1_init()
+{
+    /* set to fast pwm mode, OCR1A = top, clock divisor = 1*/
+    TCCR1A = 0x82;
+    TCCR1B = 0x19;
+
+    /* set the top value to 3999 (divisor for 4khz) */
+    /* duty cycle set to 50% */
+    OCR1A = 2000;
+    ICR1 = 3999;
+
+    /* enable the output of the timer on OCR1A*/
+    DDRB |= 0x02;
+}
+
+/********************************************************************
+* stepdir_out_setOutput()
+*
+* program the step/dir to output a certain number of pulses within
+* the sample frame.  This function should be called from the high-frequency
+* loop.
+*
+* Due to rounding errors, this function should not be used to achieve
+* more than about 40 steps/microsteps per 4KHz sample frame.  If higher
+* rates are desired, a more sophisticated algorithm will be required.
+*
+* parameters:
+*    the number of pulses to output during the frame time
+*
+* returns:
+*    void
+*
+* changes:
+*    updates the timer registers for Timer1 (used for the step/dir 
+*    rate generator)
+*
+* NOTE: This function assumes that the cpu clock is running at 16MHz
+*/
+void step_dir_out1_setOutput(long requested_pulses)
+{    
+    PIND = 0x04;
+
+    // set the new top value to the timer divisor
+    OCR1A = 2000+(requested_pulses/(16*1024));
     
+    PIND = 0x04;
+}    
+#endif    
 

@@ -35,6 +35,8 @@
 void vprofiler_setParameters(long deltax, FP16 velocity, FP16 acceleration, char scurve);
 void vprofiler_start();
 void vprofiler_update();
+void vprofiler_startv();
+void vprofiler_updatev();
 void vprofiler_stop();
 unsigned char vprofiler_isDone();
 
