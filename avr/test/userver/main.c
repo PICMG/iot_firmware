@@ -57,9 +57,8 @@ int main(void)
   node_init();
 
   // initialize all channels based on configuration paramters
-  //channels_init();
-  step_dir_out1_init();
-
+  channels_init();
+  
   #ifdef ENTITY_STEPPER1
     entityStepper1_init();
   #endif

@@ -37,7 +37,7 @@
     #define F_CPU 16000000
 #endif
 
-#define VELOCITYDEBUG
+// #define VELOCITYDEBUG
 #ifndef VELOCITYDEBUG
 /********************************************************************
 * stepdir_out_init()
@@ -85,7 +85,7 @@ void step_dir_out1_init()
     TCCR1B = 0x19;
 
     // set the direction pin data direction to output
-    DDRB |= (1<<DDB0);
+    DDRB |= (1<<DDB4);
 }
 
 /********************************************************************
@@ -113,8 +113,6 @@ void step_dir_out1_init()
 */
 void step_dir_out1_setOutput(long requested_pulses)
 {    
-    PIND = 0x04;
-
     // stop the timer - this should be done before clearing the count
     TCCR1B = 0x18;
 
@@ -136,18 +134,15 @@ void step_dir_out1_setOutput(long requested_pulses)
     if (PINB|(1<<PB2)) TCCR1C = (1<<FOC1B);
 
     // output the direction
-    if (direction) PORTB |= (1<<PB0);
-    else PORTB &= (~(1<<PB0));
+    if (direction) PORTB |= (1<<PB4);
+    else PORTB &= (~(1<<PB4));
 
     // set the mode back to FAST PWM 15
     TCCR1A = 0x33;
     
     // enable the timer
     TCCR1B = 0x19;
-    
-    PIND = 0x04;
-
- 
+     
     // calculate the divisor to get the right number of pulses
     // since:
     //    pulses / second = requested_pulses * SAMPLE_RATE;
@@ -202,7 +197,8 @@ void step_dir_out1_init()
 * rates are desired, a more sophisticated algorithm will be required.
 *
 * parameters:
-*    the number of pulses to output during the frame time
+*    the number of pulses to output during the frame time expressed as a
+*    fixed point number with 16 bits of fractional precision.
 *
 * returns:
 *    void
@@ -215,12 +211,9 @@ void step_dir_out1_init()
 */
 void step_dir_out1_setOutput(long requested_pulses)
 {    
-    PIND = 0x04;
-
     // set the new top value to the timer divisor
-    OCR1A = 2000+(requested_pulses/(16*1024));
-    
-    PIND = 0x04;
+    OCR1A = 2000+(requested_pulses/50);
+  
 }    
 #endif    
 
