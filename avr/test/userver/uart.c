@@ -37,7 +37,7 @@
 #include "uart.h"
 
 // Baud rate.
-#define BAUD 9600
+#define BAUD 38400
 #define BUFFERSIZE 64    // this must be an 8-bit power of 2
 #define BIT2NUM(bit) (1<<bit)
 

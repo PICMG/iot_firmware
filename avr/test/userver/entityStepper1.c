@@ -70,6 +70,9 @@
     #define MOTOR_FLAGS_REVERSE    0x02
     #define MOTOR_FLAGS_VMODE      0x01
 
+    #define SWITCH_STATE_PRESSED_ON   0x01
+    #define SWITCH_STATE_RELEASED_OFF 0x02
+
     unsigned char servo_cmd   = MOTOR_CMD_NONE;
     unsigned char servo_mode  = MOTOR_MODE_NOWAIT;
     unsigned char servo_flags = 0x00;
@@ -80,7 +83,7 @@
     FP16 requested_velocity     = TO_FP16(511);
     FP16 requested_acceleration = TO_FP16(1);
     FP16 requested_kffa;
-    static char mode_scurve    = 1;
+    static char mode_scurve    = 0;
     static unsigned char state = STATE_IDLE;
 
     static FP16 vel = TO_FP16(0);
@@ -228,13 +231,14 @@
         commandEffecterInst.allowedStatesMask = 7; 
         commandEffecterInst.defaultState = 2;   // default state = stop
 
-        // initialize the brake effecter
+        // initialize the output enable effecter
         #ifdef ENTITY_STEPPER1_OUTPUTENABLE
             stateeffecter_init(&outputEnableEffecterInst);
             outputEnableEffecterInst.allowedStatesMask = 3;
             outputEnableEffecterInst.stateWhenHigh = 2;
             outputEnableEffecterInst.stateWhenLow = 1;
             outputEnableEffecterInst.defaultState = 1;
+            DDRD |= (1<<PD5);
         #endif 
 
         // initialize the output enable effecter
@@ -291,9 +295,14 @@
     void entityStepper1_readChannels() {
         // read the globalInterlockSensor's channel
         CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_GLOBALINTERLOCKSENSOR_BOUNDCHANNEL,_sample());
-        
+        statesensor_setValueFromChannelBit(&globalInterlockSensorInst,
+            CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_GLOBALINTERLOCKSENSOR_BOUNDCHANNEL,_getRawData())
+        );
         // read the triggerSensor' channel
         CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_TRIGGERSENSOR_BOUNDCHANNEL,_sample());
+        statesensor_setValueFromChannelBit(&triggerSensorInst,
+            CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_TRIGGERSENSOR_BOUNDCHANNEL,_getRawData())
+        );
         
         // read the motionStateSensor's channel
         // do nothing - this channel is virtual
@@ -301,17 +310,23 @@
         #ifdef ENTITY_STEPPER1_POSITIVELIMIT_BOUNDCHANNEL
             // read the positive limit sensor's channel
             CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_POSITIVELIMIT_BOUNDCHANNEL,_sample());
+            statesensor_setValueFromChannelBit(&positiveLimitSensorInst,
+                CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_POSITIVELIMIT_BOUNDCHANNEL,_getRawData())
+            );
         #endif
 
         #ifdef ENTITY_STEPPER1_NEGATIVELIMIT_BOUNDCHANNEL
             // read the negative limit sensor's channel
             CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_NEGATIVELIMIT_BOUNDCHANNEL,_sample());
+            statesensor_setValueFromChannelBit(&negativeLimitSensorInst,
+                CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_NEGATIVELIMIT_BOUNDCHANNEL,_getRawData())
+            );
         #endif
 
         #ifdef ENTITY_STEPPER1_POSITION_BOUNDCHANNEL
             // read the position sensor's channel
             CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_POSITION_BOUNDCHANNEL,_sample);
-        #endif 
+        #endif
     }
 
 
@@ -845,8 +860,21 @@
 // are disabled when this function runs.
 //
 void entityStepper1_updateControl() {
+    // output changes from previous interation
+    #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+        // output the ENABLE
+        if (outputEnableEffecterInst.state == outputEnableEffecterInst.stateWhenHigh) {
+            PORTD |= (1<<PD5);
+        }
+        else {
+            PORTD &= (~(1<<PD5));
+        }
+    #endif
     step_dir_out1_setOutput(current_velocity);
     
+    // read new values for all the sensors
+    entityStepper1_readChannels();
+
     // check to see if there was a requested state change
     unsigned char reqState = commandEffecterInst.state;
     if (reqState == 1) {  // run requested
@@ -863,19 +891,19 @@ void entityStepper1_updateControl() {
     // update flags based on current state of sensors
     // start by clearling all flags but the motion direction
     // this is set at the start of motion.
-    servo_flags &= (~(MOTOR_FLAGS_REVERSE));
+    servo_flags &= MOTOR_FLAGS_REVERSE;
     if ((statesensor_isEnabled(&globalInterlockSensorInst))&&
         (globalInterlockSensorInst.value == globalInterlockSensorInst.stateWhenHigh)) servo_flags |= MOTOR_FLAGS_INTERLOCK;
     if ((statesensor_isEnabled(&triggerSensorInst))&&
         (triggerSensorInst.value == triggerSensorInst.stateWhenHigh)) servo_flags |= MOTOR_FLAGS_TRIGGER;
     #ifdef ENTITY_STEPPER1_POSITIVELIMIT
         if ((statesensor_isEnabled(&positiveLimitSensorInst) == 1)&&
-            (positiveLimitSensorInst.value == positiveLimitSensorInst.stateWhenHigh)) 
+            (positiveLimitSensorInst.value == SWITCH_STATE_PRESSED_ON)) 
             servo_flags |= MOTOR_FLAGS_POSLIMIT;
     #endif
     #ifdef ENTITY_STEPPER1_NEGATIVELIMIT
         if (statesensor_isEnabled(&negativeLimitSensorInst)&&
-            (negativeLimitSensorInst.value == negativeLimitSensorInst.stateWhenHigh)) 
+            (negativeLimitSensorInst.value == SWITCH_STATE_PRESSED_ON)) 
             servo_flags |= MOTOR_FLAGS_NEGLIMIT;
     #endif
     #ifdef ENTITY_STEPPER1_POSITION
@@ -908,7 +936,7 @@ void entityStepper1_updateControl() {
             // transistion
 
             // turn on the brake if required
-            #ifdef ENTITY_STEPPER1_BRAKE
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
                 #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_BRAKE
                     stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
                 #endif
@@ -950,12 +978,12 @@ void entityStepper1_updateControl() {
             if (!numericeffecter_isEnabled(&aprofileEffecterInst)) break;
 
             // disable the brake if it is set
-            #ifdef ENTITY_STEPPER1_BRAKE
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
                 stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenLow);
             #endif
 
             // enable the motor if it is disabled
-            #ifdef ENTITY_STEPPER1_ENABLE
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
                 stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenHigh);
             #endif
 
@@ -996,7 +1024,7 @@ void entityStepper1_updateControl() {
             // transistion
 
             // turn on the brake if required
-            #ifdef ENTITY_STEPPER1_BRAKE
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
                 #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_BRAKE
                     stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
                 #endif
@@ -1021,7 +1049,7 @@ void entityStepper1_updateControl() {
             // transition
 
             // turn on the brake if required
-            #ifdef ENTITY_STEPPER1_BRAKE
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
                 #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINCONDITIONSTOP_BRAKE
                     stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
                 #endif
@@ -1087,7 +1115,7 @@ void entityStepper1_updateControl() {
             // transistion
 
             // turn on the brake if required
-            #ifdef ENTITY_STEPPER1_BRAKE
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
                 #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_BRAKE
                     stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
                 #endif
@@ -1112,7 +1140,7 @@ void entityStepper1_updateControl() {
             // transition
 
             // turn on the brake if required
-            #ifdef ENTITY_STEPPER1_BRAKE
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
                 #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINCONDITIONSTOP_BRAKE
                     stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
                 #endif
@@ -1194,7 +1222,7 @@ void entityStepper1_updateControl() {
             #endif
 
             // enable the motor if it is disabled
-            #ifdef ENTITY_STEPPER1_ENABLE
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
                 stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenHigh);
             #endif
 
