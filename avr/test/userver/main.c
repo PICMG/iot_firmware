@@ -74,12 +74,12 @@ int main(void)
 
   // send an MCTP discovery notifiy command
   delay_set(0,1000);
-  mctp_sendNoWait(1,mctp_discovery_msg,0);
+  //mctp_sendNoWait(1,mctp_discovery_msg,0);
   while (1) {
     // if the discovery notify has timed out and no response has been received, 
     // send another discovery notify message
     if ((!mctp_context.discovered)&&(delay_isDone(0))) {
-        mctp_sendNoWait(2,mctp_discovery_msg,0);
+        //mctp_sendNoWait(2,mctp_discovery_msg,0);
         delay_set(0,1000);
     } else {
       // otherwise process messages
