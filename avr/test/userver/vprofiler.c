@@ -96,6 +96,8 @@ static FP16 calc_dx(float v0, float a, float j, float dt) {
 */
 void vprofiler_start()
 {
+	// TODO - need to perform special case where position = 0
+	
 	float t2 = FP16_TO_FLOAT(active_velocity) / FP16_TO_FLOAT(active_acceleration);
 	// for scurve, average_acceleration = (1/2) peak_acceleration
 

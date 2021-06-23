@@ -31,7 +31,7 @@
 //====================================================
 // effecter state machine states
 #define DISABLED  2  // this value was chosen to match the PLDM OperationalState value
-#define ENABLED   1  // this value was chosen to match the PLDM OperationalState value
+#define ENABLED   0  // this value was chosen to match the PLDM OperationalState value
 
 //===================================================================
 // stateeffecter_init()
@@ -93,6 +93,19 @@ unsigned char stateeffecter_setOperationalState(StateEffecterInstance *inst, uns
     else inst->operationalState = DISABLED;
     SREG = sreg;
     return 1;
+}
+
+//===================================================================
+// stateeffecter_isEnabled()
+//
+// returns true if the effecter is enabled.
+//
+// parameters:
+//    inst - a pointer to the instance data for the effecter.
+unsigned char stateeffecter_isEnabled(StateEffecterInstance *inst)
+{
+    if (inst->operationalState!=DISABLED) return 1;
+    return 0;
 }
 
 //===================================================================

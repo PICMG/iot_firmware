@@ -62,22 +62,21 @@
 // named interface channel on the specified port and bit.
 #define DEFINE_DIGITAL_OUT_CHANNEL_FUNCTS(channelname, port, bit) \
     void CONCATENATE(channelname, _init()) { \
-        /* set the bit direction to input */ \
-        CONCATENATE(DDR, port) &= (~(1<<bit)); \
-        /* turn off the pull-up resistor */ \
-        CONCATENATE(PORT, port) &= (~(1<<bit)); \
+        /* set the bit direction to output */ \
+        CONCATENATE(DDR, port) |= (1<<bit); \
     } \
     void CONCATENATE(channelname, _setOutput(unsigned char output)) { \
         /* set the output value */ \
-        CONCATENATE(PORT, port) |= (output<<bit); \
+        if (output) CONCATENATE(PORT, port) |= (1<<bit); \
+        else CONCATENATE(PORT, port) &= (~(1<<bit)); \
     } \
     void CONCATENATE(channelname, _enable()) { \
         /* set the pin to output */ \
-        CONCATENATE(DDR, port) &= (~(1<<bit)); \
+        CONCATENATE(DDR, port) |= (1<<bit); \
     } \
     void CONCATENATE(channelname, _disable()) { \
         /* set the pin to input */ \
-        CONCATENATE(DDR, port) |= (~(1<<bit)); \
+        CONCATENATE(DDR, port) &= (~(1<<bit)); \
         /* turn off the pull-up resistor */ \
         CONCATENATE(PORT, port) &= (~(1<<bit)); \
     } \

@@ -260,3 +260,17 @@ unsigned char statesensor_getSensorPreviousState(StateSensorInstance *inst)
     return inst->previousState;
 }
 
+//===================================================================
+// statesensor_setValueFromChannelBit()
+//
+// set the state of the sesor based on the raw channel input.
+// This should only be called from the high=priority loop.
+//
+// parameters:
+//    inst - a pointer to the instance data for the sensor.
+//    bit - the bit value from the input channel.
+void statesensor_setValueFromChannelBit(StateSensorInstance *inst, unsigned char bit)
+{
+    inst->value = inst->stateWhenLow;
+    if (bit) inst->value = inst->stateWhenHigh; 
+}

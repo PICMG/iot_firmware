@@ -41,6 +41,7 @@ typedef struct {
 
 void          statesensor_init(StateSensorInstance *inst);
 void          statesensor_setValue(StateSensorInstance *inst, unsigned char val);
+void          statesensor_setValueFromChannelBit(StateSensorInstance *inst, unsigned char bit);
 void          statesensor_updateSensorState(StateSensorInstance *inst);
 unsigned char statesensor_setEnables(StateSensorInstance *inst, unsigned char enable);
 unsigned char statesensor_isEnabled(StateSensorInstance *inst);
