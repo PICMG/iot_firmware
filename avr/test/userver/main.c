@@ -58,7 +58,7 @@ int main(void)
 
   // initialize all channels based on configuration paramters
   channels_init();
-  
+
   #ifdef ENTITY_STEPPER1
     entityStepper1_init();
   #endif

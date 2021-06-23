@@ -1,4 +1,3 @@
-
 //    stepdir_out.c
 //
 //    This file defines functions related to the stepdir_out 
@@ -103,7 +102,9 @@ void step_dir_out1_init()
 *    the number of pulses to output during the frame time
 *
 * returns:
-*    void
+*    the integer number of pulses that will be sent during the 
+*    next sample frame. The sign of the return value signifies the
+*    direction of motion.
 *
 * changes:
 *    updates the timer registers for Timer1 (used for the step/dir 
@@ -111,7 +112,7 @@ void step_dir_out1_init()
 *
 * NOTE: This function assumes that the cpu clock is running at 16MHz
 */
-void step_dir_out1_setOutput(long requested_pulses)
+int step_dir_out1_setOutput(long requested_pulses)
 {    
     // stop the timer - this should be done before clearing the count
     TCCR1B = 0x18;
@@ -165,6 +166,8 @@ void step_dir_out1_setOutput(long requested_pulses)
     } else {
         timer_divisor = (F_CPU/SAMPLE_RATE) / pulses;
     }
+    if (direction) return -pulses;
+    return pulses;
 }    
 #else
 static unsigned char direction;
@@ -215,5 +218,4 @@ void step_dir_out1_setOutput(long requested_pulses)
     OCR1A = 2000+(requested_pulses/50);
   
 }    
-#endif    
-
+#endif   

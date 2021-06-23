@@ -274,4 +274,3 @@ void statesensor_setValueFromChannelBit(StateSensorInstance *inst, unsigned char
     inst->value = inst->stateWhenLow;
     if (bit) inst->value = inst->stateWhenHigh; 
 }
-

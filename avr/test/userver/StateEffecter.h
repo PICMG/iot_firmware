@@ -42,6 +42,7 @@ unsigned char stateeffecter_getOutput(StateEffecterInstance *inst);
 unsigned char stateeffecter_setOperationalState(StateEffecterInstance *inst, unsigned char state);
 unsigned char stateeffecter_setPresentState(StateEffecterInstance *inst, unsigned char state);
 unsigned char stateeffecter_getOperationalState(StateEffecterInstance *inst);
+unsigned char stateeffecter_isEnabled(StateEffecterInstance *inst);
 unsigned char stateeffecter_getPresentState(StateEffecterInstance *inst);
 
 #endif // STATEEFFECTER_H_INCLUDED

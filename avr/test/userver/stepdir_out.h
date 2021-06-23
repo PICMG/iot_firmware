@@ -25,6 +25,6 @@
 //
 #pragma once
 void step_dir_out1_init();
-void step_dir_out1_setOutput(long output); 
+int step_dir_out1_setOutput(long output); 
 void step_dir_out1_enable(); 
 void step_dir_out1_disable();

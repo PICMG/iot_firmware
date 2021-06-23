@@ -67,8 +67,8 @@
     } \
     void CONCATENATE(channelname, _setOutput(unsigned char output)) { \
         /* set the output value */ \
-        if (output) CONCATENATE(PORT, port) |= (output<<bit); \
-        else CONCATENATE(PORT, port) &= (~(output<<bit)); \
+        if (output) CONCATENATE(PORT, port) |= (1<<bit); \
+        else CONCATENATE(PORT, port) &= (~(1<<bit)); \
     } \
     void CONCATENATE(channelname, _enable()) { \
         /* set the pin to output */ \
