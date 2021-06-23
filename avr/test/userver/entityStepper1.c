@@ -26,6 +26,11 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
+// TODO: place this definition in a common header or compile macro
+#ifndef __AVR_ATmega328P__ 
+#define __AVR_ATmega328P__
+#endif
+#include "avr/io.h"
 #include "pdrdata.h"
 
 #ifdef ENTITY_STEPPER1
@@ -50,6 +55,9 @@
     #define STATE_RUNNING    5
     #define STATE_WAITING    6
     #define STATE_DONE       7
+    #define STATE_STOPPINGV  (16+STATE_RUNNINGV)
+    #define STATE_STOPPING   (16+STATE_RUNNING)
+
 
     #define MOTOR_CMD_NONE   0
     #define MOTOR_CMD_RUN    1
@@ -78,13 +86,14 @@
     unsigned char servo_flags = 0x00;
 
     // buffered values for the requested position, velocity and acceleration
-    long current_position       = 0;
-    long requested_position     = 1000000L;
-    FP16 requested_velocity     = TO_FP16(511);
-    FP16 requested_acceleration = TO_FP16(1);
-    FP16 requested_kffa;
+    //long requested_position     = 1000000L;
+    //FP16 requested_velocity     = TO_FP16(511);
+    //FP16 requested_acceleration = TO_FP16(1);
+    //FP16 requested_kffa;
     static char mode_scurve    = 0;
     static unsigned char state = STATE_IDLE;
+    static int deltax_t0           = 0;  // the position steps that will be made this frame
+    static int deltax_t1           = 0;  // the position steps that were made last frame;
 
     static FP16 vel = TO_FP16(0);
 
@@ -241,7 +250,7 @@
             DDRD |= (1<<PD5);
         #endif 
 
-        // initialize the output enable effecter
+        // initialize the brake enable effecter
         #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
             stateeffecter_init(&brakeEffecterInst);
             brake.stateWhenHigh = 2;
@@ -267,24 +276,28 @@
         numericeffecter_init(&outputEffecterInst);
         outputEffecterInst.maxSettable = 0x7FFFFFFF;
         outputEffecterInst.minSettable = -0x7FFFFFFF;
+        outputEffecterInst.defaultValue = ENTITY_STEPPER1_OUTPUTEFFECTER_DEFAULTVALUE;
 
         // initialize the pfinal effecter
         numericeffecter_init(&pfinalEffecterInst);
         pfinalEffecterInst.maxSettable = 0x7FFFFFFF;
         pfinalEffecterInst.minSettable = -0x7FFFFFFF;
-        pfinalEffecterInst.value = 1000000;
+        pfinalEffecterInst.value = ENTITY_STEPPER1_PFINAL_DEFAULTVALUE;
+        pfinalEffecterInst.defaultValue = ENTITY_STEPPER1_PFINAL_DEFAULTVALUE;
 
         // initialize the vprofile effecter
         numericeffecter_init(&vprofileEffecterInst);
         vprofileEffecterInst.maxSettable = 0x7FFFFFFF;
         vprofileEffecterInst.minSettable = -0x7FFFFFFF;
-        vprofileEffecterInst.value = requested_velocity;
+        vprofileEffecterInst.value = ENTITY_STEPPER1_VPROFILE_DEFAULTVALUE;
+        vprofileEffecterInst.defaultValue = ENTITY_STEPPER1_VPROFILE_DEFAULTVALUE;
 
         // initialize the aprofile effecter
         numericeffecter_init(&aprofileEffecterInst);
         aprofileEffecterInst.maxSettable = 0x7FFFFFFF;
         aprofileEffecterInst.minSettable = -0x7FFFFFFF;
-        aprofileEffecterInst.value = requested_acceleration;
+        aprofileEffecterInst.value = ENTITY_STEPPER1_APROFILE_DEFAULTVALUE;
+        aprofileEffecterInst.defaultValue = ENTITY_STEPPER1_APROFILE_DEFAULTVALUE;
     }
 
     //===============================================================
@@ -326,6 +339,8 @@
         #ifdef ENTITY_STEPPER1_POSITION_BOUNDCHANNEL
             // read the position sensor's channel
             CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_POSITION_BOUNDCHANNEL,_sample);
+        #else
+            positionSensorInst.value += deltax_t1;
         #endif
     }
 
@@ -424,7 +439,7 @@
         #endif
         #ifdef ENTITY_STEPPER1_TRIGGEREFFECTER_EFFECTERID
             case ENTITY_STEPPER1_TRIGGEREFFECTER_EFFECTERID:
-                if (!stateeffecter_setOperationalState(&commandEffecterInst, effecter_op_state)) { 
+                if (!stateeffecter_setOperationalState(&triggerEffecterInst, effecter_op_state)) { 
                     response = RESPONSE_UNSUPPORTED_EFFECTERSTATE;
                 }
                 break;
@@ -870,7 +885,20 @@ void entityStepper1_updateControl() {
             PORTD &= (~(1<<PD5));
         }
     #endif
-    step_dir_out1_setOutput(current_velocity);
+    // update the global Iterlock Effecter output
+    if (stateeffecter_isEnabled(&globalInterlockEffecterInst))
+        CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_GLOBALINTERLOCKEFFECTER_BOUNDCHANNEL,_enable());
+    else
+        CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_GLOBALINTERLOCKEFFECTER_BOUNDCHANNEL,_disable());
+    CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_GLOBALINTERLOCKEFFECTER_BOUNDCHANNEL,_setOutput(stateeffecter_getOutput(&globalInterlockEffecterInst)));
+    // Update the trigger Effecter output
+    if (stateeffecter_isEnabled(&triggerEffecterInst))
+        CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_TRIGGEREFFECTER_BOUNDCHANNEL,_enable());
+    else
+        CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_TRIGGEREFFECTER_BOUNDCHANNEL,_disable());
+    CALL_CHANNEL_FUNCTION(ENTITY_STEPPER1_TRIGGEREFFECTER_BOUNDCHANNEL,_setOutput(stateeffecter_getOutput(&triggerEffecterInst)));
+    deltax_t1 = deltax_t0; 
+    deltax_t0 = step_dir_out1_setOutput(current_velocity);
     
     // read new values for all the sensors
     entityStepper1_readChannels();
@@ -881,9 +909,16 @@ void entityStepper1_updateControl() {
         if ((state == STATE_IDLE)||(state==STATE_RUNNINGV)) {
             // run command is only valid from the idle or runningv states
             servo_cmd = MOTOR_CMD_RUN;
+            servo_mode = 0;
         }
     } else if (reqState == 2) {  // stop requested 
         servo_cmd = MOTOR_CMD_STOP; 
+    } else if (reqState == 3) { // wait requested
+        if (state == STATE_IDLE) {
+            // wait command is only valid from the idle state
+            servo_cmd = MOTOR_CMD_RUN;
+            servo_mode = MOTOR_MODE_WAIT;
+        }    
     }
     commandEffecterInst.state = 0;  // unknown state
     
@@ -893,9 +928,12 @@ void entityStepper1_updateControl() {
     // this is set at the start of motion.
     servo_flags &= MOTOR_FLAGS_REVERSE;
     if ((statesensor_isEnabled(&globalInterlockSensorInst))&&
-        (globalInterlockSensorInst.value == globalInterlockSensorInst.stateWhenHigh)) servo_flags |= MOTOR_FLAGS_INTERLOCK;
+        (globalInterlockSensorInst.value == globalInterlockSensorInst.stateWhenLow)) {
+            servo_flags |= MOTOR_FLAGS_INTERLOCK;
+            servo_flags |= MOTOR_FLAGS_ERROR;
+    }
     if ((statesensor_isEnabled(&triggerSensorInst))&&
-        (triggerSensorInst.value == triggerSensorInst.stateWhenHigh)) servo_flags |= MOTOR_FLAGS_TRIGGER;
+        (triggerSensorInst.value == triggerSensorInst.stateWhenLow)) servo_flags |= MOTOR_FLAGS_TRIGGER;
     #ifdef ENTITY_STEPPER1_POSITIVELIMIT
         if ((statesensor_isEnabled(&positiveLimitSensorInst) == 1)&&
             (positiveLimitSensorInst.value == SWITCH_STATE_PRESSED_ON)) 
@@ -961,17 +999,17 @@ void entityStepper1_updateControl() {
             if (numericeffecter_isEnabled(&pfinalEffecterInst)) {                
                 // position/velocity motion
                 // set the motion parameters to the most recently requested
-                long requested_deltax = pfinalEffecterInst.value - current_position;
+                long requested_deltax = pfinalEffecterInst.value - positionSensorInst.value;
                 if (requested_deltax<0) servo_flags |= MOTOR_FLAGS_REVERSE;
                 vprofiler_setParameters(requested_deltax, vprofileEffecterInst.value, aprofileEffecterInst.value, mode_scurve);
             } else {
                 // velocity only move
-                if (vprofileEffecterInst.value<0) servo_flags |= MOTOR_FLAGS_REVERSE;
+                if (current_velocity<0) servo_flags |= MOTOR_FLAGS_REVERSE;
                 vprofiler_setParameters(vprofileEffecterInst.value, vprofileEffecterInst.value, aprofileEffecterInst.value, mode_scurve);
             }
             // transition to the waiting state
             state = STATE_WAITING;
-        } 
+        }
         else if ((servo_cmd == MOTOR_CMD_RUN) && (servo_mode == MOTOR_MODE_NOWAIT)) {
             // check to see if all the required effecters are enabled
             if (!numericeffecter_isEnabled(&vprofileEffecterInst)) break;
@@ -992,7 +1030,7 @@ void entityStepper1_updateControl() {
             if (numericeffecter_isEnabled(&pfinalEffecterInst)) {                
                 // position/velocity motion
                 // set the motion parameters to the most recently requested and
-                long requested_deltax = pfinalEffecterInst.value - current_position;
+                long requested_deltax = pfinalEffecterInst.value - positionSensorInst.value;
                 if (requested_deltax<0) servo_flags |= MOTOR_FLAGS_REVERSE;
                 vprofiler_setParameters(requested_deltax, vprofileEffecterInst.value, aprofileEffecterInst.value, mode_scurve);
                 
@@ -1003,7 +1041,7 @@ void entityStepper1_updateControl() {
                 state = STATE_RUNNING;
             } else {
                 servo_flags |= MOTOR_FLAGS_VMODE;
-                if (vprofileEffecterInst.value<0) servo_flags |= MOTOR_FLAGS_REVERSE;
+                if (current_velocity<0) servo_flags |= MOTOR_FLAGS_REVERSE;
                 vprofiler_setParameters(vprofileEffecterInst.value, vprofileEffecterInst.value, aprofileEffecterInst.value, mode_scurve);
 
                 // start the velocity profiler
@@ -1065,24 +1103,8 @@ void entityStepper1_updateControl() {
             state = STATE_COND;
         }
         else if (servo_cmd == MOTOR_CMD_STOP) {
-            // set the motion parameters to idle settings (follow/coast/brake)
-
-            // turn on the brake if required
-            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
-                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_BRAKE
-                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
-                #endif
-            #endif
-
-            // disable the motor required
-            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
-                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_COAST
-                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
-                #endif
-            #endif
-
-            // transition to the idle state
-            state = STATE_IDLE;
+            // transition to the stopping state
+            state = STATE_STOPPING;
         } 
         else if (vprofiler_isDone()) {
             // set the motion parameters to the done settings (follow/coast/brake)
@@ -1109,6 +1131,8 @@ void entityStepper1_updateControl() {
         // update the velocity profiler position - running is the only mode
         // in which this happens
         vprofiler_updatev();
+        servo_flags &= (~MOTOR_FLAGS_REVERSE);
+        if (current_velocity<0) servo_flags |= MOTOR_FLAGS_REVERSE;
         if (servo_flags & MOTOR_FLAGS_ERROR) {
             // perform actions for entry to error state
             // error condition has priority over any other state
@@ -1156,24 +1180,8 @@ void entityStepper1_updateControl() {
             state = STATE_COND;
         }
         else if (servo_cmd == MOTOR_CMD_STOP) {
-            // set the motion parameters to idle settings (follow/coast/brake)
-
-            // turn on the brake if required
-            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
-                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_BRAKE
-                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
-                #endif
-            #endif
-
-            // disable the motor required
-            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
-                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_COAST
-                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
-                #endif
-            #endif
-
             // transition to the idle state
-            state = STATE_IDLE;
+            state = STATE_STOPPINGV;
         } else if (servo_cmd == MOTOR_CMD_RUN) {
             // request to slew to a new velocity
 
@@ -1183,11 +1191,88 @@ void entityStepper1_updateControl() {
 
             servo_flags = 0;
             servo_flags |= MOTOR_FLAGS_VMODE;
-            if (vprofileEffecterInst.value<0) servo_flags |= MOTOR_FLAGS_REVERSE;
+            if (current_velocity<0) servo_flags |= MOTOR_FLAGS_REVERSE;
             vprofiler_setParameters(vprofileEffecterInst.value, vprofileEffecterInst.value, aprofileEffecterInst.value, mode_scurve);
 
             // start the velocity profiler
             vprofiler_startv();
+        }
+        break;
+    case STATE_STOPPING:
+    case STATE_STOPPINGV:
+        if (servo_flags & MOTOR_FLAGS_ERROR) {
+            // perform actions for entry to error state
+            // error condition has priority over any other state
+            // transistion
+
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINERRORSTOP_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
+
+            state = STATE_ERROR;
+        }
+        else if ((servo_flags & MOTOR_FLAGS_TRIGGER ) || 
+            ((servo_flags & MOTOR_FLAGS_NEGLIMIT) && (servo_flags & MOTOR_FLAGS_REVERSE)) ||
+            ((servo_flags & MOTOR_FLAGS_POSLIMIT) && ((servo_flags & MOTOR_FLAGS_REVERSE)==0))
+            )
+        {
+            // perform actions for entry to condition stop state
+            // warning conition has priority over all but error
+            // transition
+
+            // turn on the brake if required
+            #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINCONDITIONSTOP_BRAKE
+                    stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                #endif
+            #endif
+
+            // disable the motor required
+            #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINCONDITIONSTOP_COAST
+                    stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                #endif
+            #endif
+
+            state = STATE_COND;
+        }
+        else {
+            // reduce the velocity by the requested acceleration until it reaches 0
+            if (current_velocity>0) {
+                current_velocity -= (aprofileEffecterInst.value<0)?-aprofileEffecterInst.value:aprofileEffecterInst.value;
+                if (current_velocity<0) current_velocity = 0;
+            } else if (current_velocity<0) {
+                current_velocity += (aprofileEffecterInst.value<0)?-aprofileEffecterInst.value:aprofileEffecterInst.value;
+                if (current_velocity>0) current_velocity = 0;        
+            } else if (current_velocity==0) {
+                // velocity is zero - transition to IDLE state.
+                // turn on the brake if required
+                #ifdef ENTITY_STEPPER1_BRAKEEFFECTER
+                    #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_BRAKE
+                        stateeffecter_setPresentState(&brakeEffecterInst, brakeEffecterInst.stateWhenHigh);
+                    #endif
+                #endif
+
+                // disable the motor required
+                #ifdef ENTITY_STEPPER1_OUTPUTENABLE
+                    #ifdef ENTITY_STEPPER1_PARAM_OUTPUTINIDLE_COAST
+                        stateeffecter_setPresentState(&outputEnableEffecterInst, outputEnableEffecterInst.stateWhenLow);
+                    #endif
+                #endif
+                state = STATE_IDLE;
+            }
+            servo_flags &= (~MOTOR_FLAGS_REVERSE);
+            if (current_velocity<0) servo_flags |= MOTOR_FLAGS_REVERSE;
         }
         break;
     case STATE_WAITING:
@@ -1386,7 +1471,7 @@ void entityStepper1_updateControl() {
         state = STATE_ERROR;
     }
     servo_cmd = MOTOR_CMD_NONE; 
-    motionStateSensorInst.value = state;      
+    motionStateSensorInst.value = state&0xF;      
 }
 
 #endif // ENTITY_STEPPER1

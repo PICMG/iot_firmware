@@ -33,6 +33,7 @@ typedef struct {
                                      // this will be linearized and sent to
                                      // the channel
     unsigned char operationalState;  // the operational state of the sensor
+    long          defaultValue;      // the default value when enabled
     FIXEDPOINT_24_8 maxSettable;     // the maximum settable value
     FIXEDPOINT_24_8 minSettable;     // the minimum settable value
 } NumericEffecterInstance;

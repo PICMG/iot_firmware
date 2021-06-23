@@ -135,7 +135,12 @@ unsigned char numericeffecter_setOperationalState(NumericEffecterInstance *inst,
     unsigned char sreg = SREG;
     __builtin_avr_cli();
     if (state == DISABLED) inst->operationalState = state;
-    else inst->operationalState = ENABLED;
+    else {
+        if ((inst->operationalState==DISABLED)||(inst->operationalState==0)) {
+            inst->value = inst->defaultValue;
+        }
+        inst->operationalState = ENABLED;
+    }
     SREG = sreg;
     return 1;
 }
