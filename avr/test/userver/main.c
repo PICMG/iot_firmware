@@ -34,7 +34,7 @@
 #include "channels.h"
 #include "stepdir_out.h"
 #include "entityStepper1.h"
-
+#include "entitySimple1.h"
 
 int main(void)
 {
@@ -58,6 +58,7 @@ int main(void)
 
   // initialize all channels based on configuration paramters
   channels_init();
+  adc_init();
 
   #ifdef ENTITY_STEPPER1
     entityStepper1_init();

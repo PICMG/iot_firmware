@@ -1,7 +1,7 @@
-//    EntityStepper1.c
+//    channels.c
 //
-//    This header file defines functions related to the the Stepper1  
-//    Logical Entity Type.  Much of this code is conditionally compiled
+//    This header file defines functions related to the digital channel  
+//    support.  Much of this code is conditionally compiled
 //    based on macro definitions from the configuraiton header file.
 //
 //    This code is intended to be used as part of the PICMG reference code 
@@ -82,15 +82,6 @@
     } \
 
   // declare the channel-related raw data
-  #ifdef CHANNEL_AIN12V
-    unsigned int ain12v_rawdata;
-  #endif
-  #ifdef CHANNEL_AIN24V
-    unsigned int ain24v_rawdata;
-  #endif
-  #ifdef CHANNEL_AIN5V
-    unsigned int ain5v_rawdata;
-  #endif
   #ifdef CHANNEL_COUNT_IN1
     unsigned int count_in1_rawdata;
   #endif
@@ -199,15 +190,6 @@
 void channels_init() 
 {
   // initialize all channels based on configuration paramters
-  #ifdef CHANNEL_AIN12V
-    ain12v_init();
-  #endif
-  #ifdef CHANNEL_AIN24V
-    ain24v_init();
-  #endif
-  #ifdef CHANNEL_AIN5V
-    ain5v_init();
-  #endif
   #ifdef CHANNEL_COUNT_IN1
     count_in1_init();
   #endif
