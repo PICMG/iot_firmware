@@ -27,6 +27,8 @@ INCLUDES    := -I.
 OBJECTS     := main.o simulavr_info.o node.o pdrdata.o vprofiler.o systemtimer.o stepdir_out.o interpolator.o channels.o adc.o entityStepper1.o entitySimple1.o NumericEffecter.o StateEffecter.o StateSensor.o NumericSensor.o EventGenerator.o mctp.o uart.o crc8.o fcs.o
 CXX_FLAGS   := -Wall -mmcu=atmega328p -DF_CPU=16000000UL
 OUTPUT_DIR  := $(CURDIR)
+UUID_BYTES := $(shell ./getuuid.sh)
+
 export      CXX_FLAGS
 export      OUTPUT_DIR
 
@@ -51,7 +53,7 @@ run_stepper: clean cfg_stepper $(OBJECTS)
 
 # build non-library object files and place them in this folder
 %.o : %.c
-	avr-gcc $(CXX_FLAGS) -c $< $(INCLUDES) $(LIBINCLUDES)
+	avr-gcc $(CXX_FLAGS) -DUUID=$(UUID_BYTES) -c $< $(INCLUDES) $(LIBINCLUDES)
 
 # clean this folder and the library folder of any object files that currently exist
 clean:

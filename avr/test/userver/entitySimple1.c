@@ -44,6 +44,7 @@
     #include "vprofiler.h"
     #include "stepdir_out.h"
     #include "interpolator.h"
+    #include "EventGenerator.h"
 
     #define SINT32_TYPE 5
 
@@ -72,17 +73,17 @@
     // Sensor-Specific Code
     //===============================================================
     static StateSensorInstance globalInterlockSensorInst; 
-    static void globalInterlockSensor_sendEvent()
+    static void globalInterlockSensor_sendEvent(PldmRequestHeader *rxHeader, unsigned char more)
     {
-        node_sendStateSensorEvent(&(globalInterlockSensorInst.eventGen),
+        node_sendStateSensorEvent(rxHeader, more, &(globalInterlockSensorInst.eventGen),
             ENTITY_SIMPLE1_GLOBALINTERLOCKSENSOR_SENSORID,
             statesensor_getSensorPreviousState(&globalInterlockSensorInst));
     }
 
     static StateSensorInstance triggerSensorInst; 
-    static void triggerSensor_sendEvent()
+    static void triggerSensor_sendEvent(PldmRequestHeader *rxHeader, unsigned char more)
     {
-        node_sendStateSensorEvent(&(triggerSensorInst.eventGen),
+        node_sendStateSensorEvent(rxHeader, more, &(triggerSensorInst.eventGen),
             ENTITY_SIMPLE1_TRIGGERSENSOR_SENSORID,
             statesensor_getSensorPreviousState(&triggerSensorInst));
     }
@@ -90,9 +91,9 @@
     // numeric sensor
     #ifdef ENTITY_SIMPLE1_SENSOR1
         static NumericSensorInstance sensor1SensorInst;
-        static void sensor1Sensor_sendEvent()
+        static void sensor1Sensor_sendEvent(PldmRequestHeader *rxHeader, unsigned char more)
         {
-            node_sendNumericSensorEvent(&(sensor1SensorInst.eventGen),
+            node_sendNumericSensorEvent(rxHeader, more, &(sensor1SensorInst.eventGen),
                 ENTITY_SIMPLE1_SENSOR1_SENSORID,
                 numericsensor_getSensorPreviousState(&sensor1SensorInst),
                 sensor1SensorInst.value
@@ -103,9 +104,9 @@
     // state sensor
     #ifdef ENTITY_SIMPLE1_SENSOR2
         static StateSensorInstance sensor2SensorInst; 
-        static void sensor2Sensor_sendEvent()
+        static void sensor2Sensor_sendEvent(PldmRequestHeader *rxHeader, unsigned char more)
         {
-            node_sendStateSensorEvent(&(sensor2SensorInst.eventGen),
+            node_sendStateSensorEvent(rxHeader, more, &(sensor2SensorInst.eventGen),
                 ENTITY_SIMPLE1_SENSOR2_SENSORID,
                 statesensor_getSensorPreviousState(&sensor2SensorInst)
             );
@@ -151,6 +152,115 @@
             );
         #endif
     }
+
+    //===============================================================
+    // entitySimple1_UpdateEvents()
+    //
+    // this function updates the event state for each sensor that is
+    // not currently in the "SENT" state.
+    void entitySimple1_updateEvents(char *fifoInsertId) {
+        if (!eventgenerator_isEventSent(&(globalInterlockSensorInst.eventGen))) {
+            eventgenerator_updateEventStateMachine(&(globalInterlockSensorInst.eventGen));
+            if (eventgenerator_isEventPending(&(globalInterlockSensorInst.eventGen)) && 
+               (globalInterlockSensorInst.eventGen.priority < 0)) {
+                // this event has not yet been placed in the fifo
+                globalInterlockSensorInst.eventGen.priority = *fifoInsertId;
+                *fifoInsertId = ((*fifoInsertId)+1)&0xF;
+            }
+        }
+        
+        if (!eventgenerator_isEventSent(&(triggerSensorInst.eventGen))) {
+            eventgenerator_updateEventStateMachine(&(triggerSensorInst.eventGen));
+            if (eventgenerator_isEventPending(&(triggerSensorInst.eventGen)) && 
+               (triggerSensorInst.eventGen.priority < 0)) {
+                // this event has not yet been placed in the fifo
+                triggerSensorInst.eventGen.priority = *fifoInsertId;
+                *fifoInsertId = ((*fifoInsertId)+1)&0xF;
+            }
+        }
+        
+        #ifdef ENTITY_SIMPLE1_SENSOR1_BOUNDCHANNEL
+            if (!eventgenerator_isEventSent(&(sensor1SensorInst.eventGen))) {
+                eventgenerator_updateEventStateMachine(&(sensor1SensorInst.eventGen));
+            }
+            if (eventgenerator_isEventPending(&(sensor1SensorInst.eventGen)) && 
+               (sensor1SensorInst.eventGen.priority < 0)) {
+                // this event has not yet been placed in the fifo
+                sensor1SensorInst.eventGen.priority = *fifoInsertId;
+                *fifoInsertId = ((*fifoInsertId)+1)&0xF;
+            }
+        #endif
+
+        #ifdef ENTITY_SIMPLE1_SENSOR2_BOUNDCHANNEL
+            if (!eventgenerator_isEventSent(&(sensor2SensorInst.eventGen))) {
+                eventgenerator_updateEventStateMachine(&(sensor2SensorInst.eventGen));
+            }
+            if (eventgenerator_isEventPending(&(sensor2SensorInst.eventGen)) && 
+               (sensor2SensorInst.eventGen.priority < 0)) {
+                // this event has not yet been placed in the fifo
+                sensor2SensorInst.eventGen.priority = *fifoInsertId;
+                *fifoInsertId = ((*fifoInsertId)+1)&0xF;
+            }
+        #endif
+    }
+
+    //===============================================================
+    // entitySimple1_acknowledgeEvent()
+    //
+    // this function acknowledges the event for each sensor that is
+    // currently in the "SENT" state.
+    void entitySimple1_acknowledgeEvent() {
+        if (eventgenerator_isEventSent(&(globalInterlockSensorInst.eventGen))) {
+            eventgenerator_acknowledge(&(globalInterlockSensorInst.eventGen));
+        }
+        
+        if (eventgenerator_isEventSent(&(triggerSensorInst.eventGen))) {
+            eventgenerator_acknowledge(&(triggerSensorInst.eventGen));
+        }
+        
+        #ifdef ENTITY_SIMPLE1_SENSOR1_BOUNDCHANNEL
+            if (eventgenerator_isEventSent(&(sensor1SensorInst.eventGen))) {
+                eventgenerator_acknowledge(&(sensor1SensorInst.eventGen));
+            }
+        #endif
+
+        #ifdef ENTITY_SIMPLE1_SENSOR2_BOUNDCHANNEL
+            if (eventgenerator_isEventSent(&(sensor2SensorInst.eventGen))) {
+                eventgenerator_acknowledge(&(sensor2SensorInst.eventGen));
+            }
+        #endif
+    }
+
+    //===============================================================
+    // entitySimple1_respondToPollEvent()
+    //
+    // this function responds to a poll event request by sending the 
+    // event response from the proper sensor.
+    void entitySimple1_respondToPollEvent(PldmRequestHeader *rxHeader, char fifoInsertId, char fifoExtractId) {
+        unsigned char moreEvents = 1;
+        if (((fifoExtractId+1)&0x0f)==fifoInsertId) moreEvents = 0;
+        
+        if (globalInterlockSensorInst.eventGen.priority==fifoExtractId) {
+            eventgenerator_startSending(&(globalInterlockSensorInst.eventGen),rxHeader,moreEvents);
+        }
+        
+        if (triggerSensorInst.eventGen.priority==fifoExtractId) {
+            eventgenerator_startSending(&(triggerSensorInst.eventGen),rxHeader,moreEvents);
+        }
+        
+        #ifdef ENTITY_SIMPLE1_SENSOR1_BOUNDCHANNEL
+            if (sensor1SensorInst.eventGen.priority==fifoExtractId) {
+                eventgenerator_startSending(&(sensor1SensorInst.eventGen),rxHeader,moreEvents);
+            }
+        #endif
+
+        #ifdef ENTITY_SIMPLE1_SENSOR2_BOUNDCHANNEL
+            if (sensor1SensorInst.eventGen.priority==fifoExtractId) {
+                eventgenerator_startSending(&(sensor2SensorInst.eventGen),rxHeader,moreEvents);
+            }
+        #endif
+    }
+
 #pragma GCC pop_options
 
     //===============================================================

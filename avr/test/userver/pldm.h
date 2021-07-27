@@ -66,8 +66,14 @@ typedef struct {
 #define PDR_TYPE_OEM_ENTITY_ID                   17
 #define PDR_TYPE_FRU_RECORD_SET                  20
 
+// PLDM Control and discovery command codes (Type code = 0x00)
 #define CMD_SET_TID                         0x01 // SetTID
 #define CMD_GET_TID                         0x02 // GetTID
+#define CMD_GET_PLDM_VERSION                0x03 //
+#define CMD_GET_PLDM_TYPES                  0x04 //
+#define CMD_GET_PLDM_COMMANDS               0x05 //
+
+// PLDM message command codes (Type code = 2)
 #define CMD_GET_TERMINUS_UID                0x03 // GetTerminusUID
 #define CMD_SET_EVENT_RECEIVER              0x04 // SetEventReceiver
 #define CMD_GET_EVENT_RECEIVER              0x05 // GetEventReceiver
@@ -106,6 +112,10 @@ typedef struct {
 #define CMD_FIND_PDR                        0x52 // FindPDR
 #define CMD_RUN_INIT_AGENT                  0x58 // RunInitAgent
 #define CMD_GET_PDR_REPOSITORY_SIGNATURE    0x53 // GetPDRRepositorySignature
+
+// PLDM for FRU DATA PLDM TYPE = 4
+#define CMD_GET_FRU_TABLE_METADATA          0x01 
+#define CMD_GET_FRU_RECORD_TABLE            0x02 
 
 #define RESPONSE_SUCCESS                    0x00
 #define RESPONSE_ERROR                      0x01
