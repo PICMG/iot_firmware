@@ -30,6 +30,9 @@
  void entitySimple1_init();
  void entitySimple1_readChannels();
  void entitySimple1_writeChannels();
+ void entitySimple1_updateEvents(char *eventFifoInsertId);
+ void entitySimple1_acknowledgeEvent(char fifoId);
+ void entitySimple1_respondToPollEvent(PldmRequestHeader *rxHeader, char fifoInsertId, char fifoExtractId);
 
  unsigned char entitySimple1_setStateEffecterStates(PldmRequestHeader* rxHeader);
  unsigned char entitySimple1_setStateEffecterEnables(PldmRequestHeader* rxHeader);

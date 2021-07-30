@@ -28,6 +28,7 @@
 #include "EventGenerator.h"
 #include "pdrdata.h"
 #include "mctp.h"
+#include "pldm.h"
 
 #define MAX_TIMEOUT_COUNT (1*SAMPLE_RATE)
 #define MAX_ATTEMPTS      3
@@ -38,8 +39,7 @@
 #define DISABLED 0
 #define ENABLED  1
 #define PENDING  2
-#define SENDING  3
-#define WAITING  4
+#define SENT     3
 
 //===================================================================
 // eventgenerator_init()
@@ -51,11 +51,9 @@
 //          evaluated.
 void eventgenerator_init(EventGeneratorInstance *egi)
 {
-    egi->acknowledged  = 0;
-    egi->attempts      = 0;
     egi->eventOccurred = 0;
     egi->eventState    = DISABLED;
-    egi->timeoutCount  = 0;
+    egi->priority      = -1;
     egi->sendEvent     = 0;
 }
 
@@ -80,7 +78,7 @@ void eventgenerator_setEventOccuredFn(EventGeneratorInstance *egi, char (*fn)())
 // parameters:
 //    egi - a pointer to the event generator instance that will be
 //          evaluated.
-void eventgenerator_setSendEventFn(EventGeneratorInstance *egi,void (*fn)())
+void eventgenerator_setSendEventFn(EventGeneratorInstance *egi,void (*fn)(PldmRequestHeader*,unsigned char))
 {
     egi->sendEvent = fn;
 }
@@ -110,10 +108,9 @@ char eventgenerator_isEventPending(EventGeneratorInstance* egi)
 // parameters:
 //    egi - a pointer to the event generator instance that will be
 //          evaluated.
-char eventgenerator_isEventSending(EventGeneratorInstance* egi)
+char eventgenerator_isEventSent(EventGeneratorInstance* egi)
 {
-    return ((egi->eventState == SENDING) || 
-            (egi->eventState == WAITING));
+    return (egi->eventState == SENT);
 }
 
 //===================================================================
@@ -130,7 +127,7 @@ char eventgenerator_isEnabled(EventGeneratorInstance* egi)
 }
 
 //===================================================================
-// eventgenerator_setEnableAsynchronousEvents()
+// eventgenerator_setEnableEvents()
 //
 // based on the specified parameter, enable or disable events for 
 // this sensor.  If the parameter is “true”, asynchronous event 
@@ -140,7 +137,7 @@ char eventgenerator_isEnabled(EventGeneratorInstance* egi)
 //    egi - a pointer to the event generator instance that will be
 //          operated on.
 //    enable - if true, enable events, otherwise disable them
-void eventgenerator_setEnableAsyncEvents(EventGeneratorInstance* egi, unsigned char enable)
+void eventgenerator_setEnableEvents(EventGeneratorInstance* egi, unsigned char enable)
 {
     if ((enable)&&(egi->eventState == DISABLED)) {
         egi->eventState = ENABLED;
@@ -161,12 +158,28 @@ void eventgenerator_setEnableAsyncEvents(EventGeneratorInstance* egi, unsigned c
 // parameters:
 //    egi - a pointer to the event generator instance that will be
 //          operated on.
-void eventgenerator_startSending(EventGeneratorInstance* egi)
+void eventgenerator_startSending(EventGeneratorInstance* egi, PldmRequestHeader *rxHeader, unsigned char more)
 {
     if (egi->eventState == PENDING) {
-        egi->eventState = SENDING;
-        egi->attempts = 0;
-        egi->acknowledged = 0; 
+        egi->eventState = SENT;
+        egi->sendEvent(rxHeader,more);
+    }
+}
+
+//===================================================================
+// eventgenerator_acknowledge()
+//
+// acknowledge the event for this sensor.  Clear the fifo priority
+// and transition back to the ENABLED state.
+// 
+// parameters:
+//    egi - a pointer to the event generator instance that will be
+//          operated on.
+void eventgenerator_acknowledge(EventGeneratorInstance* egi)
+{
+    if (egi->eventState == SENT) {
+        egi->eventState = ENABLED;
+        egi->priority = -1;
     }
 }
 
@@ -193,28 +206,11 @@ void eventgenerator_updateEventStateMachine(EventGeneratorInstance* egi)
         case PENDING:
             // do nothing - just wait for start sending command
             break;
-        case SENDING:
-            egi->sendEvent();
-            egi->timeoutCount = 0;
-            egi->attempts++;
-            egi->eventState = WAITING;
+        case SENT:
+            // do nothing - just wait for acknowledge
             break;
-        case WAITING:
-            // wait for an acknowledge or a timeout
-            if (egi->acknowledged) {
-                egi->eventState = ENABLED;
-            } else {
-                egi->timeoutCount ++;
-                if (egi->timeoutCount>=MAX_TIMEOUT_COUNT) {
-                    if (egi->attempts<=MAX_ATTEMPTS) {
-                        egi->attempts++;
-                        egi->eventState = SENDING;
-                    } else {
-                        egi->eventState = ENABLED;
-                    }
-                }
-            }
-            break;
+        default:
+            egi->eventState = DISABLED;
     }
 }
 

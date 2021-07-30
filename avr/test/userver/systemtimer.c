@@ -34,6 +34,7 @@
 #include "pdrdata.h"
 #include "pldm.h"
 #include "entityStepper1.h"
+#include "entitySimple1.h"
 
 #ifndef F_CPU
     #define F_CPU 16000000

@@ -70,10 +70,10 @@ extern PDR_BYTE_TYPE __pdr_data[] PDR_DATA_ATTRIBUTES;
 // FRU-Related Macros
 extern FRU_BYTE_TYPE __fru_data[] FRU_DATA_ATTRIBUTES;
 #define FRU_TABLE_MAXIMUM_SIZE 0
-#define FRU_TOTAL_SIZE 43
+#define FRU_TOTAL_SIZE 12
 #define FRU_TOTAL_RECORD_SETS 1
-#define FRU_NUMBER_OF_RECORDS 2
-#define FRU_MAX_RECORD_SIZE 29
+#define FRU_NUMBER_OF_RECORDS 1
+#define FRU_MAX_RECORD_SIZE 12
 
 //====================
 // Channel-Related Macros

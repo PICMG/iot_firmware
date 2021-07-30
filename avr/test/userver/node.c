@@ -44,7 +44,22 @@
 #include "entitySimple1.h"
 #include "EventGenerator.h"
 
-uint8   tid;
+static uint8   tid;
+static uint8   globalEventEnableState = 0;
+static char   eventFifoInsertId = 0;
+static char   eventFifoExtractId = 0;
+
+#ifdef UUID
+    const unsigned char uuid_bytes[] PROGMEM = {UUID};
+#else
+    const unsigned char uuid_bytes[] PROGMEM = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+#endif
+
+#define FRU_BYTE_TYPE const unsigned char
+#define LINTABLE_TYPE const long
+#define PDR_DATA_ATTRIBUTES PROGMEM
+#define FRU_DATA_ATTRIBUTES PROGMEM
+#define LINTABLE_DATA_ATTRIBUTES PROGMEM
 
 #define UINT8_TYPE  0
 #define SINT8_TYPE  1
@@ -363,361 +378,498 @@ static void processCommandGetPdr(PldmRequestHeader* rxHeader)
     }
 }
 
-    //*******************************************************************
-    // setStateEfffecterValue()
-    //
-    // set the value of a numeric state effecter if it exists.
-    //
-    // parameters:
-    //    rxHeader - a pointer to the request header
-    // returns:
-    //    void
-    // changes:
-    //    the contents of the transmit buffer
-    static void setStateEffecterStates(PldmRequestHeader* rxHeader) {
-        #ifdef ENTITY_STEPPER1
-            unsigned char response = entityStepper1_setStateEffecterStates(rxHeader);
-        #endif
-        #ifdef ENTITY_SERVO1
-            unsigned char response = entityServo1_setStateEffecterStates(rxHeader);
-        #endif
-        #ifdef ENTITY_PID1
-            unsigned char response = entityPid1_setStateEffecterStates(rxHeader);
-        #endif
-        #ifdef ENTITY_SIMPLE1
-            unsigned char response = entitySimple1_setStateEffecterStates(rxHeader);
-        #endif
-        
-        // send the response
-        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
+//*******************************************************************
+// processCommandGetFruTable()
+//
+// processes a getFruTable command, implemeting the PLDM state machine for
+// packet disassembly, if required.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void processCommandFruTable(PldmRequestHeader* rxHeader) 
+{
+    static char fruTxState = 0;
+    static unsigned int fruNextHandle;
+
+    unsigned long dataTransferHandle = *((long*)(mctp_context.rxBuffer + sizeof(*rxHeader)));
+    unsigned char transferOperationFlag  = *(mctp_context.rxBuffer + sizeof(*rxHeader) + sizeof(unsigned long));
+    unsigned char errorcode = 0;
+    const unsigned short requestCount = 32;
+    unsigned char padding = ((unsigned char)FRU_TOTAL_SIZE&0x03);
+    if (padding) padding = 4-padding;
+
+    switch (fruTxState) {
+    case 0: // transfer has not begun yet
+        if (transferOperationFlag != 0x1)
+            errorcode = RESPONSE_INVALID_TRANSFER_OPERATION_FLAG;
+        else if (dataTransferHandle != 0x0000)
+            errorcode = RESPONSE_INVALID_DATA_TRANSFER_HANDLE;
+        if (errorcode) {
+            // send the error response
+            mctp_transmitFrameStart(sizeof(PldmResponseHeader)+ 6 + 5-1, 1);
             transmitByte(rxHeader->flags1 & 0x7f);
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
-            transmitByte(response);   // completion code
+            mctp_transmitFrameData(&errorcode,1);  // response->completionCode = errorcode;
+            transmitLong(0);                       // response->NextTransferHandle;
+            transmitByte(0);                       // response->transferFlag = 0;
             mctp_transmitFrameEnd();
-    } 
-
-    //*******************************************************************
-    // setStateEfffecterEnables()
-    //
-    // set the value of a state effecter enable if it exists.
-    //
-    // parameters:
-    //    rxHeader - a pointer to the request header
-    // returns:
-    //    void
-    // changes:
-    //    the contents of the transmit buffer
-    static void setStateEffecterEnables(PldmRequestHeader* rxHeader) {
-        #ifdef ENTITY_STEPPER1
-            unsigned char response = entityStepper1_setStateEffecterEnables(rxHeader);
-        #endif
-        #ifdef ENTITY_SERVO1
-            unsigned char response = entityServo1_setStateEffecterEnables(rxHeader);
-        #endif
-        #ifdef ENTITY_PID1
-            unsigned char response = entityPid1_setStateEffecterEnables(rxHeader);
-        #endif
-        #ifdef ENTITY_SIMPLE1
-            unsigned char response = entitySimple1_setStateEffecterEnables(rxHeader);
-        #endif
-
-        // send the response
-        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
+            return;
+        }
+        if (requestCount >= FRU_TABLE_MAXIMUM_SIZE + padding) {          
+            // send the data (single part)
+            mctp_transmitFrameStart( sizeof(PldmResponseHeader) + 6 + FRU_TOTAL_SIZE + padding + 4 + 5-1, 1);
             transmitByte(rxHeader->flags1 & 0x7f);
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
-            transmitByte(response);   // completion code
+            transmitByte(RESPONSE_SUCCESS);       // response->completionCode = RESPONSE_SUCCESS;
+            transmitLong(0);                      // response->nextDataTransferHandle = 0;
+            transmitByte(0x05);                   // response->transferFlag = 0x05;   // start and end
+            // send the FRU data
+            for (int i = 0;i < FRU_TOTAL_SIZE; i++) {
+                transmitByte(pgm_read_byte(&(__fru_data[i])));
+            }
+            // send padding bytes if required
+            for (int i = 0;i < padding; i++) {
+                transmitByte(0x00);
+            }
+            transmitLong(0x00);                   // TODO: calculate and send CRC
             mctp_transmitFrameEnd();
-    } 
-
-    //*******************************************************************
-    // getStateSensorReading()
-    //
-    // get the value of a state sensor state if it exists.
-    //
-    // parameters:
-    //    rxHeader - a pointer to the request header
-    // returns:
-    //    void
-    // changes:
-    //    the contents of the transmit buffer
-    static void getStateSensorReading(PldmRequestHeader* rxHeader) {
-        unsigned char body[10];
-        unsigned char size;
-
-        #ifdef ENTITY_STEPPER1
-            unsigned char response = entityStepper1_getStateSensorReading(rxHeader, body, &size);
-        #endif
-        #ifdef ENTITY_SERVO1
-            unsigned char response = entityServo1_getStateSensorReading(rxHeader, body, &size);
-        #endif
-        #ifdef ENTITY_PID1
-            unsigned char response = entityPid1_getStateSensorReading(rxHeader, body, &size);
-        #endif
-        #ifdef ENTITY_SIMPLE1
-            unsigned char response = entitySimple1_getStateSensorReading(rxHeader, body, &size);
-        #endif
-
-        // send the response
-        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5 + size,1);
+            return;
+        }
+        // start sending the data (multi-part)
+        mctp_transmitFrameStart( sizeof(PldmResponseHeader) + 6 + requestCount + 5-1,1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(RESPONSE_SUCCESS);        // response->completionCode = RESPONSE_SUCCESS;
+        transmitLong(dataTransferHandle + requestCount);  // next data transfer handle
+        transmitByte(0x00);                               // response->transferFlag = 0x0;   // start
+        // insert the pdr
+        for (int i = 0;i < requestCount;i++) {
+            unsigned char byte = pgm_read_byte(&(__fru_data[dataTransferHandle++])); 
+            transmitByte(byte);
+        }
+        mctp_transmitFrameEnd();
+        fruTxState = 1;
+        fruNextHandle = dataTransferHandle;
+        return;
+    case 1: // transfer has already begun
+        if (transferOperationFlag != 0x0) errorcode = RESPONSE_INVALID_TRANSFER_OPERATION_FLAG;
+        else if (dataTransferHandle != fruNextHandle) errorcode = RESPONSE_INVALID_DATA_TRANSFER_HANDLE;
+        if (errorcode) {
+            // send the error response
+            mctp_transmitFrameStart(sizeof(PldmResponseHeader)+ 6 + 5-1, 1);
             transmitByte(rxHeader->flags1 & 0x7f);
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
-            transmitByte(response);         // completion code
-            mctp_transmitFrameData(body,size);
+            mctp_transmitFrameData(&errorcode,1);  // response->completionCode = errorcode;
+            transmitLong(0);                       // response->NextTransferHandle;
+            transmitByte(0);                       // response->transferFlag = 0;
             mctp_transmitFrameEnd();
-    } 
-
-    //*******************************************************************
-    // getStateEfffecterStates()
-    //
-    // get the value of a numeric state effecter state if it exists.
-    //
-    // parameters:
-    //    rxHeader - a pointer to the request header
-    // returns:
-    //    void
-    // changes:
-    //    the contents of the transmit buffer
-    static void getStateEffecterStates(PldmRequestHeader* rxHeader) {
-        unsigned char body[10];
-        unsigned char size;
-
-        #ifdef ENTITY_STEPPER1
-            unsigned char response = entityStepper1_getStateEffecterStates(rxHeader, body, &size);
-        #endif
-        #ifdef ENTITY_SERVO1
-            unsigned char response = entityServo1_getStateEffecterStates(rxHeader, body, &size);
-        #endif
-        #ifdef ENTITY_PID1
-            unsigned char response = entityPid1_getStateEffecterStates(rxHeader, body, &size);
-        #endif
-        #ifdef ENTITY_SIMPLE1
-            unsigned char response = entitySimple1_getStateEffecterStates(rxHeader, body, &size);
-        #endif
-
-        // send the response
-        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5 + size,1);
+            return;
+        }
+        if (requestCount + dataTransferHandle >= FRU_TOTAL_SIZE + padding) {
+            // transfer end part of the data
+            mctp_transmitFrameStart( sizeof(PldmResponseHeader) + 10 + FRU_TOTAL_SIZE + padding -
+                dataTransferHandle + 5 - 1 + 1,1);
             transmitByte(rxHeader->flags1 & 0x7f);
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
-            transmitByte(response);         // completion code
-            mctp_transmitFrameData(body,size);
+            transmitByte(RESPONSE_SUCCESS);        // response->completionCode = RESPONSE_SUCCESS;
+            transmitLong(0);                      // next data transfer handle
+            transmitByte(0x04);                   // response->transferFlag = 0x04;   end
+            // send the FRU data
+            for (int i = 0;i < FRU_TOTAL_SIZE; i++) {
+                transmitByte(pgm_read_byte(&(__fru_data[dataTransferHandle++])));
+            }
+            // send padding bytes if required
+            for (int i = 0;i < padding; i++) {
+                transmitByte(0x00);
+            }
+            transmitLong(0x00);                   // TODO: calculate and send CRC
             mctp_transmitFrameEnd();
-    } 
-
-    //*******************************************************************
-    // setNumericEfffecterValue()
-    //
-    // set the value of a numeric state effecter if it exists.
-    //
-    // parameters:
-    //    rxHeader - a pointer to the request header
-    // returns:
-    //    void
-    // changes:
-    //    the contents of the transmit buffer
-    static void setNumericEffecterValue(PldmRequestHeader* rxHeader) {
-        #ifdef ENTITY_STEPPER1
-            unsigned char response = entityStepper1_setNumericEffecterValue(rxHeader);
-        #endif
-        #ifdef ENTITY_SERVO1
-            unsigned char response = entityServo1_setNumericEffecterValue(rxHeader);
-        #endif
-        #ifdef ENTITY_PID1
-            unsigned char response = entityPid1_setNumericEffecterValue(rxHeader);
-        #endif
-        #ifdef ENTITY_SIMPLE1
-            unsigned char response = entitySimple1_setNumericEffecterValue(rxHeader);
-        #endif
-
-        // send the response
-        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
-            transmitByte(rxHeader->flags1 & 0x7f);
-            transmitByte(rxHeader->flags2);
-            transmitByte(rxHeader->command);
-            transmitByte(response);   // completion code
-            mctp_transmitFrameEnd();    
+            fruTxState = 0;
+            return;
+        }
+        // send the middle data (multi-part)
+        mctp_transmitFrameStart( sizeof(PldmResponseHeader) + 6 + requestCount + 5-1,1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(RESPONSE_SUCCESS);        // response->completionCode = RESPONSE_SUCCESS;
+        transmitLong(dataTransferHandle + requestCount); // next data transfer handle
+        transmitByte(0x01);                   // response->transferFlag = 0x01;   middle
+        for (int i = 0;i < requestCount;i++) {
+            unsigned char byte = pgm_read_byte(&(__pdr_data[dataTransferHandle++])); 
+            transmitByte(byte);
+        }
+        mctp_transmitFrameEnd();
+        fruTxState = 1;
+        fruNextHandle = dataTransferHandle;
+        return;
     }
+}
 
-    //*******************************************************************
-    // getNumericEfffecterValue()
-    //
-    // set the value of a numeric state effecter if it exists.
-    //
-    // parameters:
-    //    rxHeader - a pointer to the request header
-    // returns:
-    //    void
-    // changes:
-    //    the contents of the transmit buffer
-    static void getNumericEffecterValue(PldmRequestHeader* rxHeader) {
-        unsigned char body[10];
-        unsigned char size;
+//*******************************************************************
+// setStateEfffecterValue()
+//
+// set the value of a numeric state effecter if it exists.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void setStateEffecterStates(PldmRequestHeader* rxHeader) {
+    #ifdef ENTITY_STEPPER1
+        unsigned char response = entityStepper1_setStateEffecterStates(rxHeader);
+    #endif
+    #ifdef ENTITY_SERVO1
+        unsigned char response = entityServo1_setStateEffecterStates(rxHeader);
+    #endif
+    #ifdef ENTITY_PID1
+        unsigned char response = entityPid1_setStateEffecterStates(rxHeader);
+    #endif
+    #ifdef ENTITY_SIMPLE1
+        unsigned char response = entitySimple1_setStateEffecterStates(rxHeader);
+    #endif
+    
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);   // completion code
+        mctp_transmitFrameEnd();
+} 
 
-        #ifdef ENTITY_STEPPER1
-            unsigned char response = entityStepper1_getNumericEffecterValue(rxHeader, body, &size);
-        #endif
-        #ifdef ENTITY_SERVO1
-            unsigned char response = entityServo1_getNumericEffecterValue(rxHeader, body, &size);
-        #endif
-        #ifdef ENTITY_PID1
-            unsigned char response = entityPid1_getNumericEffecterValue(rxHeader, body, &size);
-        #endif
-        #ifdef ENTITY_SIMPLE1
-            unsigned char response = entitySimple1_getNumericEffecterValue(rxHeader, body, &size);
-        #endif
+//*******************************************************************
+// setStateEfffecterEnables()
+//
+// set the value of a state effecter enable if it exists.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void setStateEffecterEnables(PldmRequestHeader* rxHeader) {
+    #ifdef ENTITY_STEPPER1
+        unsigned char response = entityStepper1_setStateEffecterEnables(rxHeader);
+    #endif
+    #ifdef ENTITY_SERVO1
+        unsigned char response = entityServo1_setStateEffecterEnables(rxHeader);
+    #endif
+    #ifdef ENTITY_PID1
+        unsigned char response = entityPid1_setStateEffecterEnables(rxHeader);
+    #endif
+    #ifdef ENTITY_SIMPLE1
+        unsigned char response = entitySimple1_setStateEffecterEnables(rxHeader);
+    #endif
 
-        // send the response
-        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + size + 5,1);
-            transmitByte(rxHeader->flags1 & 0x7f);
-            transmitByte(rxHeader->flags2);
-            transmitByte(rxHeader->command);
-            transmitByte(response);   // completion code
-            mctp_transmitFrameData(body,size);
-            mctp_transmitFrameEnd();
-    }
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);   // completion code
+        mctp_transmitFrameEnd();
+} 
 
-    //*******************************************************************
-    // getSensorReading()
-    //
-    // return the value of a numeric sensor.
-    //
-    // parameters:
-    //    rxHeader - a pointer to the request header
-    // returns:
-    //    void
-    // changes:
-    //    the contents of the transmit buffer
-    static void getSensorReading(PldmRequestHeader* rxHeader) {
-        unsigned char body[10];
-        unsigned char size;
+//*******************************************************************
+// getStateSensorReading()
+//
+// get the value of a state sensor state if it exists.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void getStateSensorReading(PldmRequestHeader* rxHeader) {
+    unsigned char body[10];
+    unsigned char size;
 
-        #ifdef ENTITY_STEPPER1
-            unsigned char response = entityStepper1_getSensorReading(rxHeader, body, &size);
-        #endif
-        #ifdef ENTITY_SERVO1
-            unsigned char response = entityServo1_getSensorReading(rxHeader, body, &size);
-        #endif
-        #ifdef ENTITY_PID1
-            unsigned char response = entityPid1_getSensorReading(rxHeader, body, &size);
-        #endif
-        #ifdef ENTITY_SIMPLE1
-            unsigned char response = entitySimple1_getSensorReading(rxHeader, body, &size);
-        #endif
+    #ifdef ENTITY_STEPPER1
+        unsigned char response = entityStepper1_getStateSensorReading(rxHeader, body, &size);
+    #endif
+    #ifdef ENTITY_SERVO1
+        unsigned char response = entityServo1_getStateSensorReading(rxHeader, body, &size);
+    #endif
+    #ifdef ENTITY_PID1
+        unsigned char response = entityPid1_getStateSensorReading(rxHeader, body, &size);
+    #endif
+    #ifdef ENTITY_SIMPLE1
+        unsigned char response = entitySimple1_getStateSensorReading(rxHeader, body, &size);
+    #endif
 
-        // send the response
-        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + size + 5,1);
-            transmitByte(rxHeader->flags1 & 0x7f);
-            transmitByte(rxHeader->flags2);
-            transmitByte(rxHeader->command);
-            transmitByte(response);   // completion code
-            mctp_transmitFrameData(body,size);
-            mctp_transmitFrameEnd();
-    }
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5 + size,1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);         // completion code
+        mctp_transmitFrameData(body,size);
+        mctp_transmitFrameEnd();
+} 
 
-    //*******************************************************************
-    // setNumericSensorEnable()
-    //
-    // set the enable for a numeric effecter.
-    //
-    // parameters:
-    //    rxHeader - a pointer to the request header
-    // returns:
-    //    void
-    // changes:
-    //    the contents of the transmit buffer
-    static void setNumericSensorEnable(PldmRequestHeader* rxHeader) {
-        #ifdef ENTITY_STEPPER1
-            unsigned char response = entityStepper1_setNumericSensorEnable(rxHeader);
-        #endif
-        #ifdef ENTITY_SERVO1
-            unsigned char response = entityServo1_setNumericSensorEnable(rxHeader);
-        #endif
-        #ifdef ENTITY_PID1
-            unsigned char response = entityPid1_setNumericSensorEnable(rxHeader);
-        #endif
-        #ifdef ENTITY_SIMPLE1
-            unsigned char response = entitySimple1_setNumericSensorEnable(rxHeader);
-        #endif
+//*******************************************************************
+// getStateEfffecterStates()
+//
+// get the value of a numeric state effecter state if it exists.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void getStateEffecterStates(PldmRequestHeader* rxHeader) {
+    unsigned char body[10];
+    unsigned char size;
 
-        // send the response
-        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
-            transmitByte(rxHeader->flags1 & 0x7f);
-            transmitByte(rxHeader->flags2);
-            transmitByte(rxHeader->command);
-            transmitByte(response);   // completion code
-            mctp_transmitFrameEnd();
-    }
+    #ifdef ENTITY_STEPPER1
+        unsigned char response = entityStepper1_getStateEffecterStates(rxHeader, body, &size);
+    #endif
+    #ifdef ENTITY_SERVO1
+        unsigned char response = entityServo1_getStateEffecterStates(rxHeader, body, &size);
+    #endif
+    #ifdef ENTITY_PID1
+        unsigned char response = entityPid1_getStateEffecterStates(rxHeader, body, &size);
+    #endif
+    #ifdef ENTITY_SIMPLE1
+        unsigned char response = entitySimple1_getStateEffecterStates(rxHeader, body, &size);
+    #endif
 
-    //*******************************************************************
-    // setNumericEffecterEnable()
-    //
-    // set the enable for a numeric effecter.
-    //
-    // parameters:
-    //    rxHeader - a pointer to the request header
-    // returns:
-    //    void
-    // changes:
-    //    the contents of the transmit buffer
-    static void setNumericEffecterEnable(PldmRequestHeader* rxHeader) {
-        #ifdef ENTITY_STEPPER1
-            unsigned char response = entityStepper1_setNumericEffecterEnable(rxHeader);
-        #endif
-        #ifdef ENTITY_SERVO1
-            unsigned char response = entityServo1_setNumericEffecterEnable(rxHeader);
-        #endif
-        #ifdef ENTITY_PID1
-            unsigned char response = entityPid1_setNumericEffecterEnable(rxHeader);
-        #endif
-        #ifdef ENTITY_SIMPLE1
-            unsigned char response = entitySimple1_setNumericEffecterEnable(rxHeader);
-        #endif
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5 + size,1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);         // completion code
+        mctp_transmitFrameData(body,size);
+        mctp_transmitFrameEnd();
+} 
 
-        // send the response
-        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
-            transmitByte(rxHeader->flags1 & 0x7f);
-            transmitByte(rxHeader->flags2);
-            transmitByte(rxHeader->command);
-            transmitByte(response);   // completion code
-            mctp_transmitFrameEnd();
-    }
+//*******************************************************************
+// setNumericEfffecterValue()
+//
+// set the value of a numeric state effecter if it exists.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void setNumericEffecterValue(PldmRequestHeader* rxHeader) {
+    #ifdef ENTITY_STEPPER1
+        unsigned char response = entityStepper1_setNumericEffecterValue(rxHeader);
+    #endif
+    #ifdef ENTITY_SERVO1
+        unsigned char response = entityServo1_setNumericEffecterValue(rxHeader);
+    #endif
+    #ifdef ENTITY_PID1
+        unsigned char response = entityPid1_setNumericEffecterValue(rxHeader);
+    #endif
+    #ifdef ENTITY_SIMPLE1
+        unsigned char response = entitySimple1_setNumericEffecterValue(rxHeader);
+    #endif
 
-    //*******************************************************************
-    // setStateSensorEnables()
-    //
-    // set the enable for a state sensor.
-    //
-    // parameters:
-    //    rxHeader - a pointer to the request header
-    // returns:
-    //    void
-    // changes:
-    //    the contents of the transmit buffer
-    static void setStateSensorEnables(PldmRequestHeader* rxHeader) {
-        #ifdef ENTITY_STEPPER1
-            unsigned char response = entityStepper1_setStateSensorEnables(rxHeader);
-        #endif
-        #ifdef ENTITY_SERVO1
-            unsigned char response = entityServo1_setStateSensorEnables(rxHeader);
-        #endif
-        #ifdef ENTITY_PID1
-            unsigned char response = entityPid1_setStateSensorEnables(rxHeader);
-        #endif
-        #ifdef ENTITY_SIMPLE1
-            unsigned char response = entitySimple1_setStateSensorEnables(rxHeader);
-        #endif
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);   // completion code
+        mctp_transmitFrameEnd();    
+}
 
-        // send the response
-        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
-            transmitByte(rxHeader->flags1 & 0x7f);
-            transmitByte(rxHeader->flags2);
-            transmitByte(rxHeader->command);
-            transmitByte(response);   // completion code
-            mctp_transmitFrameEnd();
-    }
+//*******************************************************************
+// getNumericEfffecterValue()
+//
+// set the value of a numeric state effecter if it exists.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void getNumericEffecterValue(PldmRequestHeader* rxHeader) {
+    unsigned char body[10];
+    unsigned char size;
+
+    #ifdef ENTITY_STEPPER1
+        unsigned char response = entityStepper1_getNumericEffecterValue(rxHeader, body, &size);
+    #endif
+    #ifdef ENTITY_SERVO1
+        unsigned char response = entityServo1_getNumericEffecterValue(rxHeader, body, &size);
+    #endif
+    #ifdef ENTITY_PID1
+        unsigned char response = entityPid1_getNumericEffecterValue(rxHeader, body, &size);
+    #endif
+    #ifdef ENTITY_SIMPLE1
+        unsigned char response = entitySimple1_getNumericEffecterValue(rxHeader, body, &size);
+    #endif
+
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + size + 5,1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);   // completion code
+        mctp_transmitFrameData(body,size);
+        mctp_transmitFrameEnd();
+}
+
+//*******************************************************************
+// getSensorReading()
+//
+// return the value of a numeric sensor.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void getSensorReading(PldmRequestHeader* rxHeader) {
+    unsigned char body[10];
+    unsigned char size;
+
+    #ifdef ENTITY_STEPPER1
+        unsigned char response = entityStepper1_getSensorReading(rxHeader, body, &size);
+    #endif
+    #ifdef ENTITY_SERVO1
+        unsigned char response = entityServo1_getSensorReading(rxHeader, body, &size);
+    #endif
+    #ifdef ENTITY_PID1
+        unsigned char response = entityPid1_getSensorReading(rxHeader, body, &size);
+    #endif
+    #ifdef ENTITY_SIMPLE1
+        unsigned char response = entitySimple1_getSensorReading(rxHeader, body, &size);
+    #endif
+
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + size + 5,1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);   // completion code
+        mctp_transmitFrameData(body,size);
+        mctp_transmitFrameEnd();
+}
+
+//*******************************************************************
+// setNumericSensorEnable()
+//
+// set the enable for a numeric effecter.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void setNumericSensorEnable(PldmRequestHeader* rxHeader) {
+    #ifdef ENTITY_STEPPER1
+        unsigned char response = entityStepper1_setNumericSensorEnable(rxHeader);
+    #endif
+    #ifdef ENTITY_SERVO1
+        unsigned char response = entityServo1_setNumericSensorEnable(rxHeader);
+    #endif
+    #ifdef ENTITY_PID1
+        unsigned char response = entityPid1_setNumericSensorEnable(rxHeader);
+    #endif
+    #ifdef ENTITY_SIMPLE1
+        unsigned char response = entitySimple1_setNumericSensorEnable(rxHeader);
+    #endif
+
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);   // completion code
+        mctp_transmitFrameEnd();
+}
+
+//*******************************************************************
+// setNumericEffecterEnable()
+//
+// set the enable for a numeric effecter.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void setNumericEffecterEnable(PldmRequestHeader* rxHeader) {
+    #ifdef ENTITY_STEPPER1
+        unsigned char response = entityStepper1_setNumericEffecterEnable(rxHeader);
+    #endif
+    #ifdef ENTITY_SERVO1
+        unsigned char response = entityServo1_setNumericEffecterEnable(rxHeader);
+    #endif
+    #ifdef ENTITY_PID1
+        unsigned char response = entityPid1_setNumericEffecterEnable(rxHeader);
+    #endif
+    #ifdef ENTITY_SIMPLE1
+        unsigned char response = entitySimple1_setNumericEffecterEnable(rxHeader);
+    #endif
+
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);   // completion code
+        mctp_transmitFrameEnd();
+}
+
+//*******************************************************************
+// setStateSensorEnables()
+//
+// set the enable for a state sensor.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+static void setStateSensorEnables(PldmRequestHeader* rxHeader) {
+    #ifdef ENTITY_STEPPER1
+        unsigned char response = entityStepper1_setStateSensorEnables(rxHeader);
+    #endif
+    #ifdef ENTITY_SERVO1
+        unsigned char response = entityServo1_setStateSensorEnables(rxHeader);
+    #endif
+    #ifdef ENTITY_PID1
+        unsigned char response = entityPid1_setStateSensorEnables(rxHeader);
+    #endif
+    #ifdef ENTITY_SIMPLE1
+        unsigned char response = entitySimple1_setStateSensorEnables(rxHeader);
+    #endif
+
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5,1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response);   // completion code
+        mctp_transmitFrameEnd();
+}
 
 //*******************************************************************
 // setTID()
@@ -766,6 +918,297 @@ void getTid(PldmRequestHeader* rxHeader) {
 }
 
 //*******************************************************************
+// getPldmVersion()
+//
+// respond by sending the Pldm Version supported by this node
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+void getPldmVersion(PldmRequestHeader* rxHeader) {
+    unsigned char response_code = RESPONSE_SUCCESS;
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 13 + 1 + 5, 1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response_code);   // completion code
+        transmitLong(0x00000000);      // next transfer handle
+        transmitByte(0x05);            // start and end
+        transmitLong(0xF1F0F000);      // Version 1.0.0.0
+        transmitLong(0x4A868FFB);      // CRC32 of the
+        mctp_transmitFrameEnd();
+}
+
+//*******************************************************************
+// getPldmTypes()
+//
+// respond by sending the Pldm types supported by this node
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+void getPldmTypes(PldmRequestHeader* rxHeader) {
+    unsigned char response_code = RESPONSE_SUCCESS;
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 8 + 1 + 5, 1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response_code);   // completion code
+        transmitByte(0x15);            // types 0-7 (base, platform management, fru supported)
+        transmitByte(0x00);            // types 8-15
+        transmitByte(0x00);            // types 6-23
+        transmitByte(0x00);            // types 24-31
+        transmitByte(0x00);            // types 32-39
+        transmitByte(0x00);            // types 40-47
+        transmitByte(0x00);            // types 48-55
+        transmitByte(0x00);            // types 56-63
+        mctp_transmitFrameEnd();
+}
+
+//*******************************************************************
+// getPldmCommands()
+//
+// respond by sending the commands supported by this node
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+void getPldmCommands(PldmRequestHeader* rxHeader) {
+    unsigned char response_code = RESPONSE_SUCCESS;
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 32 + 1 + 5, 1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response_code);  // completion code   
+        switch(rxHeader->flags2&0x3F) {
+            case 0:
+                // pldm command and discovery
+                transmitLong(0x0000003E);
+                transmitLong(0x00000000);
+                transmitLong(0x00000000);
+                transmitLong(0x00000000);
+                break;
+            case 2:
+                // pldm for platform management and control
+                transmitLong(0x007F1810);
+                transmitLong(0x07070003);
+                transmitLong(0x00030000);
+                transmitLong(0x00000000);
+                break;
+            case 4:
+                // pldm for fru
+                transmitLong(0x00000006);
+                transmitLong(0x00000000);
+                transmitLong(0x00000000);
+                transmitLong(0x00000000);
+                break;
+            default:
+                transmitLong(0x00000000);
+                transmitLong(0x00000000);
+                transmitLong(0x00000000);
+                transmitLong(0x00000000);
+                break;
+        }
+        mctp_transmitFrameEnd();
+}
+
+//*******************************************************************
+// getTerminusUuid()
+//
+// respond by sending the UUID of this node
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+void getUuid(PldmRequestHeader* rxHeader) {
+    unsigned char response_code = RESPONSE_SUCCESS;
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 16 + 1 + 5, 1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response_code);   // completion code
+        for (int i=0;i<16;i++) transmitByte(pgm_read_byte(uuid_bytes[i]));
+        mctp_transmitFrameEnd();
+}
+
+//*******************************************************************
+// processCommandEventMessageSupported()
+//
+// respond to a EventMessageSupported command.  Currently only polling
+// is supported by the device.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+void processCommandEventMessageSupported(PldmRequestHeader* rxHeader) {
+    unsigned char response_code = RESPONSE_SUCCESS;
+    
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 4 + 1 + 5, 1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response_code);   // completion code
+        transmitByte(globalEventEnableState);
+        transmitByte(0x04);  // polled mode support only
+        transmitByte(0x01);  // one class of event generated
+        transmitByte(0x00);  // sensor event class generated
+        mctp_transmitFrameEnd();
+}
+
+//*******************************************************************
+// processSetEventReceiver()
+//
+// respond to a SetEventReceiver command.  Currently only polling
+// is supported by the device.
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+void processSetEventReceiver(PldmRequestHeader* rxHeader) {
+    unsigned char enable = *((char*)(rxHeader+1));
+
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5, 1);
+    transmitByte(rxHeader->flags1 & 0x7f);
+    transmitByte(rxHeader->flags2);
+    transmitByte(rxHeader->command);
+    if ((enable==0)||(enable==2)) transmitByte(RESPONSE_SUCCESS);
+    else transmitByte(RESPONSE_ENABLE_METHOD_NOT_SUPPORTED);
+
+    globalEventEnableState = 0;
+    if (enable==2) globalEventEnableState = 1;
+}
+
+//*******************************************************************
+// processPollForPlataformEvent()
+//
+// respond to a PollForPlatformEvent command.  C
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+void processPollForPlatformEvent(PldmRequestHeader* rxHeader) {
+    if (!globalEventEnableState) {
+        // send error if events are not enabled
+        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 1 + 5, 1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(RESPONSE_ERROR);   // completion code
+        mctp_transmitFrameEnd();
+        return;
+    }
+    
+    // note: for simplicity, this function sends events as a
+    // single transfer.  It is assumed that acknowledgements
+    // always are targeted at the correct ID.
+    unsigned char transferOperation = *(((char*)(rxHeader+1))+1);
+
+    if (transferOperation==0x02) {
+        // acknowledge only
+        if (eventFifoInsertId!=eventFifoExtractId) {    
+            // there are items in the fifo - call the entity to
+            // acknowledge the current event
+#ifdef ENTITY_SIMPLE1
+            entitySimple1_acknowledgeEvent(eventFifoExtractId);
+#endif
+#ifdef ENTITY_STEPPER1
+            entityStepper1_acknowledgeEvent(eventFifoExtractId);
+#endif
+            // "remove the event from the fifo"
+            eventFifoExtractId = (eventFifoExtractId+1)&0xF;
+        } 
+        // send the response
+        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 3 + 1 + 5, 1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(RESPONSE_SUCCESS);   // completion code
+        transmitByte(tid);
+        if (eventFifoInsertId!=eventFifoExtractId) transmitShort(0xFFFF); 
+        else transmitShort(0x0000); 
+        mctp_transmitFrameEnd();
+    } else {
+        if (eventFifoInsertId!=eventFifoExtractId) {
+            // there are items in the FIFO - call the entity to
+            // respond to this request
+#ifdef ENTITY_SIMPLE1
+            entitySimple1_respondToPollEvent(rxHeader, eventFifoInsertId, eventFifoExtractId);
+#endif
+#ifdef ENTITY_STEPPER1
+            entityStepper1_respondToPollEvent(rxHeader, eventFifoInsertId, eventFifoExtractId);
+#endif
+        } else {
+            // send the response - there was nothing to retrieve
+            mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 3 + 1 + 5, 1);
+            transmitByte(rxHeader->flags1 & 0x7f);
+            transmitByte(rxHeader->flags2);
+            transmitByte(rxHeader->command);
+            transmitByte(RESPONSE_SUCCESS);   // completion code
+            transmitByte(tid);
+            transmitShort(0x00); 
+            mctp_transmitFrameEnd();
+        }
+    }
+}
+
+//*******************************************************************
+// getFruTableMetadata()
+//
+// respond to a getFruTableMetadata command.  
+//
+// parameters:
+//    rxHeader - a pointer to the request header
+// returns:
+//    void
+// changes:
+//    the contents of the transmit buffer
+void getFruTableMetadata(PldmRequestHeader* rxHeader) {
+    unsigned char response_code = RESPONSE_SUCCESS;
+    
+    // send the response
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 18 + 1 + 5, 1);
+        transmitByte(rxHeader->flags1 & 0x7f);
+        transmitByte(rxHeader->flags2);
+        transmitByte(rxHeader->command);
+        transmitByte(response_code);   // completion code
+        transmitByte(0x01);  // major version
+        transmitByte(0x00);  // minor version
+        transmitLong(FRU_TABLE_MAXIMUM_SIZE); 
+        transmitLong(FRU_TOTAL_SIZE); 
+        transmitShort(FRU_TOTAL_RECORD_SETS);
+        transmitShort(FRU_NUMBER_OF_RECORDS);
+        transmitLong(0x00000000);  // CRC32 - TODO: Calculate this checksum       
+        mctp_transmitFrameEnd();
+}
+
+//*******************************************************************
 // parseCommand()
 //
 // parse a new PLDM command and take appropriate action.  It is assumed
@@ -783,72 +1226,124 @@ static void parseCommand()
     // they are easier to use later.
     PldmRequestHeader* rxHeader = (PldmRequestHeader*)mctp_getPacket();
 
-    // switch based on the command type byte in the header
-    switch (rxHeader->command) {
-    case CMD_GET_TID:
-        getTid(rxHeader);
-        break;
-    case CMD_SET_TID:
-        setTid(rxHeader);
-        break;
-    case CMD_GET_SENSOR_READING:
-        getSensorReading(rxHeader);
-        break;
-    case CMD_SET_NUMERIC_SENSOR_ENABLE:
-        setNumericSensorEnable(rxHeader);
-        break;
-    case CMD_GET_STATE_SENSOR_READINGS:
-        getStateSensorReading(rxHeader);
-        break;
-    case CMD_SET_STATE_SENSOR_ENABLES:
-        setStateSensorEnables(rxHeader);
-        break;
-    case CMD_SET_NUMERIC_EFFECTER_VALUE:
-        setNumericEffecterValue(rxHeader);
-        break;
-    case CMD_GET_NUMERIC_EFFECTER_VALUE:
-        getNumericEffecterValue(rxHeader);
-        break;
-    case CMD_SET_STATE_EFFECTER_STATES:
-        setStateEffecterStates(rxHeader);
-        break;
-    case CMD_GET_STATE_EFFECTER_STATES:
-        getStateEffecterStates(rxHeader);
-        break;
-    case CMD_GET_PDR_REPOSITORY_INFO:
-    {
-        mctp_transmitFrameStart(sizeof(GetPdrRepositoryInfoResponse) + sizeof(PldmRequestHeader) + 5,1);
-        transmitByte(rxHeader->flags1 & 0x7f);
-        transmitByte(rxHeader->flags2);
-        transmitByte(rxHeader->command);
-        transmitByte(RESPONSE_SUCCESS);   // completion code
-        transmitByte(0);                  // repository state = available
-        for (int i=0;i<13;i++) transmitByte(0); // update time
-        for (int i=0;i<13;i++) transmitByte(0); // oem update time
-        transmitLong(PDR_NUMBER_OF_RECORDS);            // pdr record count
-        transmitLong(PDR_TOTAL_SIZE);   // repository size
-        transmitLong(PDR_MAX_RECORD_SIZE);  // record size
-        transmitByte(0);                  // no timeout
-        mctp_transmitFrameEnd();
-        break;
-    }
-    case CMD_GET_PDR:
-        processCommandGetPdr(rxHeader);
-        break;
-    case CMD_SET_NUMERIC_EFFECTER_ENABLE:
-        setNumericEffecterEnable(rxHeader);
-        break;
-    case CMD_SET_STATE_EFFECTER_ENABLES:
-        setStateEffecterEnables(rxHeader);
-        break;
-    default:
-        mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 5 + 1,1);
-        transmitByte(rxHeader->flags1 & 0x7f);
-        transmitByte(rxHeader->flags2);
-        transmitByte(rxHeader->command);
-        transmitByte(RESPONSE_ERROR_UNSUPPORTED_PLDM_CMD);   // completion code
-        break;
-    }
+    // switch based on the command and type in the header
+    if (((rxHeader->flags2)&0x3f)==0) {
+        // PLDM Messanging Control and Discovery
+        switch (rxHeader->command) {
+        case CMD_GET_TID:
+            getTid(rxHeader);
+            break;
+        case CMD_SET_TID:
+            setTid(rxHeader);
+            break;
+        case CMD_GET_PLDM_VERSION:
+            getPldmVersion(rxHeader);
+            break;
+        case CMD_GET_PLDM_TYPES:
+            getPldmTypes(rxHeader);
+            break;
+        case CMD_GET_PLDM_COMMANDS:
+            getPldmCommands(rxHeader);
+            break;
+        default:
+            mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 5 + 1,1);
+            transmitByte(rxHeader->flags1 & 0x7f);
+            transmitByte(rxHeader->flags2);
+            transmitByte(rxHeader->command);
+            transmitByte(RESPONSE_ERROR_UNSUPPORTED_PLDM_CMD);   // completion code
+            break;
+        }
+    } else if (((rxHeader->flags2)&0x3f)==2) {
+        // PLDM for Platform Monitoring and Control
+        switch (rxHeader->command) {
+        case CMD_GET_TERMINUS_UID:
+            getUuid(rxHeader);
+            break;
+        case CMD_GET_SENSOR_READING:
+            getSensorReading(rxHeader);
+            break;
+        case CMD_SET_NUMERIC_SENSOR_ENABLE:
+            setNumericSensorEnable(rxHeader);
+            break;
+        case CMD_GET_STATE_SENSOR_READINGS:
+            getStateSensorReading(rxHeader);
+            break;
+        case CMD_SET_STATE_SENSOR_ENABLES:
+            setStateSensorEnables(rxHeader);
+            break;
+        case CMD_SET_NUMERIC_EFFECTER_VALUE:
+            setNumericEffecterValue(rxHeader);
+            break;
+        case CMD_GET_NUMERIC_EFFECTER_VALUE:
+            getNumericEffecterValue(rxHeader);
+            break;
+        case CMD_SET_STATE_EFFECTER_STATES:
+            setStateEffecterStates(rxHeader);
+            break;
+        case CMD_GET_STATE_EFFECTER_STATES:
+            getStateEffecterStates(rxHeader);
+            break;
+        case CMD_GET_PDR_REPOSITORY_INFO:
+        {
+            mctp_transmitFrameStart(sizeof(GetPdrRepositoryInfoResponse) + sizeof(PldmRequestHeader) + 5,1);
+            transmitByte(rxHeader->flags1 & 0x7f);
+            transmitByte(rxHeader->flags2);
+            transmitByte(rxHeader->command);
+            transmitByte(RESPONSE_SUCCESS);   // completion code
+            transmitByte(0);                  // repository state = available
+            for (int i=0;i<13;i++) transmitByte(0); // update time
+            for (int i=0;i<13;i++) transmitByte(0); // oem update time
+            transmitLong(PDR_NUMBER_OF_RECORDS);            // pdr record count
+            transmitLong(PDR_TOTAL_SIZE);   // repository size
+            transmitLong(PDR_MAX_RECORD_SIZE);  // record size
+            transmitByte(0);                  // no timeout
+            mctp_transmitFrameEnd();
+            break;
+        }
+        case CMD_GET_PDR:
+            processCommandGetPdr(rxHeader);
+            break;
+        case CMD_SET_NUMERIC_EFFECTER_ENABLE:
+            setNumericEffecterEnable(rxHeader);
+            break;
+        case CMD_SET_STATE_EFFECTER_ENABLES:
+            setStateEffecterEnables(rxHeader);
+            break;
+        case CMD_EVENT_MESSAGE_SUPPORTED:
+            processCommandEventMessageSupported(rxHeader);
+            break;
+        case CMD_POLL_FOR_PLATFORM_EVENT_MESSAGE:
+            processPollForPlatformEvent(rxHeader);
+            break;
+        case CMD_SET_EVENT_RECEIVER:
+            processSetEventReceiver(rxHeader);
+            break;
+        default:
+            mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 5 + 1,1);
+            transmitByte(rxHeader->flags1 & 0x7f);
+            transmitByte(rxHeader->flags2);
+            transmitByte(rxHeader->command);
+            transmitByte(RESPONSE_ERROR_UNSUPPORTED_PLDM_CMD);   // completion code
+            break;
+        }
+    } else if (((rxHeader->flags2)&0x3f)==4) {
+        // PLDM for FRU Data
+        switch (rxHeader->command) {
+        case CMD_GET_FRU_TABLE_METADATA:
+            getFruTableMetadata(rxHeader);
+            break;
+        case CMD_GET_FRU_RECORD_TABLE:
+            processCommandFruTable(rxHeader); 
+            break;
+        default:
+            mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 5 + 1,1);
+            transmitByte(rxHeader->flags1 & 0x7f);
+            transmitByte(rxHeader->flags2);
+            transmitByte(rxHeader->command);
+            transmitByte(RESPONSE_ERROR_UNSUPPORTED_PLDM_CMD);   // completion code
+            break;
+        }
+    } 
     return;
 }
 
@@ -903,15 +1398,14 @@ unsigned char* node_getResponse(void) {
 //    sensorId - the ID of the senosr that caused the event
 //    presentReading - the current reading of the sensor  
 void node_sendNumericSensorEvent(
+        PldmRequestHeader *rxHeader,
+        unsigned char more,
         EventGeneratorInstance* egi, 
         unsigned int sensorId, 
         unsigned char previousEventState, 
         FIXEDPOINT_24_8 presentReading
 ) 
 {  
-    // flush any messages in progress from the transmit queue
-    uart_flush();
-
     // begin the event frame
     mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 13 + 5,1);
     // transmit the header
@@ -944,10 +1438,12 @@ void node_sendNumericSensorEvent(
 // parameters:
 //    egi - event generator instance related to this event.
 //    sensorId - the ID of the senosr that caused the event
-void node_sendStateSensorEvent(EventGeneratorInstance* egi, unsigned int sensorId, 
-                                    unsigned char previousEventState) {
-    // flush any messages in progress from the transmit queue
-    uart_flush();
+void node_sendStateSensorEvent(
+        PldmRequestHeader *rxHeader,
+        unsigned char more,
+        EventGeneratorInstance* egi, 
+        unsigned int sensorId, 
+        unsigned char previousEventState) {
 
     // begin the event frame
     mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 8 + 5,1);
@@ -971,35 +1467,17 @@ void node_sendStateSensorEvent(EventGeneratorInstance* egi, unsigned int sensorI
 }
 
 //===================================================================
-// sendHeartbeatEvent()
+// updateEvents()
 //
-// send a heartbeat event based on the parameters passed to the
-// function.  This helper function is intended to be called by child
-// instances from within the high-priority loop.
+// called from the low-priority loop to update the state of the event
+// handler.
 //
 // parameters:
-void node_sendHeartbeatEvent() {
-    static unsigned char sequenceNumber = 0;
-
-    // flush any messages in progress from the transmit queue
-    uart_flush();
-
-    // begin the event frame
-    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 5 + 5,1);
-    
-    // transmit the header
-    transmitByte( 0x80 );    // pldm datagram request message type, instance ID 0
-    transmitByte( 0x00);     // header version = 00, pldm type = 0 (pldm messaging/discovery)
-    transmitByte( CMD_PLATFORM_EVENT_MESSAGE ); 
-
-    // transmit the platform event message common data
-    transmitByte(0x01);         // format version
-    transmitByte(0x01);         // terminus ID
-    transmitByte(0x06);         // event class 6 = heatbeat
-
-    // transmit the body
-    transmitByte(0x01);          // format version
-    transmitByte(sequenceNumber++); // sequence number
-    
-    mctp_transmitFrameEnd();
+void node_updateEvents() {
+    #ifdef ENTITY_STEPPER1
+    entityStepper1_updateEvents(&eventFifoInsertId);
+    #endif
+    #ifdef ENTITY_SIMPLE1
+    entitySimple1_updateEvents(&eventFifoInsertId);
+    #endif
 }

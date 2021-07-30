@@ -195,5 +195,5 @@
         return ain_rawdata; 
     } 
 #else
-    adc_init() {};
+    void adc_init() {};
 #endif

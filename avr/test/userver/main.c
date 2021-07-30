@@ -35,6 +35,7 @@
 #include "stepdir_out.h"
 #include "entityStepper1.h"
 #include "entitySimple1.h"
+#include "adc.h"
 
 int main(void)
 {
@@ -85,6 +86,9 @@ int main(void)
     } else {
       // otherwise process messages
       node_getResponse();
+
+      // update sensor event states
+      node_updateEvents();
     }
   }
   return 0;

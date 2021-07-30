@@ -27,25 +27,25 @@
 //
 #ifndef EVENTGENERATOR_H_INCLUDED
 #define EVENTGENERATOR_H_INCLUDED
+#include "pldm.h"
 
 typedef struct {
     unsigned char eventState;   // the current state of the event generator
-    unsigned char timeoutCount; // how long until timeout waiting for response
-    unsigned char attempts;     // the number of sent attempts that have been made
-    unsigned char acknowledged; // true if the event has been acknowledged
+    char priority;              // fifo priority
     char (*eventOccurred)();    // pointer to child's implmentation eventOccured()
-    void (*sendEvent)();        // pointer to child's implmentation of sendEvent()
+    void (*sendEvent)(PldmRequestHeader *, unsigned char); // pointer to child's implmentation of sendEvent()
 
 } EventGeneratorInstance;
 
 void eventgenerator_init(EventGeneratorInstance *egi);
 void eventgenerator_setEventOccurredFn(EventGeneratorInstance *egi,char (*)());
-void eventgenerator_setSendEventFn(EventGeneratorInstance *egi,void (*)());
+void eventgenerator_setSendEventFn(EventGeneratorInstance *egi,void (*)(PldmRequestHeader *, unsigned char));
 char eventgenerator_isEventPending(EventGeneratorInstance* egi);
-char eventgenerator_isEventSending(EventGeneratorInstance* egi);
+char eventgenerator_isEventSent(EventGeneratorInstance* egi);
 char eventgenerator_isEnabled(EventGeneratorInstance* egi);
-void eventgenerator_setEnableAsyncEvents(EventGeneratorInstance* egi, unsigned char enable);
-void eventgenerator_startSending(EventGeneratorInstance* egi);
+void eventgenerator_setEnableEvents(EventGeneratorInstance* egi, unsigned char enable);
+void eventgenerator_startSending(EventGeneratorInstance* egi, PldmRequestHeader *rxHeader, unsigned char more);
 void eventgenerator_updateEventStateMachine(EventGeneratorInstance* egi);
+void eventgenerator_acknowledge(EventGeneratorInstance* egi);
 
 #endif // EVENTGENERATOR_H_INCLUDED
