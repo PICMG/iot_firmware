@@ -334,8 +334,8 @@ END GROUP
                 0x0000000000000992                processSetEventReceiver
                 0x00000000000009dc                processPollForPlatformEvent
                 0x0000000000000ab6                getFruTableMetadata
-                0x0000000000000b16                node_putCommand
-                0x0000000000000b54                node_getResponse
+                0x0000000000000b22                node_putCommand
+                0x0000000000000b60                node_getResponse
                 0x0000000000001636                node_sendNumericSensorEvent
                 0x00000000000016b4                node_sendStateSensorEvent
                 0x0000000000001714                node_updateEvents

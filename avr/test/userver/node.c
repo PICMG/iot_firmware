@@ -1193,14 +1193,15 @@ void getFruTableMetadata(PldmRequestHeader* rxHeader) {
     unsigned char response_code = RESPONSE_SUCCESS;
     
     // send the response
-    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 14 + 1 + 5, 1);
+    mctp_transmitFrameStart(sizeof(PldmRequestHeader) + 18 + 1 + 5, 1);
         transmitByte(rxHeader->flags1 & 0x7f);
         transmitByte(rxHeader->flags2);
         transmitByte(rxHeader->command);
         transmitByte(response_code);   // completion code
         transmitByte(0x01);  // major version
         transmitByte(0x00);  // minor version
-        transmitLong(FRU_TABLE_MAXIMUM_SIZE);  
+        transmitLong(FRU_TABLE_MAXIMUM_SIZE); 
+        transmitLong(FRU_TOTAL_SIZE); 
         transmitShort(FRU_TOTAL_RECORD_SETS);
         transmitShort(FRU_NUMBER_OF_RECORDS);
         transmitLong(0x00000000);  // CRC32 - TODO: Calculate this checksum       
