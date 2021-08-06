@@ -50,6 +50,8 @@
         "stdexcept": "cpp",
         "streambuf": "cpp",
         "cinttypes": "cpp",
-        "typeinfo": "cpp"
-    }
+        "typeinfo": "cpp",
+        "pgmspace.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
 }

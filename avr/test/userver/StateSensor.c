@@ -172,8 +172,8 @@ unsigned char statesensor_setOperationalState(StateSensorInstance *inst, unsigne
     inst->operationalState = state;
     SREG = sreg;
 
-    if (eventMessageEnable == 1) eventgenerator_setEnableAsyncEvents(&inst->eventGen,0);  // disable
-    else if (eventMessageEnable == 4) eventgenerator_setEnableAsyncEvents(&inst->eventGen,1); // enable
+    if (eventMessageEnable == 1) eventgenerator_setEnableEvents(&inst->eventGen,0);  // disable
+    else if (eventMessageEnable == 4) eventgenerator_setEnableEvents(&inst->eventGen,1); // enable
     return RESPONSE_SUCCESS;
 }
 

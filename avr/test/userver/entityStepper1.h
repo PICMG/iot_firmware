@@ -29,7 +29,10 @@
  void entityStepper1_init();
  void entityStepper1_readChannels();
  void entityStepper1_writeChannels();
-
+ void entityStepper1_updateEvents(char *eventFifoInsertId);
+ void entityStepper1_acknowledgeEvent(char fifoId);
+ void entityStepper1_respondToPollEvent(PldmRequestHeader *rxHeader, char fifoInsertId, char fifoExtractId);
+ 
  unsigned char entityStepper1_setStateEffecterStates(PldmRequestHeader* rxHeader);
  unsigned char entityStepper1_setStateEffecterEnables(PldmRequestHeader* rxHeader);
  unsigned char entityStepper1_getStateEffecterStates(PldmRequestHeader* rxHeader, unsigned char *responseBody, unsigned char *size);

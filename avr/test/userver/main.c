@@ -34,7 +34,8 @@
 #include "channels.h"
 #include "stepdir_out.h"
 #include "entityStepper1.h"
-
+#include "entitySimple1.h"
+#include "adc.h"
 
 int main(void)
 {
@@ -58,6 +59,7 @@ int main(void)
 
   // initialize all channels based on configuration paramters
   channels_init();
+  adc_init();
 
   #ifdef ENTITY_STEPPER1
     entityStepper1_init();
@@ -79,11 +81,14 @@ int main(void)
     // if the discovery notify has timed out and no response has been received, 
     // send another discovery notify message
     if ((!mctp_context.discovered)&&(delay_isDone(0))) {
-        //mctp_sendNoWait(2,mctp_discovery_msg,0);
+        mctp_sendNoWait(2,mctp_discovery_msg,0);
         delay_set(0,1000);
     } else {
       // otherwise process messages
       node_getResponse();
+
+      // update sensor event states
+      node_updateEvents();
     }
   }
   return 0;

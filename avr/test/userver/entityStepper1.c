@@ -101,34 +101,34 @@
     // Sensor-Specific Code
     //===============================================================
     static StateSensorInstance globalInterlockSensorInst; 
-    static void globalInterlockSensor_sendEvent()
+    static void globalInterlockSensor_sendEvent(PldmRequestHeader *rxHeader, unsigned char more)
     {
-        node_sendStateSensorEvent(&(globalInterlockSensorInst.eventGen),
+        node_sendStateSensorEvent(rxHeader,more,&(globalInterlockSensorInst.eventGen),
             ENTITY_STEPPER1_GLOBALINTERLOCKSENSOR_SENSORID,
             statesensor_getSensorPreviousState(&globalInterlockSensorInst));
     }
 
     static StateSensorInstance triggerSensorInst; 
-    static void triggerSensor_sendEvent()
+    static void triggerSensor_sendEvent(PldmRequestHeader *rxHeader, unsigned char more)
     {
-        node_sendStateSensorEvent(&(triggerSensorInst.eventGen),
+        node_sendStateSensorEvent(rxHeader,more,&(triggerSensorInst.eventGen),
             ENTITY_STEPPER1_TRIGGERSENSOR_SENSORID,
             statesensor_getSensorPreviousState(&triggerSensorInst));
     }
 
     static StateSensorInstance motionStateSensorInst; 
-    static void motionStateSensor_sendEvent()
+    static void motionStateSensor_sendEvent(PldmRequestHeader *rxHeader, unsigned char more)
     {
-        node_sendStateSensorEvent(&(motionStateSensorInst.eventGen),
+        node_sendStateSensorEvent(rxHeader,more,&(motionStateSensorInst.eventGen),
             ENTITY_STEPPER1_MOTIONSTATE_SENSORID,
             statesensor_getSensorPreviousState(&motionStateSensorInst));
     }
 
     #ifdef ENTITY_STEPPER1_POSITIVELIMIT
         static StateSensorInstance positiveLimitSensorInst; 
-        static void positiveLimitSensor_sendEvent()
+        static void positiveLimitSensor_sendEvent(PldmRequestHeader *rxHeader, unsigned char more)
         {
-            node_sendStateSensorEvent(&(positiveLimitSensorInst.eventGen),
+            node_sendStateSensorEvent(rxHeader,more,&(positiveLimitSensorInst.eventGen),
                 ENTITY_STEPPER1_POSITIVELIMIT_SENSORID,
                 statesensor_getSensorPreviousState(&positiveLimitSensorInst));
         }
@@ -136,9 +136,9 @@
 
     #ifdef ENTITY_STEPPER1_NEGATIVELIMIT
         static StateSensorInstance negativeLimitSensorInst; 
-        static void negativeLimitSensor_sendEvent()
+        static void negativeLimitSensor_sendEvent(PldmRequestHeader *rxHeader, unsigned char more)
         {
-            node_sendStateSensorEvent(&(negativeLimitSensorInst.eventGen),
+            node_sendStateSensorEvent(rxHeader,more,&(negativeLimitSensorInst.eventGen),
                 ENTITY_STEPPER1_NEGATIVELIMIT_SENSORID,
                 statesensor_getSensorPreviousState(&negativeLimitSensorInst)
             );
@@ -147,9 +147,9 @@
 
     #ifdef ENTITY_STEPPER1_POSITION
         static NumericSensorInstance positionSensorInst;
-        static void positionSensor_sendEvent()
+        static void positionSensor_sendEvent(PldmRequestHeader *rxHeader, unsigned char more)
         {
-            node_sendNumericSensorEvent(&(positionSensorInst.eventGen),
+            node_sendNumericSensorEvent(rxHeader,more,&(positionSensorInst.eventGen),
                 ENTITY_STEPPER1_POSITION_SENSORID,
                 numericsensor_getSensorPreviousState(&positionSensorInst),
                 positionSensorInst.value
@@ -342,6 +342,150 @@
         #else
             positionSensorInst.value += deltax_t1;
         #endif
+    }
+
+    //===============================================================
+    // entityStepper1_updateEvents()
+    //
+    // this function updates the event state for each sensor that is
+    // not currently in the "SENT" state.
+    void entityStepper1_updateEvents(char *fifoInsertId) {
+        if (!eventgenerator_isEventSent(&(globalInterlockSensorInst.eventGen))) {
+            eventgenerator_updateEventStateMachine(&(globalInterlockSensorInst.eventGen));
+            if (eventgenerator_isEventPending(&(globalInterlockSensorInst.eventGen)) && 
+               (globalInterlockSensorInst.eventGen.priority < 0)) {
+                // this event has not yet been placed in the fifo
+                globalInterlockSensorInst.eventGen.priority = *fifoInsertId;
+                *fifoInsertId = ((*fifoInsertId)+1)&0xF;
+            }
+        }
+        
+        if (!eventgenerator_isEventSent(&(triggerSensorInst.eventGen))) {
+            eventgenerator_updateEventStateMachine(&(triggerSensorInst.eventGen));
+            if (eventgenerator_isEventPending(&(triggerSensorInst.eventGen)) && 
+               (triggerSensorInst.eventGen.priority < 0)) {
+                // this event has not yet been placed in the fifo
+                triggerSensorInst.eventGen.priority = *fifoInsertId;
+                *fifoInsertId = ((*fifoInsertId)+1)&0xF;
+            }
+        }
+        
+        #ifdef ENTITY_STEPPER1_POSITIVELIMIT_BOUNDCHANNEL
+            if (!eventgenerator_isEventSent(&(positiveLimitSensorInst.eventGen))) {
+                eventgenerator_updateEventStateMachine(&(positiveLimitSensorInst.eventGen));
+                if (eventgenerator_isEventPending(&(positiveLimitSensorInst.eventGen)) && 
+                (positiveLimitSensorInst.eventGen.priority < 0)) {
+                    // this event has not yet been placed in the fifo
+                    positiveLimitSensorInst.eventGen.priority = *fifoInsertId;
+                    *fifoInsertId = ((*fifoInsertId)+1)&0xF;
+                }
+            }
+        #endif
+
+        #ifdef ENTITY_STEPPER1_NEGATIVELIMIT_BOUNDCHANNEL
+            if (!eventgenerator_isEventSent(&(negativeLimitSensorInst.eventGen))) {
+                eventgenerator_updateEventStateMachine(&(negativeLimitSensorInst.eventGen));
+                if (eventgenerator_isEventPending(&(negativeLimitSensorInst.eventGen)) && 
+                (negativeLimitSensorInst.eventGen.priority < 0)) {
+                    // this event has not yet been placed in the fifo
+                    negativeLimitSensorInst.eventGen.priority = *fifoInsertId;
+                    *fifoInsertId = ((*fifoInsertId)+1)&0xF;
+                }
+            }
+        #endif
+
+        if (!eventgenerator_isEventSent(&(motionStateSensorInst.eventGen))) {
+            eventgenerator_updateEventStateMachine(&(motionStateSensorInst.eventGen));
+            if (eventgenerator_isEventPending(&(motionStateSensorInst.eventGen)) && 
+            (motionStateSensorInst.eventGen.priority < 0)) {
+                // this event has not yet been placed in the fifo
+                motionStateSensorInst.eventGen.priority = *fifoInsertId;
+                *fifoInsertId = ((*fifoInsertId)+1)&0xF;
+            }
+        }
+
+        if (!eventgenerator_isEventSent(&(positionSensorInst.eventGen))) {
+            eventgenerator_updateEventStateMachine(&(positionSensorInst.eventGen));
+            if (eventgenerator_isEventPending(&(positionSensorInst.eventGen)) && 
+            (positionSensorInst.eventGen.priority < 0)) {
+                // this event has not yet been placed in the fifo
+                positionSensorInst.eventGen.priority = *fifoInsertId;
+                *fifoInsertId = ((*fifoInsertId)+1)&0xF;
+            }
+        }
+    }
+
+    //===============================================================
+    // entityStepper1_acknowledgeEvent()
+    //
+    // this function acknowledges the event for each sensor that is
+    // currently in the "SENT" state.
+    void entityStepper1_acknowledgeEvent() {
+        if (eventgenerator_isEventSent(&(globalInterlockSensorInst.eventGen))) {
+            eventgenerator_acknowledge(&(globalInterlockSensorInst.eventGen));
+        }
+        
+        if (eventgenerator_isEventSent(&(triggerSensorInst.eventGen))) {
+            eventgenerator_acknowledge(&(triggerSensorInst.eventGen));
+        }
+        
+       #ifdef ENTITY_STEPPER1_POSITIVELIMIT_BOUNDCHANNEL
+            if (eventgenerator_isEventSent(&(positiveLimitSensorInst.eventGen))) {
+                eventgenerator_acknowledge(&(positiveLimitSensorInst.eventGen));
+            }
+        #endif
+
+        #ifdef ENTITY_STEPPER1_NEGATIVELIMIT_BOUNDCHANNEL
+            if (eventgenerator_isEventSent(&(negativeLimitSensorInst.eventGen))) {
+                eventgenerator_acknowledge(&(negativeLimitSensorInst.eventGen));
+            }
+        #endif
+
+        if (eventgenerator_isEventSent(&(motionStateSensorInst.eventGen))) {
+            eventgenerator_acknowledge(&(motionStateSensorInst.eventGen));
+        }
+
+        if (eventgenerator_isEventSent(&(positionSensorInst.eventGen))) {
+            eventgenerator_acknowledge(&(positionSensorInst.eventGen));
+        }
+    }
+
+    //===============================================================
+    // entityStepper1_respondToPollEvent()
+    //
+    // this function responds to a poll event request by sending the 
+    // event response from the proper sensor.
+    void entityStepper1_respondToPollEvent(PldmRequestHeader *rxHeader, char fifoInsertId, char fifoExtractId) {
+        unsigned char moreEvents = 1;
+        if (((fifoExtractId+1)&0x0f)==fifoInsertId) moreEvents = 0;
+        
+        if (globalInterlockSensorInst.eventGen.priority==fifoExtractId) {
+            eventgenerator_startSending(&(globalInterlockSensorInst.eventGen),rxHeader,moreEvents);
+        }
+        
+        if (triggerSensorInst.eventGen.priority==fifoExtractId) {
+            eventgenerator_startSending(&(triggerSensorInst.eventGen),rxHeader,moreEvents);
+        }
+        
+        #ifdef ENTITY_STEPPER1_POSITIVELIMIT_BOUNDCHANNEL
+            if (positiveLimitSensorInst.eventGen.priority==fifoExtractId) {
+                eventgenerator_startSending(&(positiveLimitSensorInst.eventGen),rxHeader,moreEvents);
+            }
+        #endif
+
+        #ifdef ENTITY_STEPPER1_NEGATIVELIMIT_BOUNDCHANNEL
+            if (negativeLimitSensorInst.eventGen.priority==fifoExtractId) {
+                eventgenerator_startSending(&(negativeLimitSensorInst.eventGen),rxHeader,moreEvents);
+            }
+        #endif
+
+        if (motionStateSensorInst.eventGen.priority==fifoExtractId) {
+            eventgenerator_startSending(&(motionStateSensorInst.eventGen),rxHeader,moreEvents);
+        }
+
+        if (positionSensorInst.eventGen.priority==fifoExtractId) {
+            eventgenerator_startSending(&(positionSensorInst.eventGen),rxHeader,moreEvents);
+        }
     }
 
 

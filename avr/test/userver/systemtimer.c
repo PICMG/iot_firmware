@@ -34,6 +34,7 @@
 #include "pdrdata.h"
 #include "pldm.h"
 #include "entityStepper1.h"
+#include "entitySimple1.h"
 
 #ifndef F_CPU
     #define F_CPU 16000000
@@ -45,6 +46,8 @@ static unsigned int delay_limit[DELAY_INSTANCES];
 static unsigned int delay_newlimit[DELAY_INSTANCES];
 static unsigned char delay_limit_changed[DELAY_INSTANCES];
 
+#pragma GCC push_options
+#pragma GCC optimize "-O3"
 /********************************************************************
 * TIMER2_COMPA_VECT
 *
@@ -71,6 +74,9 @@ ISR(TIMER2_COMPA_vect) {
     #ifdef ENTITY_PID1
         entityPID1_updateControl();
     #endif
+    #ifdef ENTITY_SIMPLE1
+        entitySimple1_updateControl();
+    #endif
 
     // update delay counters every fourth clock
     if (tick == 0) {
@@ -87,6 +93,7 @@ ISR(TIMER2_COMPA_vect) {
     }
     tick = (tick+1)&0x03;
 }
+#pragma GCC pop_options
 
 /********************************************************************
 * systemtimer_init()
