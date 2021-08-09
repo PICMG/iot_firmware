@@ -1,0 +1,1382 @@
+{
+	"capabilities":
+	{
+		"device":"ATMEGA328PB",
+		"pins": [
+			"J1.1",
+			"J1.2",
+			"J1.3",
+			"J1.6",
+			"J1.7",
+			"J1.8",
+			"J1.10",
+			"J1.14",
+			"J1.16",
+			"J1.17",
+			"J1.18",
+			"J3.1.i",
+			"J3.4.i",
+			"J3.1.o",
+			"J3.4.o"
+		],
+	
+		"channels": [
+			{
+				"name"  : "digital_in1",
+				"type": "digital_in",
+				"precision":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+                "accuracy":0,
+				"pins": [{"name":"J1.1","function":"in"}]
+			},
+			{
+				"name": "count_in1",
+				"type": "count_in",
+				"precision":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+                "accuracy":0,
+				"description":null,
+				"pins": [{"name":"J1.1","function":"in"}]
+			},
+			{
+				"name": "rate_in1",
+				"type": "rate_in",
+				"precision":16,
+				"minValueAtPin":0,
+				"maxValueAtPin":16000000,
+                "accuracy":0,
+				"description":null,
+				"pins": [{"name":"J1.1","function":"in"}]
+			},
+			{
+				"name": "digital_in2",
+				"type": "digital_in",
+				"precision":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+                "accuracy":0,
+				"description":null,
+				"pins": [{"name":"J1.2","function":"in"}]
+			},
+			{
+				"name": "count_in2",
+				"type": "count_in",
+				"precision":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+                "accuracy":0,
+				"description":null,
+				"pins": [{"name":"J1.2","function":"in"}]
+			},
+			{
+				"name": "rate_in2",
+				"type": "rate_in",
+				"precision":16,
+				"minValueAtPin":0,
+				"maxValueAtPin":16000000,
+                "accuracy":0,
+				"description":null,
+				"pins": [{"name":"J1.2","function":"in"}]
+			},
+			{
+				"name": "digital_out1",
+				"type": "digital_out",
+				"precision":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+                "accuracy":0,
+				"description":null,
+				"pins": [{"name":"J1.3","function":"out"}]
+			},
+			{
+				"name": "rate_out1",
+				"type": "rate_out",
+				"precision":16,
+				"minValueAtPin":0,
+				"maxValueAtPin":16000000,
+                "accuracy":0,
+				"description":null,
+				"pins": [{"name":"J1.3","function":"out"}]
+			},
+			{
+				"name": "quadrature_in1",
+				"type": "quadrature_in",
+				"precision":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+                "accuracy":0,
+				"description":null,
+				"pins": [{"name":"J1.6","function":"Z"},{"name":"J1.7","function":"A"},{"name":"J1.8","function":"B"}]
+			},
+			{
+				"name": "step_dir_out1",
+				"type": "step_dir_out",
+				"precision":-16,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+                "accuracy":0,
+				"description":null,
+				"pins": [{"name":"J1.6","function":"step"},{"name":"J1.7","function":"dir"}]
+			},
+			{
+				"name": "digital_in3",
+				"type": "digital_in",
+				"precision":0,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+				"pins": [{"name":"J1.6","function":"in"}]
+			},
+			{
+				"name": "count_in3",
+				"type": "count_in",
+				"precision":0,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+				"pins": [{"name":"J1.6","function":"in"}]
+			},
+			{
+				"name": "rate_in3",
+				"type": "rate_in",
+				"precision":16,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":16000000,
+				"description":null,
+				"pins": [{"name":"J1.6","function":"in"}]
+			},
+			{
+				"name": "digital_out2",
+				"type": "digital_out",
+				"precision":0,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+				"pins": [{"name":"J1.6","function":"out"}]
+			},
+			{
+				"name": "rate_out2",
+				"type": "digital_out",
+				"precision":16,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":16000000,
+				"description":null,
+				"pins": [{"name":"J1.6","function":"out"}]
+			},
+			{
+				"name": "digital_in4",
+				"type": "digital_in",
+				"precision":0,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+				"pins": [{"name":"J1.7","function":"in"}]
+			},
+			{
+				"name": "count_in4",
+				"type": "count_in",
+				"precision":0,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+				"pins": [{"name":"J1.7","function":"in"}]
+			},
+			{
+				"name": "rate_in4",
+				"type": "rate_in",
+				"precision":16,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":16000000,
+				"description":null,
+				"pins": [{"name":"J1.7","function":"in"}]
+			},
+			{
+				"name": "digital_out3",
+				"type": "digital_out",
+				"precision":0,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+				"pins": [{"name":"J1.7","function":"out"}]
+			},
+			{
+				"name": "rate_out3",
+				"type": "rate_out",
+				"precision":16,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":16000000,
+				"description":null,
+				"pins": [{"name":"J1.7","function":"out"}]
+			},
+			{
+				"name": "digital_in5",
+				"type": "digital_in",
+				"precision":0,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+				"pins": [{"name":"J1.7","function":"in"}]
+			},
+			{
+				"name": "count_in5",
+				"type": "count_in",
+				"precision":0,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+				"pins": [{"name":"J1.7","function":"in"}]
+			},
+			{
+				"name": "rate_in5",
+				"type": "rate_in",
+				"precision":16,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":16000000,
+				"description":null,
+				"pins": [{"name":"J1.8","function":"in"}]
+			},
+			{
+				"name": "digital_out4",
+				"type": "digital_out",
+				"precision":0,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+				"pins": [{"name":"J1.8","function":"out"}]
+			},
+			{
+				"name": "rate_out4",
+				"type": "rate_out",
+				"precision":16,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":16000000,
+				"description":null,
+				"pins": [{"name":"J1.8","function":"out"}]
+			},
+			{
+				"name": "pwm_out1",
+				"type": "pwm_out",
+				"precision":16,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":100,
+				"description":null,
+				"pins": [{"name":"J1.10","function":"out"}]
+			},
+			{
+				"name": "analog_out1",
+				"type": "analog_out",
+				"precision":16,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":5,
+				"description":null,
+				"pins": [{"name":"J1.10","function":"aout"}]
+			},
+			{
+				"name": "ain2_5v",
+				"type": "analog_in",
+				"precision":10,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":2.5,
+				"description":null,
+				"pins": [{"name":"J1.14","function":"ain"}]
+			},
+			{
+				"name": "current_loop_in",
+				"type": "analog_in",
+				"precision":10,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":2.5,
+				"description":null,
+				"pins": [{"name":"J1.14","function":"ain"}]
+			},
+			{
+				"name": "ain5v",
+				"type": "analog_in",
+				"precision":10,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":2.5,
+				"description":null,
+				"pins": [{"name":"J1.16","function":"ain"}]
+			},
+			{
+				"name": "ain12v",
+				"type": "analog_in",
+				"precision":10,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":2.5,
+				"description":null,
+				"pins": [{"name":"J1.17","function":"ain"}]
+			},
+			{
+				"name": "ain24v",
+				"type": "analog_in",
+				"precision":10,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":2.5,
+				"description":null,
+				"pins": [{"name":"J1.18","function":"ain"}]
+			},
+			{
+				"name"  : "interlock_in",
+				"type": "digital_in",
+				"precision":0,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+				"pins": [{"name":"J3.1.i","function":"in"}]
+			},
+			{
+				"name"  : "interlock_out",
+				"type": "digital_out",
+				"precision":0,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+				"pins": [{"name":"J3.1.o","function":"in"}]
+			},
+			{
+				"name"  : "trigger_in",
+				"type": "digital_in",
+				"precision":0,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+				"pins": [{"name":"J3.4.i","function":"in"}]
+			},
+			{
+				"name"  : "trigger_out",
+				"type": "digital_out",
+				"precision":0,
+                "accuracy":0,
+				"minValueAtPin":0,
+				"maxValueAtPin":0,
+				"description":null,
+				"pins": [{"name":"J3.4.o","function":"in"}]
+			}
+		],
+		"logicalEntities": [
+            {
+				"entityVendorIANA" : 12634,
+				"vendorEntityID" : 1,
+				"name": "simple1",
+				"required": false,
+				"description": "PICMG Simple Sensor/Effecter",
+				"ioBindings" : [
+					{
+						"bindingType": "stateSensor",
+						"name": "GlobalInterlockSensor",
+						"includeInPdr": true,				
+						"required": true,
+						"description": "Global interlock input binding",
+						"isVirtual": false,
+                        "sensorID":1,
+						"allowedInterfaceTypes": ["digital_in"],
+						"boundChannel": "interlock_in",
+						"stateSetVendorIANA": 412,
+						"stateSet": 96,
+                        "usedStates":3,
+						"stateWhenLow": 1,
+						"stateWhenHigh": 2 
+					},
+					{
+						"bindingType": "stateEffecter",
+						"name": "GlobalInterlockEffecter",
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": false,
+						"description": "Global interlock ouput binding",
+                        "effecterID": 1,
+						"allowedInterfaceTypes": ["digital_out"],
+						"boundChannel": "interlock_out",
+						"stateSetVendor": 412,
+						"stateSet": 96,
+                        "usedStates": 3,
+						"stateWhenLow": 1,
+						"stateWhenHigh": 2 
+					},
+					{
+						"bindingType": "stateSensor",
+						"name": "TriggerSensor",
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": false,
+                        "sensorID":2,
+						"description": "Trigger input binding",
+						"allowedInterfaceTypes": ["digital_in"],
+						"boundChannel": "trigger_in",
+						"stateSetVendor": 12634,
+						"stateSet": 1,
+                        "usedStates": 3,
+						"stateWhenLow": 1,
+						"stateWhenHigh": 2 
+					},
+					{
+						"bindingType": "stateEffecter",
+						"name": "TriggerEffecter",
+						"includeInPdr": true,				
+						"required": true,
+                        "effecterID":2,
+						"description": "Trigger output binding",
+						"allowedInterfaceTypes": ["digital_out"],
+						"boundChannel": "trigger_out",
+						"stateSetVendor": 12634,
+						"stateSet": 1,
+                        "usedStates": 3,
+						"stateWhenLow": 1,
+						"stateWhenHigh": 2 
+					},
+					{
+						"bindingType": "numericSensor",
+						"name": "Sensor1",
+                        "sensorID":3,
+						"includeInPdr": true,				
+						"required": false,
+						"isVirtual": false,
+						"description": "generic numeric sensor",
+						"allowedInterfaceTypes": ["analog_in","count_in","rate_in","quadrature_in"],
+						"sensor": null,
+						"inputCurve": null, 
+						"boundChannel": null, 
+						"inputGearingRatio": null,
+						"physicalBaseUnit": null,
+						"phsicalUnitModifier": null,
+						"physicalRateUnit": null,
+						"physicalAuxUnit": null,
+                        "rel":null,
+						"physicalAuxUnitModifier": null,
+						"physicalAuxRateUnit": null,
+						"normalMin":null,
+						"normalMax":null,
+                        "upperThresholdWarning": null,
+                        "upperThresholdCritical": null,
+                        "upperThresholdFatal": null,						
+                        "lowerThresholdWarning": null,
+                        "lowerThresholdCritical": null,
+                        "lowerThresholdFatal": null						
+					},
+					{
+						"bindingType": "stateSensor",
+						"name": "Sensor2",
+                        "sensorID":3,
+						"includeInPdr": true,				
+						"required": false,
+						"isVirtual": false,
+						"description": "generic state sensor",
+						"allowedInterfaceTypes": ["digital_in"],
+						"boundChannel": null, 
+						"stateSetVendorIANA": null,
+						"stateSet": null,
+                        "usedStates": null,
+						"stateWhenHigh": null, 
+						"stateWhenLow": null
+					},
+					{
+						"bindingType": "numericEffecter",
+						"name": "Effecter1",
+                        "effecterID":3,
+						"includeInPdr": true,				
+						"required": false,
+						"isVirtual": false,
+						"description": "generic numeric effecter",
+						"allowedInterfaceTypes": ["analog_out","rate_out","pwm_out","step_dir_out"],
+						"effecter": null,
+						"outputCurve": null, 
+						"boundChannel": null, 
+						"outputGearingRatio": null,
+						"physicalBaseUnit": null,
+						"phsicalUnitModifier": null,
+						"physicalRateUnit": null,
+						"physicalAuxUnit": null,
+                        "rel":null,
+						"physicalAuxUnitModifier": null,
+						"physicalAuxRateUnit": null,
+                        "physicalDefaultValue": null
+					},
+					{
+						"bindingType": "stateEffecter",
+						"name": "Effecter2",
+                        "effecterID":4,
+						"includeInPdr": true,				
+						"required": false,
+						"isVirtual": false,
+						"description": "generic state effecter",
+						"allowedInterfaceTypes": ["digital_out"],
+						"boundChannel": null, 
+						"stateSetVendorIANA": null,
+						"stateSet": null,
+                        "usedStates": null,
+						"stateWhenHigh": null, 
+						"stateWhenLow" : null 
+					}
+				],
+				"parameters": []
+			},
+            {
+                "entityVendorIANA" : 12634,
+                "vendorEntityID" : 3,
+                "name": "stepper1",
+                "description": "PICMG Profiled Motion Controller - Open Loop (stepper)",
+                "required": false,
+                "ioBindings" : [
+                    {
+                        "bindingType": "stateEffecter",
+                        "effecterID":1,
+                        "name": "GlobalInterlockEffecter",
+                        "includeInPdr": true,				
+                        "required": true,
+                        "isVirtual": false,
+                        "description": "Global interlock ouput binding",
+                        "allowedInterfaceTypes": ["digital_out"],
+                        "boundChannel": "interlock_out",
+                        "stateSetVendor": 412,
+                        "stateSet": 96,
+                        "stateWhenLow": 1,
+                        "stateWhenHigh": 2, 
+                        "usedStates":3,
+                        "defaultState":1
+                    },
+                    {
+                        "bindingType": "stateSensor",
+                        "name": "GlobalInterlockSensor",
+                        "sensorID":1,
+                        "includeInPdr": true,				
+                        "required": true,
+                        "isVirtual": false,
+                        "description": "Global interlock input binding",
+                        "allowedInterfaceTypes": ["digital_in"],
+                        "boundChannel": "interlock_in",
+                        "stateSetVendor": 412,
+                        "stateSet": 96,
+                        "stateWhenLow": 1,
+                        "stateWhenHigh": 2,
+                        "usedStates":3 
+                    },
+                    {
+                        "bindingType": "stateEffecter",
+                        "effecterID":2,
+                        "name": "TriggerEffecter",
+                        "includeInPdr": true,				
+                        "required": true,
+                        "isVirtual": false,
+                        "description": "Trigger output binding",
+                        "allowedInterfaceTypes": ["digital_out"],
+                        "boundChannel": "trigger_out",
+                        "stateSetVendor": 12634,
+                        "stateSet": 1,
+                        "stateWhenLow": 1,
+                        "stateWhenHigh": 2,
+                        "usedStates":3, 
+                        "defaultState":1
+                    },
+                    {
+                        "bindingType": "stateSensor",
+                        "sensorID":2,
+                        "name": "TriggerSensor",
+                        "includeInPdr": true,				
+                        "required": true,
+                        "isVirtual": false,
+                        "description": "Trigger input binding",
+                        "allowedInterfaceTypes": ["digital_in"],
+                        "boundChannel": "trigger_in",
+                        "stateSetVendor": 12634,
+                        "stateSet": 1,
+                        "stateWhenLow": 1,
+                        "stateWhenHigh": 2, 
+                        "usedStates":3 
+                    },
+                    {
+                        "bindingType": "numericSensor",
+                        "sensorID":7,
+                        "name": "Position",
+                        "includeInPdr": true,				
+                        "required": true,
+                        "isVirtual": true,
+                        "description": "Current Position",
+                        "allowedInterfaceTypes": [],
+                        "sensor": null,
+                        "inputCurve": null, 
+                        "boundChannel": null, 
+                        "inputGearingRatio": null,
+                        "physicalBaseUnit": null,
+                        "phsicalUnitModifier": null,
+                        "physicalRateUnit": null,
+                        "physicalAuxUnit": null,
+                        "rel":null,
+                        "physicalAuxUnitModifier": null,
+                        "physicalAuxRateUnit": null,
+						"normalMin":null,
+						"normalMax":null,
+                        "upperThresholdWarning": null,
+                        "upperThresholdCritical": null,
+                        "upperThresholdFatal": null,						
+                        "lowerThresholdWarning": null,
+                        "lowerThresholdCritical": null,
+                        "lowerThresholdFatal": null						
+                    },					
+                    {
+                        "bindingType": "stateSensor",
+                        "sensorID":8,
+                        "name": "PositiveLimit",
+                        "includeInPdr": true,				
+                        "required": false,
+                        "isVirtual": false,
+                        "description": "positive limit switch",
+                        "allowedInterfaceTypes": ["digital_in"],
+                        "boundChannel": null,
+                        "stateSetVendor": 412,
+                        "stateSet": 67,
+                        "stateWhenLow": 1,
+                        "stateWhenHigh": 2,
+                        "usedStates":3  
+                    },
+                    {
+                        "bindingType": "stateSensor",
+                        "sensorID":9,
+                        "name": "NegativeLimit",
+                        "includeInPdr": true,				
+                        "required": false,
+                        "isVirtual": false,
+                        "description": "negative limit switch",
+                        "allowedInterfaceTypes": ["digital_in"],
+                        "boundChannel": null,
+                        "stateSetVendor": 412,
+                        "stateSet": 67,
+                        "stateWhenLow": 1,
+                        "stateWhenHigh": 2,
+                        "usedStates":3  
+                    },
+                    {
+                        "bindingType": "numericEffecter",
+                        "name": "OutputEffecter",
+                        "includeInPdr": false,				
+                        "required": true,
+                        "isVirtual": false,
+                        "description": "output from the controller",
+                        "allowedInterfaceTypes": ["analog_out","rate_out","pwm_out","step_dir_out"],
+                        "effecter": null,
+                        "outputCurve": null, 
+                        "boundChannel": null, 
+                        "outputGearingRatio": null,
+                        "physicalBaseUnit": null,
+                        "phsicalUnitModifier": null,
+                        "physicalRateUnit": null,
+                        "rel":null,
+                        "physicalAuxUnit": null,
+                        "physicalAuxUnitModifier": null,
+                        "physicalAuxRateUnit": null,
+                        "defaultValue": null												
+                    },
+                    {
+                        "bindingType": "stateEffecter",
+                        "name": "OutputEnable",
+                        "includeInPdr": false,				
+                        "required": false,
+                        "isVirtual": false,
+                        "description": "output enable from the controller",
+                        "allowedInterfaceTypes": ["digital_out"],
+                        "effecter": null,
+                        "stateSetVendor": null,
+                        "stateSet": null,
+                        "stateWhenLow": null,
+                        "stateWhenHigh": null,
+                        "defaultState": null,
+                        "usedStates":null
+                    },
+                    {
+                        "bindingType": "stateEffecter",
+                        "effecterID":3,
+                        "name": "Command",
+                        "includeInPdr": true,				
+                        "required": true,
+                        "isVirtual": true,
+                        "description": "command effecter",
+                        "allowedInterfaceTypes": null,
+                        "effecter": null,
+                        "boundChannel": null,
+                        "stateSetVendor": 12634,
+                        "stateSet": 5,
+                        "stateWhenLow": null,
+                        "stateWhenHigh": null,
+                        "usedStates":7,  
+                        "defaultState":1
+                    },
+                    {
+                        "bindingType": "stateSensor",
+                        "sensorID":3,
+                        "name": "motionState",
+                        "includeInPdr": true,				
+                        "required": true,
+                        "isVirtual": true,
+                        "description": "motion state sensor",
+                        "allowedInterfaceTypes": null,
+                        "sensor": null,
+                        "boundChannel": null, 
+                        "stateSetVendor": 12634,
+                        "stateSet": 4,
+                        "stateWhenLow": null,
+                        "stateWhenHigh": null,
+                        "usedStates":127  
+                    },
+                    {
+                        "bindingType": "numericEffecter",
+                        "effecterID":4,
+                        "name": "Pfinal",
+                        "includeInPdr": true,				
+                        "required": true,
+                        "isVirtual": true,
+                        "description": "Final position for profiled move",
+                        "allowedInterfaceTypes": [],
+                        "effecter": null,
+                        "outputCurve": null, 
+                        "boundChannel": null, 
+                        "outputGearingRatio": null,
+                        "physicalBaseUnit": null,
+                        "phsicalUnitModifier": null,
+                        "physicalRateUnit": null,
+                        "rel":null,
+                        "physicalAuxUnit": null,
+                        "physicalAuxUnitModifier": null,
+                        "physicalAuxRateUnit": null,
+                        "physicalDefaultValue": null												
+                    },
+                    {
+                        "bindingType": "numericEffecter",
+                        "effecterID":5,
+                        "name": "Vprofile",
+                        "includeInPdr": true,				
+                        "required": true,
+                        "isVirtual": true,
+                        "description": "velocity profile value",
+                        "allowedInterfaceTypes": [],
+                        "effecter": null,
+                        "outputCurve": null, 
+                        "boundChannel": null, 
+                        "outputGearingRatio": null,
+                        "physicalBaseUnit": null,
+                        "phsicalUnitModifier": null,
+                        "physicalRateUnit":null,
+                        "rel":null,
+                        "physicalAuxUnit": null,
+                        "physicalAuxUnitModifier": null,
+                        "physicalAuxRateUnit": null,						
+                        "physicalDefaultValue": null						
+                    },
+                    {
+                        "bindingType": "numericEffecter",
+                        "effecterID":6,
+                        "name": "Aprofile",
+                        "includeInPdr": true,				
+                        "required": true,
+                        "isVirtual": true,
+                        "description": "Acceleration profile value",
+                        "allowedInterfaceTypes": [],
+                        "effecter": null,
+                        "outputCurve": null, 
+                        "boundChannel": null, 
+                        "outputGearingRatio": null,
+                        "physicalBaseUnit": null,
+                        "phsicalUnitModifier": null,
+                        "physicalRateUnit": null,
+                        "rel":null,
+                        "physicalAuxUnit":null,
+                        "physicalAuxUnitModifier": null,
+                        "physicalAuxRateUnit": null,
+                        "physicalDefaultValue": null						
+                    }					
+                ],
+                "parameters": [
+                    {
+                        "name": "SampleRate",
+                        "description": "The system sampling rate in Hz.",
+                        "type": "numeric",
+                        "minValue": 4000,
+                        "maxValue": 5000,
+                        "defaultValue": 4000,
+                        "value":null
+                    },
+                    {
+                        "name": "DoneTimeConstant",
+                        "description": "System time constant - time to wait between profile generator reaching final position and when the controller registers as done",
+                        "type": "numeric",
+                        "minValue": 0,
+                        "defaultValue": 0.01,
+                        "value": null
+                    },
+                    {
+                        "name": "OutputInDone",
+                        "description": "Action to take when in the 'Done' motion state.  Valid values are 'brake' (apply mechanical brake), 'hold' (hold the position using the motion controller), and 'coast' (motion control is deactivated).",
+                        "type": "enum",
+                        "allowedValues": [
+                            "coast",
+                            "hold",
+                            "brake"
+                        ],
+                        "defaultValue": "hold",
+                        "value":null
+                    },
+                    {
+                        "name": "OutputInIdle",
+                        "description": "Action to take when in the 'Idle' and 'Waiting' motion states.  Valid values are 'brake' (apply mechanical brake), 'hold' (hold the position using the motion controller), and 'coast' (motion control is deactivated).",
+                        "type": "enum",
+                        "allowedValues": [
+                            "coast",
+                            "hold",
+                            "brake"
+                        ],
+                        "defaultValue": "hold",
+                        "value":null
+                    },
+                    {
+                        "name": "OutputInConditionStop",
+                        "description": "Action to take when in the ConditionStop' motion state.  Valid values are 'brake' (apply mechanical brake), 'hold' (hold the position using the motion controller), and 'coast' (motion control is deactivated).",
+                        "type": "enum",
+                        "allowedValues": [
+                            "coast",
+                            "hold",
+                            "brake"
+                        ],
+                        "defaultValue": "brake",
+                        "value":null
+                    },
+                    {
+                        "name": "OutputInErrorStop",
+                        "description": "Action to take when in the 'ErrorStop' motion state.  Valid values are 'brake' (apply mechanical brake), 'hold' (hold the position using the motion controller), and 'coast' (motion control is deactivated).",
+                        "type": "enum",
+                        "allowedValues": [
+                            "coast",
+                            "hold",
+                            "brake"
+                        ],
+                        "defaultValue": "brake",
+                        "value":null
+                    }
+                ]
+            }
+        ]
+    },
+	"configuration": {
+		"fruRecords": [
+			{
+				"vendorIANA": 412,
+				"required": true,
+				"description":null,
+				"fields": [
+                    {
+                        "type":7,
+                        "required":true,
+                        "description":null,
+                        "format":"string",
+                        "length":null,
+                        "value":"PICMG"
+                    }
+				]
+			},
+			{
+				"vendorIANA": 12634,
+				"required": true,
+				"description":null,
+				"fields": [
+					{
+						"type":0,
+						"required":true,
+						"description":null,
+						"format":"uint16",
+						"length":null,
+						"value":10
+					},
+					{
+						"type":1,
+						"required":true,
+						"description":null,
+						"format":"bytes",
+						"length":4,
+						"value":[
+							0, 2, 4, 8
+						]
+					}
+				]
+			}
+		],
+		"logicalEntities": [
+			{
+				"entityVendorIANA" : 12634,
+				"vendorEntityID" : 3,
+				"name": "stepper1",
+				"description": "PICMG Profiled Motion Controller - Open Loop (stepper)",
+				"required": true,
+				"ioBindings" : [
+					{
+						"bindingType": "stateEffecter",
+						"effecterID":1,
+						"name": "GlobalInterlockEffecter",
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": false,
+						"description": "Global interlock ouput binding",
+						"allowedInterfaceTypes": ["digital_out"],
+						"boundChannel": "interlock_out",
+						"stateSetVendor": 412,
+						"stateSet": 96,
+						"stateWhenLow": 1,
+						"stateWhenHigh": 2, 
+						"usedStates":3,
+						"defaultState":1
+					},
+					{
+						"bindingType": "stateSensor",
+						"name": "GlobalInterlockSensor",
+						"sensorID":1,
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": false,
+						"description": "Global interlock input binding",
+						"allowedInterfaceTypes": ["digital_in"],
+						"boundChannel": "interlock_in",
+						"stateSetVendor": 412,
+						"stateSet": 96,
+						"stateWhenLow": 1,
+						"stateWhenHigh": 2,
+						"usedStates":3 
+					},
+					{
+						"bindingType": "stateEffecter",
+						"effecterID":2,
+						"name": "TriggerEffecter",
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": false,
+						"description": "Trigger output binding",
+						"allowedInterfaceTypes": ["digital_out"],
+						"boundChannel": "trigger_out",
+						"stateSetVendor": 12634,
+						"stateSet": 1,
+						"stateWhenLow": 1,
+						"stateWhenHigh": 2,
+						"usedStates":3, 
+						"defaultState":1
+					},
+					{
+						"bindingType": "stateSensor",
+						"sensorID":2,
+						"name": "TriggerSensor",
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": false,
+						"description": "Trigger input binding",
+						"allowedInterfaceTypes": ["digital_in"],
+						"boundChannel": "trigger_in",
+						"stateSetVendor": 12634,
+						"stateSet": 1,
+						"stateWhenLow": 1,
+						"stateWhenHigh": 2, 
+						"usedStates":3 
+					},
+					{
+						"bindingType": "numericSensor",
+						"sensorID":7,
+						"name": "Position",
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": true,
+						"description": "Current Position",
+						"allowedInterfaceTypes": [],
+						"sensor": null,
+						"inputCurve": null, 
+						"boundChannel": null, 
+						"inputGearingRatio": null,
+						"physicalBaseUnit": 38,
+						"phsicalUnitModifier": 0,
+						"physicalRateUnit": 0,
+						"physicalAuxUnit": 0,
+						"physicalAuxUnitModifier": 0,
+						"physicalAuxRateUnit": 0,
+						"upperThresholdWarning": 4000000,
+						"upperThresholdCritical": null,
+						"upperThresholdFatal": 8000000,						
+						"lowerThresholdWarning": -4000000,
+						"lowerThresholdCritical": null,
+						"lowerThresholdFatal": -8000000						
+					},					
+					{
+						"bindingType": "stateSensor",
+						"sensorID":8,
+						"name": "PositiveLimit",
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": false,
+						"description": "positive limit switch",
+						"allowedInterfaceTypes": ["digital_in"],
+						"boundChannel": "digital_in1",
+						"stateSetVendor": 412,
+						"stateSet": 67,
+						"stateWhenLow": 1,
+						"stateWhenHigh": 2,
+						"usedStates":3  
+					},
+					{
+						"bindingType": "stateSensor",
+						"sensorID":9,
+						"name": "NegativeLimit",
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": false,
+						"description": "negative limit switch",
+						"allowedInterfaceTypes": ["digital_in"],
+						"boundChannel": "digital_in2",
+						"stateSetVendor": 412,
+						"stateSet": 67,
+						"stateWhenLow": 1,
+						"stateWhenHigh": 2,
+						"usedStates":3  
+					},
+					{
+						"bindingType": "numericEffecter",
+						"name": "OutputEffecter",
+						"includeInPdr": false,				
+						"required": true,
+						"isVirtual": false,
+						"description": "output from the controller",
+						"allowedInterfaceTypes": ["analog_out","rate_out","pwm_out","step_dir_out"],
+						"effecter": {
+							"name":"stepper_nema34_4_6nm_200steps",
+							"manufacturer":"BuildYourCNC.com",
+							"partNumber":"85bygh450a-47-80",
+							"description":"Motor, stepper, 4.6nm, nema 34, 200 steps per revolution",
+							"supportedInterfaces":["step_dir_out"],
+							"maxSampleRate":null,
+							"baseUnit":38,
+							"unitModifier":0,
+							"rateUnit":0,
+							"auxUnit":0,
+							"auxUnitModifier":0,
+							"rel":"multipledBy",
+							"auxRateUnit":0,
+							"plusAccuracy":0.005,
+							"minusAccuracy":0.005,
+							"inputUnits":"Counts",
+							"responseCurve":[{"in":-6400,"out":-2},{"in":-3200,"out":-1},{"in":0,"out":0},{"in":3200,"out":1},{"in":6400,"out":2}],
+							"ratedMax":null,
+							"nominalValue":null
+						},
+						"outputCurve": [{"in":-6400,"out":-6400},{"in":-3200,"out":-3200},{"in":0,"out":0},{"in":3200,"out":3200},{"in":6400,"out":6400}], 
+						"boundChannel": "step_dir_out1", 
+						"outputGearingRatio": 1,
+						"physicalBaseUnit": 67,
+						"phsicalUnitModifier": 0,
+						"physicalRateUnit": 0,
+						"physicalAuxUnit": 0,
+						"physicalAuxUnitModifier": 0,
+						"physicalAuxRateUnit": 0,
+						"physicalDefaultValue": 0												
+					},
+					{
+						"bindingType": "stateEffecter",
+						"name": "OutputEnable",
+						"includeInPdr": false,				
+						"required": true,
+						"isVirtual": false,
+						"description": "output enable from the controller",
+						"allowedInterfaceTypes": ["digital_out"],
+						"effecter": "digital_out4",
+						"stateSetVendor": null,
+						"stateSet": null,
+						"stateWhenLow": null,
+						"stateWhenHigh": null,
+						"defaultState": null
+					},
+					{
+						"bindingType": "stateEffecter",
+						"effecterID":3,
+						"name": "Command",
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": true,
+						"description": "command effecter",
+						"allowedInterfaceTypes": null,
+						"effecter": null,
+						"boundChannel": null,
+						"stateSetVendor": 12634,
+						"stateSet": 5,
+						"stateWhenLow": null,
+						"stateWhenHigh": null,
+						"usedStates":7,  
+						"defaultState":1
+					},
+					{
+						"bindingType": "stateSensor",
+						"sensorID":3,
+						"name": "motionState",
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": true,
+						"description": "motion state sensor",
+						"allowedInterfaceTypes": null,
+						"sensor": null,
+						"boundChannel": null, 
+						"stateSetVendor": 12634,
+						"stateSet": 4,
+						"stateWhenLow": null,
+						"stateWhenHigh": null,
+						"usedStates":127  
+					},
+					{
+						"bindingType": "numericEffecter",
+						"effecterID":4,
+						"name": "Pfinal",
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": true,
+						"description": "Final position for profiled move",
+						"allowedInterfaceTypes": [],
+						"effecter": null,
+						"outputCurve": null, 
+						"boundChannel": null, 
+						"outputGearingRatio": null,
+						"physicalBaseUnit": 38,
+						"phsicalUnitModifier": 0,
+						"physicalRateUnit": 0,
+						"physicalAuxUnit": 0,
+						"physicalAuxUnitModifier": 0,
+						"physicalAuxRateUnit": 0,
+						"physicalDefaultValue": 0												
+					},
+					{
+						"bindingType": "numericEffecter",
+						"effecterID":5,
+						"name": "Vprofile",
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": true,
+						"description": "velocity profile value",
+						"allowedInterfaceTypes": [],
+						"effecter": null,
+						"outputCurve": null, 
+						"boundChannel": null, 
+						"outputGearingRatio": null,
+						"physicalBaseUnit": 38,
+						"phsicalUnitModifier": 0,
+						"physicalRateUnit": 3,
+						"physicalAuxUnit": 0,
+						"physicalAuxUnitModifier": 0,
+						"physicalAuxRateUnit": 0,						
+						"physicalDefaultValue": 0						
+					},
+					{
+						"bindingType": "numericEffecter",
+						"effecterID":6,
+						"name": "Aprofile",
+						"includeInPdr": true,				
+						"required": true,
+						"isVirtual": true,
+						"description": "Acceleration profile value",
+						"allowedInterfaceTypes": [],
+						"effecter": null,
+						"outputCurve": null, 
+						"boundChannel": null, 
+						"outputGearingRatio": null,
+						"physicalBaseUnit": 38,
+						"phsicalUnitModifier": 0,
+						"physicalRateUnit": 3,
+						"physicalAuxUnit": 0,
+						"physicalAuxUnitModifier": 0,
+						"physicalAuxRateUnit": 3,
+						"physicalDefaultValue": 0						
+					}					
+				],
+				"parameters": [
+					{
+						"name": "SampleRate",
+						"description": "The system sampling rate in Hz.",
+						"type": "numeric",
+						"minValue": 4000,
+						"maxValue": 5000,
+						"defaultValue": 4000,
+						"value":4000
+					},
+					{
+						"name": "DoneTimeConstant",
+						"description": "System time constant - time to wait between profile generator reaching final position and when the controller registers as done",
+						"type": "numeric",
+						"minValue": 0,
+						"defaultValue": 0.01,
+						"value": 0.01
+					},
+					{
+						"name": "OutputInDone",
+						"description": "Action to take when in the 'Done' motion state.  Valid values are 'brake' (apply mechanical brake), 'hold' (hold the position using the motion controller), and 'coast' (motion control is deactivated).",
+						"type": "enum",
+						"allowedValues": [
+							"coast",
+							"hold",
+							"brake"
+						],
+						"defaultValue": "hold",
+						"value":"hold"
+					},
+					{
+						"name": "OutputInIdle",
+						"description": "Action to take when in the 'Idle' and 'Waiting' motion states.  Valid values are 'brake' (apply mechanical brake), 'hold' (hold the position using the motion controller), and 'coast' (motion control is deactivated).",
+						"type": "enum",
+						"allowedValues": [
+							"coast",
+							"hold",
+							"brake"
+						],
+						"defaultValue": "hold",
+						"value":"coast"
+					},
+					{
+						"name": "OutputInConditionStop",
+						"description": "Action to take when in the ConditionStop' motion state.  Valid values are 'brake' (apply mechanical brake), 'hold' (hold the position using the motion controller), and 'coast' (motion control is deactivated).",
+						"type": "enum",
+						"allowedValues": [
+							"coast",
+							"hold",
+							"brake"
+						],
+						"defaultValue": "brake",
+						"value":"coast"
+					},
+					{
+						"name": "OutputInErrorStop",
+						"description": "Action to take when in the 'ErrorStop' motion state.  Valid values are 'brake' (apply mechanical brake), 'hold' (hold the position using the motion controller), and 'coast' (motion control is deactivated).",
+						"type": "enum",
+						"allowedValues": [
+							"coast",
+							"hold",
+							"brake"
+						],
+						"defaultValue": "brake",
+						"value":"coast"
+					}
+				]
+			}
+		]
+	},
+	"oemStateSets": [
+		{
+			"name":"Trigger State",
+			"stateSetID":1,
+			"vendorIANA":12634,
+			"vendorName":"PICMG",
+			"oemStateValueRecords":[
+				{
+					"minStateValue":1,
+					"maxStateValue":1,
+					"languageTags":["en"],
+					"stateName":["TriggerActivated"]
+				},
+				{
+					"minStateValue":2,
+					"maxStateValue":2,
+					"languageTags":["en"],
+					"stateName":["TriggerDeactivated"]
+				}
+			]
+		},
+		{
+			"name":"PICMG Motion Controller State",
+			"stateSetID":4,
+			"vendorIANA":12634,
+			"vendorName":"PICMG",
+			"oemStateValueRecords":[
+				{
+					"minStateValue":1,
+					"maxStateValue":1,
+					"languageTags":["en"],
+					"stateName":["Idle"]
+				},
+				{
+					"minStateValue":2,
+					"maxStateValue":2,
+					"languageTags":["en"],
+					"stateName":["ConditionStop"]
+				},
+				{
+					"minStateValue":3,
+					"maxStateValue":3,
+					"languageTags":["en"],
+					"stateName":["ErrorStop"]
+				},
+				{
+					"minStateValue":4,
+					"maxStateValue":4,
+					"languageTags":["en"],
+					"stateName":["RunningV"]
+				},
+				{
+					"minStateValue":5,
+					"maxStateValue":5,
+					"languageTags":["en"],
+					"stateName":["RunningP"]
+				},
+				{
+					"minStateValue":6,
+					"maxStateValue":6,
+					"languageTags":["en"],
+					"stateName":["Waiting"]
+				},
+				{
+					"minStateValue":7,
+					"maxStateValue":7,
+					"languageTags":["en"],
+					"stateName":["Done"]
+				}
+			]
+		},
+		{
+			"name":"PICMG Motion Controller Command",
+			"stateSetID":5,
+			"vendorIANA":12634,
+			"vendorName":"PICMG",
+			"oemStateValueRecords":[
+				{
+					"minStateValue":1,
+					"maxStateValue":1,
+					"languageTags":["en"],
+					"stateName":["Start"]
+				},
+				{
+					"minStateValue":2,
+					"maxStateValue":2,
+					"languageTags":["en"],
+					"stateName":["Stop"]
+				},
+				{
+					"minStateValue":3,
+					"maxStateValue":3,
+					"languageTags":["en"],
+					"stateName":["Wait"]
+				}
+			]
+		}
+	]
+}
