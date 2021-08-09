@@ -1,4 +1,4 @@
-# Exmaple IoT Firmware <img align="right" src="./readme_images/picmg_logo.png" width=8% height=8%><img align="right" src="./readme_images/SmartSensorLogo.png" width=20% height=20%>
+# Example IoT Firmware <img align="right" src="./readme_images/picmg_logo.png" width=8% height=8%><img align="right" src="./readme_images/SmartSensorLogo.png" width=20% height=20%>
 
 ## Overview
 
