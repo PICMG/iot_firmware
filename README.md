@@ -2,25 +2,27 @@
 
 ## Overview
 
-This project implements an example firmware that meets the requirements found in the PICMG(R) IoT.1 (IoT Firmware) specification. More information about PICMG IoT.1 can be found on the PICMG website (www.picmg.org).  The firmware is one of several references implementations provided by PICMG to demonstrate implementation of the IoT specifications.
+This project implements example firmware that meets the requirements found in the PICMG(R) IoT.1 (IoT Firmware) specification. More information about PICMG IoT.1 can be found on the PICMG website (www.picmg.org).  The firmware is one of several references implementations provided by PICMG to demonstrate implementation of the IoT specifications.
 
-The use case enabled by by the PICMG firmware specificat involves a user who wishes to create a smart sensor but does not nessarily have the proficiency to create firmware code. The user to creates a firmware configuration using a configurator tool.  The configurator tool, in turn, creates a configuration file that drives the rest of the firmware build process.  This use-case is shown in the following image.
+The use case enabled by the PICMG firmware specification involves a user who wishes to create a smart sensor but does not nessarily have the proficiency to create firmware code. The user to creates a firmware configuration using a configurator tool.  The configurator tool, in turn, creates a configuration file that drives the rest of the firmware build process.  This use-case is shown in the following image.
 
 <img align="center" src="./readme_images/UseCase.png" width=60% height=60%>
 
-**This configurator example is not dependent upon a specific target hardware device for the firmware, although other PICMG example code assumes a PICMG MicroSAM module based on the Atmega 328PB microcontroller.**
+**The PICMG Firmware specification does not dictate the target hardware, however, this code assumes a PICMG MicroSAM module based on the Atmega 328PB microcontroller.**
 
-The primary features of this confugrator are:
-- Create configuration files (config.json) based on constraints found in a Controller Capabilities file.
-- Define / modify sensor definitions for use in device configurations
-- Define / modify effecter definitions for use in device configurations
-- Define / modify new state sets for use with state sensors and state effecters in device configurations
+The primary features of this firmware are:
+- Numeric and sensors/effecters with linearization
+- State sensors / effecters with possible OEM-defined state sets
+- Synchronization using global interlock and trigger signals
+- Profiled motion control with limit sensors and either S-curve or Trapezoidal motion profiles
+- Simple sensor / effecter readings and control
+- Fru data support
+- Device discovery through use of MCTP Discovery Notify message
+- Full PDLM communications stack over MCTP/Serial
 
 Other example code from PICMG can be found here:
+- https://github.com/PICMG/iot_configurator.git - example configurator that allows the user to create constraints-based device configurations for the firmware
 - https://github.com/PICMG/iot_builder - example code that converts configurator output (config.json) to C code that completes the firmware configuration for a Atmega 328PB-based firmware build.  This code can be adapted to other microcontrollers with minor modification.
-- https://github.com/PICMG/iot_firmware.git - example firmware implementation for the Atmega328PB.  This code instantiates many of the features described in the PICMG IoT.1 Firmware Specification.  Run-time features of the code are tuned through use of the configurator and builder tools.
-
-## Target Hardware
 
 ## Build Tools
 
