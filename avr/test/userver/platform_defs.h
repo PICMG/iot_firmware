@@ -1,18 +1,9 @@
-//    interpolator.c
+//*******************************************************************
+//    platform_defs.h
 //
-//    This header file defines functions required to interpolate raw
-//    data readings.  The code was extensively adapted from code provided
-//    by Triple-Ring technology and has been used with permission of the 
-//    original author.
-//
-//    This code is intended to be used as part of the PICMG reference code 
-//    for IoT.
+//    This header file adds platform-specific definitions for the build
 //    
-//    More information on the PICMG IoT data model can be found within
-//    the PICMG family of IoT specifications.  For more information,
-//    please visit the PICMG web site (www.picmg.org)
-//
-//    Copyright (C) 2021,  PICMG
+//    Copyright (C) 2020,  PICMG
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -27,8 +18,15 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
-#include "config.h"
-
 #pragma once
+#include <avr/pgmspace.h>
 
-long interpolator_linearize(int x, LINTABLE_TYPE *table, char precision);
+#define SAMPLE_RATE 4000
+typedef signed long FIXEDPOINT_24_8;
+
+#define PDR_BYTE_TYPE const unsigned char
+#define FRU_BYTE_TYPE const unsigned char
+#define LINTABLE_TYPE const long
+#define PDR_DATA_ATTRIBUTES PROGMEM
+#define FRU_DATA_ATTRIBUTES PROGMEM
+#define LINTABLE_DATA_ATTRIBUTES PROGMEM

@@ -31,7 +31,7 @@
 #include <avr/interrupt.h>
 #include "systemtimer.h"
 #include "vprofiler.h"
-#include "pdrdata.h"
+#include "config.h"
 #include "pldm.h"
 #include "entityStepper1.h"
 #include "entitySimple1.h"

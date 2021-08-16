@@ -30,7 +30,7 @@
 #define __AVR_ATmega328P__
 #endif
 
-#include "pdrdata.h"
+#include "config.h"
 #include "avr/io.h"
 #include "adc.h"
 

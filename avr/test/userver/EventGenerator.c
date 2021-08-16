@@ -26,7 +26,7 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 #include "EventGenerator.h"
-#include "pdrdata.h"
+#include "config.h"
 #include "mctp.h"
 #include "pldm.h"
 

@@ -39,7 +39,7 @@
 #include "node.h"
 #include "mctp.h"
 #include "pldm.h"
-#include "pdrdata.h"
+#include "config.h"
 #include "entityStepper1.h"
 #include "entitySimple1.h"
 #include "EventGenerator.h"

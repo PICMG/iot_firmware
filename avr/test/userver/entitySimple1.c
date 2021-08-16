@@ -31,7 +31,7 @@
 #define __AVR_ATmega328P__
 #endif
 #include "avr/io.h"
-#include "pdrdata.h"
+#include "config.h"
 
 #ifdef ENTITY_SIMPLE1
     #include "StateSensor.h"

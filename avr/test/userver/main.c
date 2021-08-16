@@ -25,7 +25,7 @@
 #include "avr/io.h"
 #include "avr/pgmspace.h"
 #include "pldm.h"
-#include "pdrdata.h"
+#include "config.h"
 #include "uart.h"
 #include "mctp.h"
 #include "node.h"

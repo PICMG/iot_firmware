@@ -30,7 +30,7 @@
 #include <avr/interrupt.h>
 #include "channels.h"
 #include "stepdir_out.h"
-#include "pdrdata.h"
+#include "config.h"
 
 #ifndef F_CPU
     #define F_CPU 16000000

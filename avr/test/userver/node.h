@@ -33,7 +33,7 @@
 #pragma once
 #include "mctp.h"
 #include "pldm.h"
-#include "pdrdata.h"
+#include "config.h"
 #include "EventGenerator.h"
 
 void node_init();
