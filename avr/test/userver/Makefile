@@ -42,7 +42,6 @@ run_builder: CXX_FLAGS += -O2
 run_builder: clean cfg_builder $(OBJECTS)
 	avr-g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) -Wl,-Map=solution.map,--cref
 	avr-objcopy -R .eeprom -R .fuse -R .lock -R .signature -O ihex $(EXECUTABLE) $(HEXFILE)
-	avrdude -p m328p -c Arduino -P COM13 -U flash:w:$(HEXFILE)
 
 # clean, build and run the project on atmega 328p hardware
 run_simple: CXX_FLAGS += -O2
