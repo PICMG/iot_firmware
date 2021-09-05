@@ -420,7 +420,7 @@ static void processCommandFruTable(PldmRequestHeader* rxHeader)
             mctp_transmitFrameEnd();
             return;
         }
-        if (requestCount >= FRU_TABLE_MAXIMUM_SIZE + padding) {          
+        if (requestCount >= FRU_TOTAL_SIZE + padding) {          
             // send the data (single part)
             mctp_transmitFrameStart( sizeof(PldmResponseHeader) + 6 + FRU_TOTAL_SIZE + padding + 4 + 5-1, 1);
             transmitByte(rxHeader->flags1 & 0x7f);
@@ -468,15 +468,15 @@ static void processCommandFruTable(PldmRequestHeader* rxHeader)
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
             mctp_transmitFrameData(&errorcode,1);  // response->completionCode = errorcode;
-            transmitLong(0);                       // response->NextTransferHandle;
+            transmitLong(0);      // response->NextTransferHandle;
             transmitByte(0);                       // response->transferFlag = 0;
             mctp_transmitFrameEnd();
             return;
         }
         if (requestCount + dataTransferHandle >= FRU_TOTAL_SIZE + padding) {
             // transfer end part of the data
-            mctp_transmitFrameStart( sizeof(PldmResponseHeader) + 10 + FRU_TOTAL_SIZE + padding -
-                dataTransferHandle + 5 - 1 + 1,1);
+            mctp_transmitFrameStart( sizeof(PldmResponseHeader) + 6 + 4 + FRU_TOTAL_SIZE + padding -
+                dataTransferHandle + 5 - 1,1);
             transmitByte(rxHeader->flags1 & 0x7f);
             transmitByte(rxHeader->flags2);
             transmitByte(rxHeader->command);
@@ -484,7 +484,7 @@ static void processCommandFruTable(PldmRequestHeader* rxHeader)
             transmitLong(0);                      // next data transfer handle
             transmitByte(0x04);                   // response->transferFlag = 0x04;   end
             // send the FRU data
-            for (int i = 0;i < FRU_TOTAL_SIZE; i++) {
+            while (dataTransferHandle < FRU_TOTAL_SIZE) {
                 transmitByte(pgm_read_byte(&(__fru_data[dataTransferHandle++])));
             }
             // send padding bytes if required
