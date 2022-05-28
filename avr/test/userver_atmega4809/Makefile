@@ -20,12 +20,11 @@
 #    along with this program.  If not, see <https:#www.gnu.org/licenses/>.
 #
 EXECUTABLE  := userver.elf
+LSSFILE  := userver.lss
 HEXFILE     := userver.hex
-LIBINCLUDES := -L/usr/lib/avr/include 
-LIBPATH     := /usr/lib/avr
 INCLUDES    := -I.  
-OBJECTS     := main.o simulavr_info.o node.o config.o vprofiler.o systemtimer.o stepdir_out.o interpolator.o channels.o adc.o entityStepper1.o entitySimple1.o NumericEffecter.o StateEffecter.o StateSensor.o NumericSensor.o EventGenerator.o mctp.o uart.o crc8.o fcs.o
-CXX_FLAGS   := -Wall -mmcu=atmega328p -DF_CPU=16000000UL
+OBJECTS     := temp.o main.o node.o config.o vprofiler.o systemtimer.o interpolator.o channels.o adc.o entityStepper1.o entitySimple1.o NumericEffecter.o StateEffecter.o StateSensor.o NumericSensor.o EventGenerator.o mctp.o uart.o crc8.o fcs.o
+CXX_FLAGS   := -Wall -mmcu=ATmega4809 -DF_CPU=16000000UL
 OUTPUT_DIR  := $(CURDIR)
 UUID_BYTES := $(shell ./getuuid.sh)
 
@@ -44,18 +43,29 @@ run_builder: clean cfg_builder $(OBJECTS)
 	avr-objcopy -R .eeprom -R .fuse -R .lock -R .signature -O ihex $(EXECUTABLE) $(HEXFILE)
 
 # clean, build and run the project on atmega 328p hardware
+list_simple: CXX_FLAGS += -O2
+list_simple: clean cfg_simple $(OBJECTS)
+	avr-g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) -Wl,-Map=solution.map,--cref
+	avr-objdump -h -S $(EXECUTABLE) > $(LSSFILE)
+	avr-objcopy -R .eeprom -R .fuse -R .lock -R .signature -O ihex $(EXECUTABLE) $(HEXFILE)
+
+# clean, build and run the project on atmega 328p hardware
 run_simple: CXX_FLAGS += -O2
 run_simple: clean cfg_simple $(OBJECTS)
 	avr-g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) -Wl,-Map=solution.map,--cref
 	avr-objcopy -R .eeprom -R .fuse -R .lock -R .signature -O ihex $(EXECUTABLE) $(HEXFILE)
-	avrdude -p m328p -c Arduino -P COM18 -U flash:w:$(HEXFILE)
+	mode com8: baud=1200 dtr=on > NULL
+	mode com8: dtr=off > NULL
+	avrdude -patmega4809 -cjtag2updi -PCOM8 -b115200 -Uflash:w:$(HEXFILE)
 
 # clean, build and run the project on atmega 328p hardware
 run_stepper: CXX_FLAGS += -Os
 run_stepper: clean cfg_stepper $(OBJECTS)
 	avr-g++ -o $(EXECUTABLE) $(CXX_FLAGS) $(OBJECTS) -Wl,-Map=solution.map,--cref
 	avr-objcopy -R .eeprom -R .fuse -R .lock -R .signature -O ihex $(EXECUTABLE) $(HEXFILE)
-	avrdude -p m328p -c Arduino -P COM18 -U flash:w:$(HEXFILE)
+	mode com8: baud=1200 dtr=on > NULL
+	mode com8: dtr=off > NULL
+	avrdude -p atmega4809 -c Arduino -P COM8 -U flash:w:$(HEXFILE)
 
 # build non-library object files and place them in this folder
 %.o : %.c
@@ -68,8 +78,8 @@ clean:
 	-rm *.hex
 
 cfg_simple:
-	cp ./configurations/pdrdata_simple.c config.c
-	cp ./configurations/pdrdata_simple.h config.h
+	cp ./configurations/nano_config.c config.c
+	cp ./configurations/nano_config.h config.h
 
 cfg_stepper:
 	cp ./configurations/pdrdata_stepper.c config.c

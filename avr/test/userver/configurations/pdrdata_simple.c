@@ -1,4 +1,4 @@
-#include "pdrdata.h"
+#include "config.h"
 
 PDR_BYTE_TYPE __pdr_data[] PDR_DATA_ATTRIBUTES = { 
    // Terminus Locator PDR 

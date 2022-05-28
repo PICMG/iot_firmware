@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "io.h": "c",
+        "iom4809.h": "c",
+        "fuse.h": "c",
+        "entitystepper1.h": "c"
+    }
+}
