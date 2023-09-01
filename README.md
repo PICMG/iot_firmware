@@ -18,7 +18,7 @@ The primary features of this firmware are:
 - Simple sensor / effecter readings and control
 - Fru data support
 - Device discovery through use of MCTP Discovery Notify message
-- Full PDLM communications stack over MCTP/Serial
+- Full PLDM communications stack over MCTP/Serial
 
 Other example code from PICMG can be found here:
 - https://github.com/PICMG/iot_configurator.git - example configurator that allows the user to create constraints-based device configurations for the firmware
